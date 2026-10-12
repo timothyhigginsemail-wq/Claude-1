@@ -3,10 +3,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, G, HORIZONS, backtest, interpret, reading, terms, cost_controls, factor_rets, fmt_pct, grid,
+from common import (COLORS, G, HORIZONS, backtest, market, interpret, reading, terms, cost_controls, factor_rets, fmt_pct, grid,
                     ic_table, lag_of, org_box, pitfalls, placebo, portfolio_controls,
                     sample_note, show, style, technical)
-from quantlab.config import HOLDOUT_START
 from quantlab.portfolio.backtest import drawdown, performance
 from quantlab.research import robustness as rb
 from quantlab.research.pipeline import restrict
@@ -80,6 +79,22 @@ with tabs[1]:
     show(style(fig, 260, f"Return attribution (% per year); total {fx['total_annual']:+.2%}"))
     st.caption("A large bar on 'rev5' or 'rev1' means the strategy is mostly harvesting "
                "short-term reversal — a well-known, crowded effect.")
+    ffac = market().factors
+    if ffac is not None:
+        st.markdown("#### Official Fama-French factors")
+        cols = ["Mkt_RF", "SMB", "HML", "RMW", "CMA", "MOM", "STREV"]
+        ff = ffac[cols].dropna()
+        fx2 = rb.factor_regression(g, ff.loc[g.index.min():g.index.max()])
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Alpha vs FF (ann.)", fmt_pct(fx2["alpha_annual"]), help=G("alpha"))
+        c2.metric("t-stat", f"{fx2['table'].loc['alpha', 't_nw']:+.2f}", help=G("t_stat"))
+        c3.metric("R²", f"{fx2['r2']:.0%}")
+        st.dataframe(fx2["table"].style.format({"coef": "{:+.3f}", "t_nw": "{:+.2f}"}))
+        reading(interpret.alpha(fx2["alpha_annual"], fx2["table"].loc["alpha", "t_nw"], fx2["r2"]))
+        st.caption("Factors from the Kenneth French Data Library (CRSP-based, all US stocks): "
+                   "market, size, value, profitability, investment, momentum, short-term "
+                   "reversal. They are close-to-close; with next-open execution the timing "
+                   "differs by part of a day, so treat exposures as approximate.")
 
 with tabs[2]:
     st.markdown("#### 1. How lucky could noise get?")
@@ -136,7 +151,7 @@ with tabs[3]:
                 "past data** (purged), then trade it next quarter. This mimics what you "
                 "would actually have done.")
     ics, cfg = grid(spec)
-    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(HOLDOUT_START))
+    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(market().holdout_start))
     gs = rb.grid_summary(ics, cfg, "research", lag)
     best = gs["t_nw"].abs().idxmax()
     c1, c2 = st.columns(2)
@@ -157,7 +172,7 @@ with tabs[3]:
     st.dataframe(wf["choices"].assign(test_start=lambda x: x.test_start.dt.date), hide_index=True)
 
 with tabs[4]:
-    st.markdown(f"The data from **{HOLDOUT_START}** onward have been excluded from every "
+    st.markdown(f"The data from **{market().holdout_start}** onward have been excluded from every "
                 "number above (including the purge of overlapping returns). Open it once, "
                 "after freezing the specification.")
     if not st.session_state.holdout_unlocked:
@@ -181,8 +196,8 @@ with tabs[4]:
         c1, c2 = st.columns(2)
         c1.metric("Holdout gross Sharpe", f"{performance(hg)['sharpe']:+.2f}")
         c2.metric("Holdout net Sharpe", f"{performance(hn)['sharpe']:+.2f}")
-        st.caption("~13 months of data: a holdout this short can only catch large failures; "
-                   "it cannot confirm a modest edge.")
+        st.caption("A holdout of a few years can catch large failures but cannot confirm a "
+                   "modest edge.")
 
 technical(r"""
 **Block bootstrap.** Resample the daily return series in contiguous blocks (length

@@ -188,7 +188,7 @@ def reality_check(ic: pd.DataFrame, horizon: int = 5, n_boot: int = 500, block: 
     blocks — rows are kept together, so correlation BETWEEN signals is preserved —
     and records the largest |t| each time. p = share of bootstrap maxima ≥ observed.
     """
-    X = ic.dropna(how="all")
+    X = ic.dropna(how="all").dropna(axis=1, how="all")
     T, K = X.shape
     if T < 50 or K == 0:
         return {"p": float("nan"), "max_t": float("nan"), "best": None, "n": K}

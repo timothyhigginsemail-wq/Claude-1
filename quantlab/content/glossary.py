@@ -246,7 +246,8 @@ GLOSSARY: dict[str, dict[str, str]] = {
         "term": "Holdout",
         "what": "Data deliberately left untouched until the specification is frozen, then "
                 "used once.",
-        "read": "Here: 2017–2018. A pass is the most credible evidence available on this data.",
+        "read": "Here: 2022–2026 (v3 data) or 2017–2018 (v1). A pass is the most credible "
+                "evidence available on this data.",
         "guide": "Look once. Every extra look turns it into in-sample data.",
         "trap": "A short holdout can only catch large failures.",
     },

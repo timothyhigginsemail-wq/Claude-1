@@ -30,6 +30,19 @@ st.caption(f"{SAMPLE_LABELS[sample]}. IC = correlation between today's signal ra
            "the next-h-day return ranking across stocks. See **4 · Predictive tests** for "
            "the full picture and **9 · Decision** for the verdict.")
 
+st.markdown("#### New in v3 — much more data")
+st.markdown("""
+- **17 years of research data** (2005–2021) plus a locked **2022–2026 holdout**, for
+  627 stocks that have been in the S&P 500 — including 2008 and 2020. Total returns
+  (dividends reinvested).
+- **Earnings dates** from SEC filings, so you can test whether a signal is just
+  earnings news (stage 5).
+- **Point-in-time fundamentals** from SEC filings: real market cap, value,
+  profitability and investment, used as controls and as four new library signals.
+- **Official Fama-French factors** for performance attribution (stage 8).
+- **Dataset switch** in the sidebar: compare every result with the original 2013–18 data.
+""")
+
 st.markdown("#### New in v2")
 st.markdown("""
 - **🧪 Signal lab** — write a hypothesis card, build a signal by point-and-click or formula,
@@ -52,10 +65,10 @@ st.markdown("""
 """)
 
 st.warning(
-    "**Read before trusting anything:** the free dataset covers only stocks that were in "
-    "the S&P 500 in 2018 (survivorship bias), only 5 years, with no bid/ask spreads or "
-    "earnings dates. The platform is built so that conclusions here are, at best, "
-    "*'worth testing on institutional data'* — never *'ready to trade'*.")
+    "**Read before trusting anything:** free data still miss most companies that were later "
+    "acquired or went bankrupt (we cover about 54% of the 2005 index, rising to 97% today), "
+    "and there are no bid/ask spreads. Conclusions here are, at best, *'worth testing on "
+    "institutional data'* — never *'ready to trade'*.")
 
 st.markdown("#### Research log (every recorded experiment)")
 reg_path = ROOT / "experiments" / "registry.csv"

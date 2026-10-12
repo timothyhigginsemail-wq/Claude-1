@@ -24,7 +24,8 @@ ITEMS = [
      "(disclosed as a mild violation)."),
     ("In-sample vs out-of-sample",
      "Results on data used to design the strategy are optimistic.",
-     "2013–2016 research sample, 2017–2018 locked holdout with purging at the boundary."),
+     "Research sample (v3: 2005–2021; v1: 2013–2016) and a locked holdout (v3: 2022–2026; "
+     "v1: 2017–2018), with purging at the boundary."),
     ("Walk-forward testing",
      "Re-estimating choices using only the past, then testing on the future.",
      "Quarterly re-selection over a 24-config grid with expanding, purged training windows."),

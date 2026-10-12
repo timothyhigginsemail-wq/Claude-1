@@ -35,4 +35,10 @@ def panel():
 def mkt(panel):
     tick = sorted(panel.ticker.unique())
     sectors = pd.Series([f"Sec{i % 4}" for i in range(len(tick))], index=tick)
-    return market_from_long(panel, sector=sectors)
+    m = market_from_long(panel, sector=sectors)
+    # synthetic quarterly earnings dates (staggered across stocks)
+    ev = pd.DataFrame(False, index=m.dates, columns=m.tickers)
+    for j, t in enumerate(m.tickers):
+        ev.iloc[(j * 7) % 63::63, j] = True
+    m.events = ev
+    return m

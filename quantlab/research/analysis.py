@@ -4,14 +4,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from quantlab.config import HOLDOUT_START
+from quantlab.config import holdout_for
 from quantlab.data.loader import Market
 from quantlab.research.returns import excess_over_universe, execution_params, forward_returns
 from quantlab.research.stats import mean_stats, rank_ic
 
 
 def sample_mask(dates: pd.DatetimeIndex, sample: str, horizon: int = 1, lag: int = 1,
-                holdout_start: str = HOLDOUT_START) -> pd.Series:
+                holdout_start: str | None = None) -> pd.Series:
     """Which signal dates belong to the sample.
 
     'research': dates before the holdout, PURGED so that no forward-return window
@@ -20,6 +20,7 @@ def sample_mask(dates: pd.DatetimeIndex, sample: str, horizon: int = 1, lag: int
     'full'    : everything.
     """
     d = pd.Series(np.arange(len(dates)), index=dates)
+    holdout_start = holdout_start or holdout_for(dates)
     hs = dates.searchsorted(pd.Timestamp(holdout_start))
     if sample == "full":
         return pd.Series(True, index=dates)

@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from quantlab.config import EXPERIMENTS_DIR, HOLDOUT_START  # noqa: E402
+from quantlab.config import EXPERIMENTS_DIR, PERIODS  # noqa: E402
 from quantlab.data.loader import load_market  # noqa: E402
 from quantlab.portfolio.backtest import CostSpec, performance, run_backtest  # noqa: E402
 from quantlab.portfolio.construct import PortfolioSpec  # noqa: E402
@@ -56,7 +56,7 @@ def n_registered_trials() -> int:
 
 
 def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdout: bool) -> dict:
-    mkt = load_market()
+    mkt = load_market(spec.dataset)
     u = build_universe(mkt, spec)
     chars = characteristics(mkt, u)
     sig = build_signal(mkt, spec, u, chars)
@@ -75,7 +75,7 @@ def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdou
         ics, cfg = rb.grid_ic(mkt, spec.hypothesis, u, execution=spec.execution)
     else:   # fixed-parameter or custom signal: the family is the whole library + this one
         from quantlab.research.library_cache import compute_library_ics, is_default, load_cached
-        lib = load_cached() if is_default(spec.min_price, spec.liquidity_pct, spec.execution) else None
+        lib = load_cached(spec.dataset) if is_default(spec.min_price, spec.liquidity_pct, spec.execution) else None
         ics = (lib.astype(float) if lib is not None
                else compute_library_ics(mkt, u, spec.execution)).copy()
         if spec.hypothesis not in ics.columns.str.rsplit("@", n=1).str[0]:
@@ -87,7 +87,7 @@ def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdou
     key = f"lb={spec.lookback} w={spec.window} h={h}"
     p_holm = float(gs.loc[key, "p_holm"]) if (key in gs.index and spec.neutralization == "none") \
         else float(holm(np.append(gs["p_nw"].values, ic.p_nw))[-1])
-    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(HOLDOUT_START))
+    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(mkt.holdout_start))
     bt = run_backtest(mkt, sig, u, pspec, cspec, spec.execution, beta=chars["beta"])
     g = restrict(bt.daily["gross"], "research", pspec.holding, lag)
     n = restrict(bt.daily["net"], "research", pspec.holding, lag)
@@ -105,12 +105,13 @@ def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdou
         "assumed_cost_bps": tc / to * 1e4 if to > 0 else np.nan,
         "dsr": deflated_sharpe(n, n_trials)["dsr"], "holdout": None,
     }
+    labels = PERIODS[spec.dataset]
     if unlock_holdout:
         ho = ic_by_horizon(mkt, sig, u, (h,), spec.execution, "holdout").loc[h]
         ev["holdout"] = {"mean_ic": float(ho.mean_ic), "t_ic": float(ho.t_nw)}
         hn = restrict(bt.daily["net"], "holdout", pspec.holding, lag)
         ev["holdout"]["net_sharpe"] = performance(hn)["sharpe"]
-    decision = evaluate(ev)
+    decision = evaluate({**ev, "period_labels": labels})
     return {
         "spec": spec.as_dict(), "portfolio": pspec.__dict__, "costs": cspec.__dict__,
         "ic_by_horizon": ic_tab.reset_index().to_dict(orient="records"),
@@ -128,6 +129,7 @@ def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdou
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="v3", choices=["v3", "v1"])
     ap.add_argument("--hypothesis", default="abnormal_volume")
     ap.add_argument("--lookback", type=int, default=20)
     ap.add_argument("--window", type=int, default=1)
@@ -144,7 +146,7 @@ def main():
     a = ap.parse_args()
     spec = ResearchSpec(hypothesis=a.hypothesis, lookback=a.lookback, window=a.window,
                         horizon=a.horizon, execution=a.execution, neutralization=a.neutralization,
-                        direction=a.direction, formula=a.formula)
+                        direction=a.direction, formula=a.formula, dataset=a.dataset)
     pspec = PortfolioSpec(holding=a.holding or a.horizon)
     cspec = CostSpec(aum=a.aum)
     res = run(spec, pspec, cspec, a.unlock_holdout)
@@ -160,11 +162,11 @@ def main():
     with open(reg, "a", newline="") as f:
         w = csv.writer(f)
         if new:
-            w.writerow(["run_id", "git", "hypothesis", "lookback", "window", "horizon",
+            w.writerow(["run_id", "git", "dataset", "hypothesis", "lookback", "window", "horizon",
                         "execution", "neutralization", "direction", "mean_ic", "t_ic", "net_sharpe",
                         "verdict", "holdout_used", "note"])
         e = res["evidence"]
-        w.writerow([res["run_id"], res["git"], spec.hypothesis, spec.lookback, spec.window,
+        w.writerow([res["run_id"], res["git"], spec.dataset, spec.hypothesis, spec.lookback, spec.window,
                     spec.horizon, spec.execution, spec.neutralization, spec.direction, f"{e['mean_ic']:.5f}",
                     f"{e['t_ic']:.2f}", f"{e['net_sharpe']:.2f}", res["verdict"],
                     a.unlock_holdout, a.note])

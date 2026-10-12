@@ -7,7 +7,7 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
-from quantlab.config import MEMBERSHIP_PATH, PANEL_PATH, PROCESSED_DIR, SECTORS_PATH
+from quantlab.config import DATASETS, DEFAULT_DATASET, holdout_for
 
 
 @dataclass
@@ -21,6 +21,15 @@ class Market:
     member: pd.DataFrame      # point-in-time S&P 500 membership
     sector: pd.Series         # ticker -> sector
     coverage: pd.DataFrame    # daily: members in index vs members we have data for
+    adj_close: pd.DataFrame | None = None   # dividend+split adjusted close (total return)
+    events: pd.DataFrame | None = None      # earnings-announcement reaction days (bool)
+    factors: pd.DataFrame | None = None     # Fama-French daily factors (decimals)
+    dataset: str = "v1"
+    fund: dict | None = None                # point-in-time fundamentals (v3)
+
+    @property
+    def holdout_start(self) -> str:
+        return holdout_for(self.dates)
 
     @property
     def dates(self) -> pd.DatetimeIndex:
@@ -36,7 +45,12 @@ class Market:
         Returns spanning a missing price are NaN (never bridged), and returns on
         unadjusted corporate-action dates are NaN.
         """
-        p = getattr(self, price)
+        if self.adj_close is not None:
+            # Total returns: dividends reinvested. Opens are put on the same basis.
+            factor = self.adj_close / self.close
+            p = self.adj_close if price == "close" else getattr(self, price) * factor
+        else:
+            p = getattr(self, price)
         r = p / p.shift(1) - 1.0
         return r.where(self.ret_valid)
 
@@ -47,7 +61,7 @@ class Market:
 
 def market_from_long(panel: pd.DataFrame, member: pd.DataFrame | None = None,
                      sector: pd.Series | None = None,
-                     coverage: pd.DataFrame | None = None) -> Market:
+                     coverage: pd.DataFrame | None = None, dtype=float) -> Market:
     """Pivot a long panel to a Market. Also used by tests with synthetic data."""
     wide = {f: panel.pivot(index="date", columns="ticker", values=f).sort_index()
             for f in ["open", "high", "low", "close", "volume"]}
@@ -57,7 +71,7 @@ def market_from_long(panel: pd.DataFrame, member: pd.DataFrame | None = None,
     else:
         rv = pd.DataFrame(True, index=wide["close"].index, columns=wide["close"].columns)
     for k in wide:
-        wide[k] = wide[k].astype(float)
+        wide[k] = wide[k].astype(dtype)
     idx, cols = wide["close"].index, wide["close"].columns
     if member is None:
         member = pd.DataFrame(True, index=idx, columns=cols)
@@ -72,14 +86,41 @@ def market_from_long(panel: pd.DataFrame, member: pd.DataFrame | None = None,
                   coverage=coverage)
 
 
-@lru_cache(maxsize=1)
-def load_market() -> Market:
-    panel = pd.read_parquet(PANEL_PATH)
-    member = pd.read_parquet(MEMBERSHIP_PATH)
+@lru_cache(maxsize=2)
+def load_market(dataset: str = "v1") -> Market:
+    """Load a processed dataset ('v1' = original 2013-18, 'v3' = 2005-26)."""
+    d = DATASETS[dataset]["dir"]
+    panel = pd.read_parquet(d / "panel.parquet")
+    member = pd.read_parquet(d / "membership.parquet")
     member.index = pd.to_datetime(member.index)
-    sectors = pd.read_csv(SECTORS_PATH).set_index("ticker")["sector"]
-    coverage = pd.read_parquet(PROCESSED_DIR / "coverage.parquet")
-    return market_from_long(panel, member, sectors, coverage)
+    sectors = pd.read_csv(d / "sectors.csv").set_index("ticker")["sector"]
+    coverage = pd.read_parquet(d / "coverage.parquet")
+    # 32-bit storage halves memory on the large dataset (precision ~7 digits is ample
+    # for prices and volumes); calculations upcast where needed.
+    dtype = "float32" if dataset != "v1" else float
+    m = market_from_long(panel, member, sectors, coverage, dtype=dtype)
+    m.dataset = dataset
+    if "adj_close" in panel:
+        m.adj_close = panel.pivot(index="date", columns="ticker", values="adj_close") \
+            .reindex_like(m.close).astype(dtype)
+    if (d / "earnings_events.parquet").exists():
+        ev = pd.read_parquet(d / "earnings_events.parquet")
+        m.events = ev.reindex(index=m.dates, columns=m.tickers).fillna(False).astype(bool)
+    fund = {}
+    for name in ("mcap", "book_to_market", "roe", "asset_growth"):
+        f = d / f"fund_{name}.parquet"
+        if f.exists():
+            x = pd.read_parquet(f)
+            x.index = pd.to_datetime(x.index)
+            fund[name] = x.reindex(index=m.dates, columns=m.tickers)
+    m.fund = fund or None
+    if (d / "ff_factors.parquet").exists():
+        m.factors = pd.read_parquet(d / "ff_factors.parquet").reindex(m.dates)
+    return m
+
+
+def default_dataset() -> str:
+    return DEFAULT_DATASET
 
 
 def eligible_universe(mkt: Market, min_price: float = 5.0, min_history: int = 60,

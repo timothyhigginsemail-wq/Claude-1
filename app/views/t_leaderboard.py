@@ -18,18 +18,18 @@ st.markdown("Every published signal in the library, plus every hypothesis you ha
 terms("ic", "stars", "holm", "bh", "reality_check")
 sample_note(sample)
 
-lib = library_ics(spec.min_price, spec.liquidity_pct, spec.execution)
+lib = library_ics(spec.min_price, spec.liquidity_pct, spec.execution, spec.dataset)
 ics = lib.copy()
 names = {k: h.name for k, h in HYPOTHESES.items()}
 fams = {k: h.family for k, h in HYPOTHESES.items()}
 
 
 @st.cache_data(show_spinner="Scoring your hypotheses…", max_entries=32)
-def custom_ics(formula, min_price, liq, execution):
+def custom_ics(formula, min_price, liq, execution, ds):
     from quantlab.research.pipeline import ResearchSpec
-    m = market()
+    m = market(ds)
     s = evaluate(formula, m)
-    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq))
+    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq, dataset=ds))
     return pd.DataFrame({f"@{h}": rank_ic(s, forward_returns(m, h, execution), u)
                          for h in (1, 5, 10, 20)})
 
@@ -38,7 +38,7 @@ for i, c in enumerate(st.session_state.get("lab_cards", [])):
     if not c.get("formula"):
         continue
     key = f"my{i}"
-    ci = custom_ics(c["formula"], spec.min_price, spec.liquidity_pct, spec.execution)
+    ci = custom_ics(c["formula"], spec.min_price, spec.liquidity_pct, spec.execution, spec.dataset)
     for col in ci:
         ics[f"{key}{col}"] = ci[col]
     names[key] = f"★ {c['name']}"
@@ -57,6 +57,10 @@ c1, c2 = st.columns(2)
 c1.metric("Best |t| at 5 days", f"{rc['max_t']:.2f}", help=G("reality_check"))
 c2.metric("…luck would give (95th pct.)", f"{rc['null_95']:.2f}", help=G("reality_check"))
 reading(interpret.reality_check(rc["p"], rc["n"]))
+if "small_size" in tab.index and abs(tab.loc["small_size", "best_t"]) >= 2:
+    st.warning("**Survivorship alert:** the data lack most companies that later failed, and "
+               "failures are concentrated among smaller firms. That flatters the 'small size' "
+               "signal in particular — treat its strength here as an upper bound.")
 
 st.subheader("The table")
 fam_opts = sorted(set(tab["family"]))
@@ -90,7 +94,7 @@ fig = go.Figure(go.Heatmap(z=z, x=[f"{h}d" for h in hs], y=view["signal"], color
 fig.update_yaxes(autorange="reversed")
 show(style(fig, 28 * len(view) + 80))
 st.caption("Blue = predicted direction (positive IC as oriented by the paper). Notice how few "
-           "cells clear ±2, and that the famous effects are weak in 2013–16 large caps.")
+           "cells clear ±2 — and compare the two datasets with the sidebar switch.")
 
 st.subheader("The signals")
 for fam in fam_opts:

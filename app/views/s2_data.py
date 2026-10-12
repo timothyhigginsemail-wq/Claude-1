@@ -4,13 +4,112 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import COLORS, ROOT, market, org_box, persist, pitfalls, show, style, technical, uni
+from common import (COLORS, G, ROOT, market, org_box, persist, pitfalls, reading, show, style,
+                    technical, terms, uni)
 
 spec = st.session_state.spec
-rep = json.loads((ROOT / "data/processed/quality_report.json").read_text())
 st.title("2 · Data")
 st.markdown("Bad data produce confident, wrong answers. Before any modelling we document "
             "**where every number comes from**, what was changed, and what is missing.")
+
+if spec.dataset != "v1":
+    from quantlab.config import DATASETS
+    rep = json.loads((DATASETS[spec.dataset]["dir"] / "quality_report.json").read_text())
+    m = market()
+    terms("survivorship", "lookahead")
+    st.subheader("Sources")
+    st.markdown(f"""
+| Data | Source | Notes |
+|---|---|---|
+| Daily prices, volume, dividends, splits | **Yahoo Finance** (chart API) | Total-return prices (dividends reinvested). Split-adjusted volume. |
+| Index membership | **fja05680/sp500** (point-in-time lists, 1996–2026) | Stocks are only eligible on days they were members. |
+| Earnings dates | **SEC EDGAR** 8-K Item 2.02 filings | Reaction day from the filing's acceptance time (after 16:00 → next day). |
+| Factors | **Kenneth French Data Library** (built from CRSP) | Mkt-RF, SMB, HML, RMW, CMA, MOM, ST reversal, risk-free rate. |
+| Fundamentals | **SEC EDGAR** XBRL company facts (~2009+) | First-reported values with their filing dates (no restatements). |
+| Sectors | datahub GICS (current) + hand labels | Current, not point-in-time. |
+""")
+    st.caption(rep["sources"]["limitations"])
+
+    st.subheader("Survivorship bias, measured")
+    cov = m.coverage
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Companies ever in the index", rep["n_candidate_tickers"], help=G("survivorship"))
+    c2.metric("…with usable data", rep["accepted"])
+    c3.metric("Avg. share of index covered", f"{rep['coverage_avg']:.0%}")
+    fig = go.Figure()
+    fig.add_scatter(x=cov.index, y=cov.n_members, name="Actual S&P 500 members",
+                    line=dict(color=COLORS["neutral"]))
+    fig.add_scatter(x=cov.index, y=cov.n_with_data, name="Members we have data for",
+                    line=dict(color=COLORS["gross"]))
+    fig.add_scatter(x=cov.index, y=uni(spec).sum(axis=1), name="Eligible after filters",
+                    line=dict(color=COLORS["long"], dash="dot"))
+    show(style(fig, 300, "Coverage of the true point-in-time index"))
+    yr = pd.Series(rep["coverage_by_year"])
+    reading(f"In {yr.index[0]} we have data for {yr.iloc[0]:.0%} of the index; by "
+            f"{yr.index[-1]}, {yr.iloc[-1]:.0%}. The missing companies are mostly those that "
+            "were later acquired, merged or went bankrupt — Yahoo only keeps live symbols. "
+            "Results from the early years are therefore the most survivorship-biased. "
+            "Compare results that start in 2005 vs. 2012 to see whether it matters.")
+    with st.expander(f"Why {len(rep['dropped'])} tickers and {len(rep['dropped_spells'])} "
+                     "membership periods were rejected"):
+        st.markdown("Yahoo re-uses old ticker symbols for new companies (e.g. **AVB** and "
+                    "**EA** now point to listings that started in July 2026) and moves renamed "
+                    "companies to new symbols (BK→BNY, ABC→COR, ANTM→ELV — mapped in "
+                    "`data/reference/yahoo_renames.csv`). Each membership period is accepted "
+                    "only if Yahoo prices cover ≥ 80% of its days and trading averages "
+                    "≥ $5m/day.")
+        st.dataframe(pd.DataFrame(rep["dropped_spells"].items(), columns=["period", "reason"]),
+                     hide_index=True, height=260)
+        st.markdown(f"**Never found on Yahoo** ({len(rep['never_found_on_yahoo'])}): "
+                    + ", ".join(rep["never_found_on_yahoo"][:120]) + " …")
+
+    st.subheader("Cleaning")
+    c = rep["cleaning"]
+    st.dataframe(pd.DataFrame([
+        ["Rows", c["clean_rows"], "—"],
+        ["Zero-volume rows", c["zero_volume_rows_set_to_missing"], "volume set missing"],
+        ["Spike-and-reverse bad prints", len(c["spike_reversal_rows_set_missing"]),
+         "prices set missing"],
+        ["Moves > 40% kept (checked: mostly 2008 and 2020 crises)",
+         rep["n_extreme_return_flags"], "kept, listed below"],
+    ], columns=["Check", "Count", "Action"]), hide_index=True)
+    with st.expander("Bad prints and the largest moves"):
+        st.markdown("**Removed:** " + ", ".join(c["spike_reversal_rows_set_missing"]))
+        st.dataframe(pd.DataFrame(rep["extreme_return_flags"]), hide_index=True, height=260)
+        st.markdown("Spin-offs are not reliably adjusted in free data: a large one-day drop "
+                    "on a spin-off date is not a shareholder loss. They are rare relative to "
+                    "the 2.2 million rows but can affect individual trades.")
+
+    if m.events is not None:
+        st.subheader("Earnings dates")
+        evc = m.events.where(m.member).sum(axis=1)
+        c1, c2 = st.columns(2)
+        c1.metric("Earnings events", f"{int(m.events.values.sum()):,}")
+        c2.metric("Companies with dates", int(m.events.any().sum()))
+        r = m.daily_returns("close").abs().where(m.member)
+        on = float(r.where(m.events).stack().mean())
+        off = float(r.where(~m.events).stack().mean())
+        reading(f"On earnings-reaction days the average absolute move is {on:.1%} vs "
+                f"{off:.1%} on other days — confirming the dates line up with real "
+                "announcements. Volume roughly doubles on these days, which is why "
+                "earnings are the first suspect for any volume signal.")
+
+    st.subheader("Inspect one stock")
+    tick = persist(st.selectbox, "Ticker", "data_ticker_v3", "AAPL", options=list(m.tickers))
+    df = pd.DataFrame({"close (split-adj.)": m.close[tick], "total-return close": m.adj_close[tick]
+                       if m.adj_close is not None else None, "volume": m.volume[tick],
+                       "member": m.member[tick]}).dropna(how="all", subset=["close (split-adj.)"])
+    fig = go.Figure()
+    fig.add_scatter(x=df.index, y=df["close (split-adj.)"], name="Price")
+    if m.adj_close is not None:
+        fig.add_scatter(x=df.index, y=df["total-return close"], name="Total-return price",
+                        line=dict(dash="dot"))
+    show(style(fig, 280, f"{tick}: price vs. total-return price (dividends reinvested)"))
+    st.dataframe(df.sort_index(ascending=False).head(250), height=240)
+    org_box("data")
+    st.stop()
+
+rep = json.loads((ROOT / "data/processed/quality_report.json").read_text())
 
 st.subheader("Sources")
 for k, s in rep["sources"].items():

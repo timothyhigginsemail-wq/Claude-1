@@ -1,0 +1,1021 @@
+{
+  "n_candidate_tickers": 982,
+  "dropped": {
+    "ABI": "no membership period covered by Yahoo data",
+    "ACV": "no membership period covered by Yahoo data",
+    "ADCT": "no membership period covered by Yahoo data",
+    "ADT": "no membership period covered by Yahoo data",
+    "APC": "no membership period covered by Yahoo data",
+    "ASO": "no membership period covered by Yahoo data",
+    "AT": "no membership period covered by Yahoo data",
+    "AV": "no membership period covered by Yahoo data",
+    "AVB": "no membership period covered by Yahoo data",
+    "BBBY": "no membership period covered by Yahoo data",
+    "BBT": "no membership period covered by Yahoo data",
+    "BEAM": "no membership period covered by Yahoo data",
+    "BUD": "no membership period covered by Yahoo data",
+    "CAM": "no membership period covered by Yahoo data",
+    "CCU": "no membership period covered by Yahoo data",
+    "CPWR": "no membership period covered by Yahoo data",
+    "CSRA": "no membership period covered by Yahoo data",
+    "DDS": "no membership period covered by Yahoo data",
+    "DISCA": "no membership period covered by Yahoo data",
+    "DYN": "no membership period covered by Yahoo data",
+    "EA": "no membership period covered by Yahoo data",
+    "EC": "no membership period covered by Yahoo data",
+    "EMC": "no membership period covered by Yahoo data",
+    "EP": "no membership period covered by Yahoo data",
+    "EQ": "no membership period covered by Yahoo data",
+    "EQR": "no membership period covered by Yahoo data",
+    "FB": "no membership period covered by Yahoo data",
+    "FOX": "no membership period covered by Yahoo data",
+    "FOXA": "no membership period covered by Yahoo data",
+    "G": "no membership period covered by Yahoo data",
+    "GDT": "no membership period covered by Yahoo data",
+    "GENZ": "no membership period covered by Yahoo data",
+    "GP": "no membership period covered by Yahoo data",
+    "GR": "no membership period covered by Yahoo data",
+    "H": "no membership period covered by Yahoo data",
+    "INFO": "no membership period covered by Yahoo data",
+    "IR": "no membership period covered by Yahoo data",
+    "JAVA": "no membership period covered by Yahoo data",
+    "KG": "no membership period covered by Yahoo data",
+    "LB": "no membership period covered by Yahoo data",
+    "LEG": "no membership period covered by Yahoo data",
+    "LIFE": "no membership period covered by Yahoo data",
+    "LU": "no membership period covered by Yahoo data",
+    "MEDI": "no membership period covered by Yahoo data",
+    "MI": "no membership period covered by Yahoo data",
+    "MMI": "no membership period covered by Yahoo data",
+    "NE": "no membership period covered by Yahoo data",
+    "NFX": "no membership period covered by Yahoo data",
+    "PARA": "no membership period covered by Yahoo data",
+    "PCL": "no membership period covered by Yahoo data",
+    "PD": "no membership period covered by Yahoo data",
+    "POM": "no membership period covered by Yahoo data",
+    "PWER": "no membership period covered by Yahoo data",
+    "QRVO": "no membership period covered by Yahoo data",
+    "S": "no membership period covered by Yahoo data",
+    "SBNY": "no membership period covered by Yahoo data",
+    "SDS": "no membership period covered by Yahoo data",
+    "SE": "no membership period covered by Yahoo data",
+    "SGP": "no membership period covered by Yahoo data",
+    "SHLD": "no membership period covered by Yahoo data",
+    "SII": "no membership period covered by Yahoo data",
+    "SPLS": "no membership period covered by Yahoo data",
+    "STI": "no membership period covered by Yahoo data",
+    "SUN": "no membership period covered by Yahoo data",
+    "TE": "no membership period covered by Yahoo data",
+    "TEK": "no membership period covered by Yahoo data",
+    "UCL": "no membership period covered by Yahoo data",
+    "UST": "no membership period covered by Yahoo data",
+    "VRTS": "no membership period covered by Yahoo data",
+    "WB": "no membership period covered by Yahoo data",
+    "WBD": "no membership period covered by Yahoo data",
+    "WEN": "no membership period covered by Yahoo data"
+  },
+  "dropped_spells": {
+    "ABI 2005-01-03..2008-11-21": "coverage 0% (symbol reused or history missing)",
+    "ACV 2005-01-03..2006-11-16": "coverage 0% (symbol reused or history missing)",
+    "ADCT 2005-01-03..2007-06-29": "coverage 0% (symbol reused or history missing)",
+    "ADT 2012-10-02..2016-04-29": "coverage 0% (symbol reused or history missing)",
+    "APC 2005-01-03..2019-08-08": "coverage 0% (symbol reused or history missing)",
+    "ASO 2005-01-03..2006-11-03": "coverage 0% (symbol reused or history missing)",
+    "AT 2005-01-03..2007-11-16": "coverage 0% (symbol reused or history missing)",
+    "AV 2005-01-03..2007-10-25": "coverage 0% (symbol reused or history missing)",
+    "AVB 2007-01-10..2026-08-17": "coverage 0% (symbol reused or history missing)",
+    "BBBY 2005-01-03..2017-07-25": "coverage 0% (symbol reused or history missing)",
+    "BBT 2005-01-03..2019-12-06": "median $ volume 1.5m (not S&P-size)",
+    "BEAM 2005-01-03..2014-04-30": "coverage 0% (symbol reused or history missing)",
+    "BR 2005-01-03..2006-03-31": "coverage 0% (symbol reused or history missing)",
+    "BUD 2005-01-03..2008-11-17": "coverage 0% (symbol reused or history missing)",
+    "CAM 2008-01-29..2016-04-01": "coverage 0% (symbol reused or history missing)",
+    "CCU 2005-01-03..2008-07-30": "median $ volume 0.8m (not S&P-size)",
+    "CEG 2005-01-03..2012-03-12": "coverage 0% (symbol reused or history missing)",
+    "CPWR 2005-01-03..2011-12-30": "coverage 73% (symbol reused or history missing)",
+    "CSRA 2015-11-30..2018-04-03": "coverage 0% (symbol reused or history missing)",
+    "DDS 2005-01-03..2008-10-21": "coverage 0% (symbol reused or history missing)",
+    "DELL 2005-01-03..2013-10-28": "coverage 0% (symbol reused or history missing)",
+    "DG 2005-01-03..2007-07-06": "coverage 0% (symbol reused or history missing)",
+    "DISCA 2010-03-01..2022-04-08": "coverage 3% (symbol reused or history missing)",
+    "DOW 2005-01-03..2017-08-31": "coverage 0% (symbol reused or history missing)",
+    "DYN 2005-01-03..2009-12-18": "coverage 0% (symbol reused or history missing)",
+    "EA 2005-01-03..2026-08-04": "coverage 0% (symbol reused or history missing)",
+    "EC 2005-01-03..2006-06-05": "coverage 0% (symbol reused or history missing)",
+    "EMC 2005-01-03..2016-09-06": "coverage 0% (symbol reused or history missing)",
+    "EP 2005-01-03..2012-05-24": "median $ volume 0.0m (not S&P-size)",
+    "EQ 2006-05-18..2009-06-30": "coverage 0% (symbol reused or history missing)",
+    "EQR 2005-01-03..2026-08-17": "coverage 0% (symbol reused or history missing)",
+    "FB 2013-12-23..2022-06-08": "coverage 0% (symbol reused or history missing)",
+    "FOX 2015-09-21..2026-10-09": "coverage 69% (symbol reused or history missing)",
+    "FOXA 2005-01-03..2026-10-09": "coverage 35% (symbol reused or history missing)",
+    "G 2005-01-03..2005-09-30": "coverage 0% (symbol reused or history missing)",
+    "GDT 2005-01-03..2006-04-21": "coverage 0% (symbol reused or history missing)",
+    "GENZ 2005-01-03..2011-04-01": "coverage 51% (symbol reused or history missing)",
+    "GP 2005-01-03..2005-12-19": "coverage 0% (symbol reused or history missing)",
+    "GR 2005-01-03..2012-07-26": "coverage 3% (symbol reused or history missing)",
+    "H 2006-08-01..2007-04-09": "coverage 0% (symbol reused or history missing)",
+    "HCA 2005-01-03..2006-11-17": "coverage 0% (symbol reused or history missing)",
+    "HLT 2005-01-03..2007-10-24": "coverage 0% (symbol reused or history missing)",
+    "INFO 2017-06-02..2022-03-01": "coverage 0% (symbol reused or history missing)",
+    "IR 2005-01-03..2009-06-30": "coverage 0% (symbol reused or history missing)",
+    "IR 2010-11-17..2026-10-09": "coverage 59% (symbol reused or history missing)",
+    "JAVA 2005-01-03..2010-01-26": "coverage 0% (symbol reused or history missing)",
+    "KG 2005-01-03..2010-12-17": "coverage 44% (symbol reused or history missing)",
+    "KMI 2005-01-03..2007-05-30": "coverage 0% (symbol reused or history missing)",
+    "LB 2005-01-03..2021-08-02": "coverage 0% (symbol reused or history missing)",
+    "LEG 2005-01-03..2021-12-17": "coverage 0% (symbol reused or history missing)",
+    "LIFE 2008-11-24..2014-01-23": "coverage 0% (symbol reused or history missing)",
+    "LU 2005-01-03..2006-11-30": "coverage 0% (symbol reused or history missing)",
+    "MEDI 2005-01-03..2007-05-31": "coverage 0% (symbol reused or history missing)",
+    "MI 2005-01-03..2011-07-05": "coverage 0% (symbol reused or history missing)",
+    "MMI 2011-01-04..2012-05-21": "coverage 0% (symbol reused or history missing)",
+    "NE 2005-01-03..2009-03-26": "coverage 0% (symbol reused or history missing)",
+    "NE 2011-01-18..2015-07-17": "coverage 0% (symbol reused or history missing)",
+    "NFX 2010-12-20..2019-02-14": "coverage 0% (symbol reused or history missing)",
+    "PARA 2022-02-17..2025-08-07": "median $ volume 0.1m (not S&P-size)",
+    "PCL 2005-01-03..2016-02-19": "coverage 0% (symbol reused or history missing)",
+    "PD 2005-01-03..2007-03-19": "coverage 0% (symbol reused or history missing)",
+    "POM 2007-11-09..2016-03-23": "coverage 0% (symbol reused or history missing)",
+    "PWER 2005-01-03..2005-03-11": "coverage 0% (symbol reused or history missing)",
+    "Q 2005-01-03..2011-03-31": "coverage 0% (symbol reused or history missing)",
+    "QRVO 2015-06-12..2024-12-20": "coverage 0% (symbol reused or history missing)",
+    "S 2005-01-03..2013-07-08": "coverage 0% (symbol reused or history missing)",
+    "SBNY 2021-12-20..2023-03-14": "coverage 0% (symbol reused or history missing)",
+    "SDS 2005-01-03..2005-08-11": "coverage 0% (symbol reused or history missing)",
+    "SE 2007-01-03..2017-02-24": "coverage 0% (symbol reused or history missing)",
+    "SGP 2005-01-03..2009-11-03": "coverage 0% (symbol reused or history missing)",
+    "SHLD 2005-03-28..2012-09-04": "coverage 0% (symbol reused or history missing)",
+    "SII 2006-10-02..2010-08-26": "coverage 13% (symbol reused or history missing)",
+    "SNDK 2006-04-20..2016-05-11": "coverage 0% (symbol reused or history missing)",
+    "SPLS 2005-01-03..2017-09-12": "coverage 0% (symbol reused or history missing)",
+    "STI 2005-01-03..2019-12-06": "coverage 0% (symbol reused or history missing)",
+    "SUN 2005-01-03..2012-10-04": "coverage 0% (symbol reused or history missing)",
+    "TE 2005-01-03..2016-06-30": "coverage 0% (symbol reused or history missing)",
+    "TEK 2005-01-03..2007-11-15": "coverage 0% (symbol reused or history missing)",
+    "UCL 2005-01-03..2005-08-10": "coverage 0% (symbol reused or history missing)",
+    "UST 2005-01-03..2009-01-05": "coverage 0% (symbol reused or history missing)",
+    "VRTS 2005-01-03..2005-07-01": "coverage 0% (symbol reused or history missing)",
+    "WB 2005-01-03..2008-12-31": "coverage 0% (symbol reused or history missing)",
+    "WBD 2022-04-11..2026-10-09": "coverage 3% (symbol reused or history missing)",
+    "WEN 2005-01-03..2008-09-29": "median $ volume 1.0m (not S&P-size)"
+  },
+  "accepted": 627,
+  "cleaning": {
+    "raw_rows": 2225756,
+    "duplicate_rows_dropped": 0,
+    "rows_dropped_nonpositive_close": 0,
+    "missing_open_high_low_cells": 0,
+    "zero_volume_rows_set_to_missing": 364,
+    "ohlc_inconsistent_rows_flagged": 1,
+    "bad_close_outside_range_set_missing": [],
+    "spike_reversal_rows_set_missing": [
+      "AMTM 2024-09-30",
+      "FMCC 2008-07-15",
+      "FNMA 2008-07-15",
+      "FNMA 2008-09-09",
+      "OKE 2020-03-18",
+      "PCG 2018-11-15"
+    ],
+    "corporate_action_returns_invalidated": 3,
+    "tickers_with_internal_gaps": {
+      "AMD": 548,
+      "CIEN": 3727,
+      "DD": 108,
+      "DXC": 7,
+      "EQT": 647,
+      "FISV": 281,
+      "FSLR": 1119,
+      "JBL": 1964,
+      "KDP": 669,
+      "LDOS": 1150,
+      "PCG": 603,
+      "PTC": 3268,
+      "RIG": 892,
+      "TEL": 252,
+      "TER": 1367,
+      "TMUS": 1231,
+      "TT": 2624
+    },
+    "clean_rows": 2225756,
+    "n_tickers": 627,
+    "n_dates": 5477,
+    "first_date": "2005-01-03",
+    "last_date": "2026-10-09"
+  },
+  "n_extreme_return_flags": 98,
+  "extreme_return_flags": [
+    {
+      "ticker": "AAL",
+      "date": "2020-06-04",
+      "return": 0.411
+    },
+    {
+      "ticker": "AIG",
+      "date": "2008-09-15",
+      "return": -0.6079
+    },
+    {
+      "ticker": "AIG",
+      "date": "2008-09-17",
+      "return": -0.4533
+    },
+    {
+      "ticker": "AIG",
+      "date": "2008-09-19",
+      "return": 0.4312
+    },
+    {
+      "ticker": "AIG",
+      "date": "2009-03-16",
+      "return": 0.66
+    },
+    {
+      "ticker": "AIG",
+      "date": "2009-03-18",
+      "return": 0.4375
+    },
+    {
+      "ticker": "AIG",
+      "date": "2009-08-05",
+      "return": 0.6272
+    },
+    {
+      "ticker": "AMD",
+      "date": "2016-04-22",
+      "return": 0.5229
+    },
+    {
+      "ticker": "APA",
+      "date": "2020-03-09",
+      "return": -0.5386
+    },
+    {
+      "ticker": "APP",
+      "date": "2024-11-07",
+      "return": 0.4627
+    },
+    {
+      "ticker": "BIIB",
+      "date": "2005-02-28",
+      "return": -0.4255
+    },
+    {
+      "ticker": "BIIB",
+      "date": "2020-11-04",
+      "return": 0.4397
+    },
+    {
+      "ticker": "C",
+      "date": "2008-11-24",
+      "return": 0.5782
+    },
+    {
+      "ticker": "CBRE",
+      "date": "2008-11-13",
+      "return": 0.4297
+    },
+    {
+      "ticker": "CBRE",
+      "date": "2008-11-24",
+      "return": 0.4499
+    },
+    {
+      "ticker": "CBRE",
+      "date": "2009-03-25",
+      "return": 0.64
+    },
+    {
+      "ticker": "CIEN",
+      "date": "2024-11-25",
+      "return": 4.2412
+    },
+    {
+      "ticker": "CNC",
+      "date": "2025-07-02",
+      "return": -0.4037
+    },
+    {
+      "ticker": "CZR",
+      "date": "2020-03-24",
+      "return": 0.4416
+    },
+    {
+      "ticker": "DXC",
+      "date": "2016-05-25",
+      "return": 0.4208
+    },
+    {
+      "ticker": "DXCM",
+      "date": "2024-07-26",
+      "return": -0.4066
+    },
+    {
+      "ticker": "ECHO",
+      "date": "2025-06-16",
+      "return": 0.4911
+    },
+    {
+      "ticker": "ECHO",
+      "date": "2025-08-26",
+      "return": 0.7025
+    },
+    {
+      "ticker": "ENPH",
+      "date": "2020-02-19",
+      "return": 0.4244
+    },
+    {
+      "ticker": "EPAM",
+      "date": "2022-02-28",
+      "return": -0.4568
+    },
+    {
+      "ticker": "EXPE",
+      "date": "2011-12-21",
+      "return": -0.5116
+    },
+    {
+      "ticker": "FANG",
+      "date": "2020-03-09",
+      "return": -0.4465
+    },
+    {
+      "ticker": "FIS",
+      "date": "2008-07-03",
+      "return": -0.4593
+    },
+    {
+      "ticker": "FISV",
+      "date": "2025-10-29",
+      "return": -0.4404
+    },
+    {
+      "ticker": "FITB",
+      "date": "2008-09-29",
+      "return": -0.4363
+    },
+    {
+      "ticker": "FITB",
+      "date": "2009-02-06",
+      "return": 0.6037
+    },
+    {
+      "ticker": "FITB",
+      "date": "2009-05-08",
+      "return": 0.5869
+    },
+    {
+      "ticker": "FMCC",
+      "date": "2008-09-08",
+      "return": -0.8275
+    },
+    {
+      "ticker": "FMCC",
+      "date": "2008-09-19",
+      "return": 0.6667
+    },
+    {
+      "ticker": "FMCC",
+      "date": "2008-09-22",
+      "return": 0.5455
+    },
+    {
+      "ticker": "FMCC",
+      "date": "2008-09-23",
+      "return": 0.5529
+    },
+    {
+      "ticker": "FMCC",
+      "date": "2008-09-24",
+      "return": 0.4318
+    },
+    {
+      "ticker": "FNMA",
+      "date": "2008-09-08",
+      "return": -0.8963
+    },
+    {
+      "ticker": "FNMA",
+      "date": "2008-09-19",
+      "return": 0.4082
+    },
+    {
+      "ticker": "FNMA",
+      "date": "2008-09-23",
+      "return": 0.6582
+    },
+    {
+      "ticker": "FSLR",
+      "date": "2013-04-09",
+      "return": 0.4553
+    },
+    {
+      "ticker": "FSLR",
+      "date": "2021-10-11",
+      "return": 2.4616
+    },
+    {
+      "ticker": "GL",
+      "date": "2024-04-11",
+      "return": -0.5314
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-09-19",
+      "return": 0.6667
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-09-30",
+      "return": 0.722
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-10-13",
+      "return": 0.8057
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-11-07",
+      "return": -0.4319
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-11-11",
+      "return": -0.5441
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-11-13",
+      "return": 0.53
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-11-24",
+      "return": 0.8889
+    },
+    {
+      "ticker": "GNW",
+      "date": "2008-12-08",
+      "return": 0.4177
+    },
+    {
+      "ticker": "GNW",
+      "date": "2009-03-10",
+      "return": 0.4176
+    },
+    {
+      "ticker": "HBAN",
+      "date": "2008-07-17",
+      "return": 0.4025
+    },
+    {
+      "ticker": "HBAN",
+      "date": "2008-10-14",
+      "return": 0.5007
+    },
+    {
+      "ticker": "HIG",
+      "date": "2008-10-30",
+      "return": -0.5156
+    },
+    {
+      "ticker": "HIG",
+      "date": "2008-11-03",
+      "return": 0.5775
+    },
+    {
+      "ticker": "HIG",
+      "date": "2008-12-05",
+      "return": 1.0236
+    },
+    {
+      "ticker": "ICE",
+      "date": "2008-10-30",
+      "return": 0.408
+    },
+    {
+      "ticker": "JBL",
+      "date": "2022-10-07",
+      "return": 1.9995
+    },
+    {
+      "ticker": "JCI",
+      "date": "2007-07-02",
+      "return": -0.6052
+    },
+    {
+      "ticker": "KDP",
+      "date": "2018-07-10",
+      "return": -0.8206
+    },
+    {
+      "ticker": "KDP",
+      "date": "2021-04-13",
+      "return": 0.4891
+    },
+    {
+      "ticker": "KEY",
+      "date": "2008-10-14",
+      "return": 0.5425
+    },
+    {
+      "ticker": "LNC",
+      "date": "2008-11-25",
+      "return": 0.4367
+    },
+    {
+      "ticker": "LNC",
+      "date": "2008-12-05",
+      "return": 0.4218
+    },
+    {
+      "ticker": "MBI",
+      "date": "2008-01-22",
+      "return": 0.4655
+    },
+    {
+      "ticker": "MBI",
+      "date": "2008-09-18",
+      "return": 0.4418
+    },
+    {
+      "ticker": "MO",
+      "date": "2008-03-31",
+      "return": -0.6993
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-08-19",
+      "return": 1.7697
+    },
+    {
+      "ticker": "MS",
+      "date": "2008-10-13",
+      "return": 0.8698
+    },
+    {
+      "ticker": "MTG",
+      "date": "2008-09-18",
+      "return": 0.7463
+    },
+    {
+      "ticker": "MTG",
+      "date": "2008-10-31",
+      "return": 0.61
+    },
+    {
+      "ticker": "NCLH",
+      "date": "2020-03-24",
+      "return": 0.4219
+    },
+    {
+      "ticker": "NFLX",
+      "date": "2013-01-24",
+      "return": 0.4222
+    },
+    {
+      "ticker": "NKTR",
+      "date": "2017-03-20",
+      "return": 0.4265
+    },
+    {
+      "ticker": "NKTR",
+      "date": "2018-06-04",
+      "return": -0.4182
+    },
+    {
+      "ticker": "OXY",
+      "date": "2020-03-09",
+      "return": -0.5343
+    },
+    {
+      "ticker": "PCG",
+      "date": "2019-01-14",
+      "return": -0.5236
+    },
+    {
+      "ticker": "PCG",
+      "date": "2019-01-24",
+      "return": 0.7459
+    },
+    {
+      "ticker": "PCG",
+      "date": "2021-07-26",
+      "return": -0.5152
+    },
+    {
+      "ticker": "PENN",
+      "date": "2020-03-16",
+      "return": -0.448
+    },
+    {
+      "ticker": "PFG",
+      "date": "2008-12-05",
+      "return": 0.4076
+    },
+    {
+      "ticker": "PNC",
+      "date": "2009-01-20",
+      "return": -0.414
+    },
+    {
+      "ticker": "PTC",
+      "date": "2020-02-10",
+      "return": 3.3372
+    },
+    {
+      "ticker": "RF",
+      "date": "2008-09-29",
+      "return": -0.4107
+    },
+    {
+      "ticker": "RF",
+      "date": "2009-02-06",
+      "return": 0.4841
+    },
+    {
+      "ticker": "SSP",
+      "date": "2008-07-01",
+      "return": -0.9275
+    },
+    {
+      "ticker": "STT",
+      "date": "2009-01-20",
+      "return": -0.5904
+    },
+    {
+      "ticker": "TER",
+      "date": "2019-07-15",
+      "return": 1.4829
+    },
+    {
+      "ticker": "THC",
+      "date": "2009-04-21",
+      "return": 0.4437
+    },
+    {
+      "ticker": "THC",
+      "date": "2010-12-10",
+      "return": 0.5501
+    },
+    {
+      "ticker": "TMUS",
+      "date": "2018-05-03",
+      "return": 1.6254
+    },
+    {
+      "ticker": "TT",
+      "date": "2018-12-20",
+      "return": 2.1665
+    },
+    {
+      "ticker": "TXT",
+      "date": "2009-04-09",
+      "return": 0.4885
+    },
+    {
+      "ticker": "UIS",
+      "date": "2008-12-23",
+      "return": 0.4528
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2013-04-19",
+      "return": 0.6191
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2014-06-24",
+      "return": 0.4041
+    },
+    {
+      "ticker": "WY",
+      "date": "2010-07-20",
+      "return": -0.6189
+    }
+  ],
+  "first_date": "2005-01-03",
+  "last_date": "2026-10-09",
+  "n_dates": 5477,
+  "coverage_first_date": 0.5292929292929293,
+  "coverage_last_date": 0.9920477137176938,
+  "coverage_avg": 0.7717404647058299,
+  "coverage_by_year": {
+    "2005": 0.5365455108005843,
+    "2006": 0.5617413839158846,
+    "2007": 0.5844046737693868,
+    "2008": 0.6123800351444091,
+    "2009": 0.6399755749147301,
+    "2010": 0.6623046285646619,
+    "2011": 0.6756680153887998,
+    "2012": 0.7004957811384436,
+    "2013": 0.7229262350858866,
+    "2014": 0.7371814243353314,
+    "2015": 0.7547523441458409,
+    "2016": 0.7874230347342138,
+    "2017": 0.8163549557263552,
+    "2018": 0.8342187142466184,
+    "2019": 0.8562863429200064,
+    "2020": 0.88321719231352,
+    "2021": 0.9007779349363508,
+    "2022": 0.9210062001859696,
+    "2023": 0.9393240556660042,
+    "2024": 0.9511348230846717,
+    "2025": 0.966354318533245,
+    "2026": 0.9847925822580472
+  },
+  "sector_sources": {
+    "datahub current GICS": 507,
+    "missing": 68,
+    "manual label (verify)": 52
+  },
+  "never_found_on_yahoo": [
+    "AABA",
+    "ABKFQ",
+    "ABMD",
+    "ABS",
+    "ACAS",
+    "ACS",
+    "AET",
+    "AGN",
+    "AKS",
+    "ALTR",
+    "ALXN",
+    "AMCC",
+    "ANDV",
+    "ANDW",
+    "ANRZQ",
+    "ANSS",
+    "APCC",
+    "APOL",
+    "ARG",
+    "ARNC",
+    "ASN",
+    "ATGE",
+    "ATVI",
+    "AVP",
+    "AW",
+    "AYE",
+    "BCR",
+    "BDK",
+    "BHGE",
+    "BIG",
+    "BJS",
+    "BLS",
+    "BMC",
+    "BMET",
+    "BMS",
+    "BNI",
+    "BOL",
+    "BRCM",
+    "BRL",
+    "BSC",
+    "BTUUQ",
+    "BXLT",
+    "CA",
+    "CBE",
+    "CBH",
+    "CBS",
+    "CBSS",
+    "CCE",
+    "CCTYQ",
+    "CDAY",
+    "CELG",
+    "CEPH",
+    "CERN",
+    "CFC",
+    "CFN",
+    "CHIR",
+    "CHK",
+    "CIN",
+    "CITGQ",
+    "CMA",
+    "CMCSK",
+    "CMVT",
+    "CMX",
+    "COG",
+    "COL",
+    "COV",
+    "CPGX",
+    "CPNLQ",
+    "CTB",
+    "CTL",
+    "CTLT",
+    "CTRA",
+    "CTX",
+    "CTXS",
+    "CVC",
+    "CVG",
+    "CVH",
+    "CXO",
+    "DALRQ",
+    "DAY",
+    "DCNAQ",
+    "DDR",
+    "DF",
+    "DFS",
+    "DISCK",
+    "DISH",
+    "DJ",
+    "DNB",
+    "DNR",
+    "DO",
+    "DPHIQ",
+    "DRE",
+    "DTV",
+    "DWDP",
+    "EDS",
+    "EKDKQ",
+    "ENDP",
+    "EOP",
+    "ESRX",
+    "ESV",
+    "ETFC",
+    "EVHC",
+    "FBHS",
+    "FDC",
+    "FDO",
+    "FI",
+    "FII",
+    "FL",
+    "FLIR",
+    "FLT",
+    "FRC",
+    "FRX",
+    "FSH",
+    "FSL",
+    "FTR",
+    "GAS",
+    "GDW",
+    "GGP",
+    "GLK",
+    "GMCR",
+    "GPS",
+    "GTW",
+    "HAR",
+    "HBI",
+    "HCBK",
+    "HCP",
+    "HCR",
+    "HES",
+    "HET",
+    "HFC",
+    "HMA",
+    "HNZ",
+    "HOLX",
+    "HOT",
+    "HPC",
+    "HSH",
+    "HSP",
+    "IAC",
+    "IGT",
+    "IPG",
+    "JCP",
+    "JNPR",
+    "JNS",
+    "JNY",
+    "JOY",
+    "JP",
+    "JWN",
+    "K",
+    "KATE",
+    "KMG",
+    "KRB",
+    "KRFT",
+    "KRI",
+    "KSE",
+    "KSU",
+    "LEHMQ",
+    "LLL",
+    "LLTC",
+    "LM",
+    "LO",
+    "LSI",
+    "LVLT",
+    "LXK",
+    "MAY",
+    "MDP",
+    "MEE",
+    "MEL",
+    "MER",
+    "MERQ",
+    "MFE",
+    "MHS",
+    "MIL",
+    "MJN",
+    "MMC",
+    "MNK",
+    "MOLX",
+    "MON",
+    "MRO",
+    "MTLQQ",
+    "MWV",
+    "MWW",
+    "MXIM",
+    "MYG",
+    "MYL",
+    "NAV",
+    "NBL",
+    "NCC",
+    "NCR",
+    "NFB",
+    "NLSN",
+    "NOVL",
+    "NSM",
+    "NVLS",
+    "NXTL",
+    "NYX",
+    "ODP",
+    "OMX",
+    "PBCT",
+    "PBG",
+    "PCP",
+    "PDCO",
+    "PEAK",
+    "PETM",
+    "PGL",
+    "PGN",
+    "PLL",
+    "PMCS",
+    "PSFT",
+    "PTV",
+    "PVN",
+    "PX",
+    "PXD",
+    "QEP",
+    "QLGC",
+    "RAI",
+    "RBK",
+    "RDC",
+    "RHT",
+    "ROH",
+    "RRD",
+    "RSHCQ",
+    "RTN",
+    "RX",
+    "SAF",
+    "SATS",
+    "SBL",
+    "SCG",
+    "SEBL",
+    "SEE",
+    "SFA",
+    "SIAL",
+    "SIVB",
+    "SLR",
+    "SNI",
+    "SNV",
+    "SOV",
+    "SRCL",
+    "STJ",
+    "STR",
+    "SUNEQ",
+    "SVU",
+    "SWN",
+    "SWY",
+    "TEG",
+    "TGNA",
+    "TIE",
+    "TIF",
+    "TIN",
+    "TLAB",
+    "TMK",
+    "TOY",
+    "TRB",
+    "TSG",
+    "TSS",
+    "TWC",
+    "TWTR",
+    "TWX",
+    "TXU",
+    "UVN",
+    "VAR",
+    "VIAB",
+    "VIAC",
+    "VSTNQ",
+    "WAMUQ",
+    "WBA",
+    "WCG",
+    "WFM",
+    "WFT",
+    "WIN",
+    "WNDXQ",
+    "WPX",
+    "WRK",
+    "WWY",
+    "WYE",
+    "WYND",
+    "X",
+    "XEC",
+    "XL",
+    "XLNX",
+    "XTO"
+  ],
+  "sources": {
+    "prices": "Yahoo Finance chart API via yfinance 1.7 / direct client (scripts/fetch_yahoo.py)",
+    "membership": "github.com/fja05680/sp500 (point-in-time S&P 500 lists)",
+    "limitations": "Companies that were delisted, acquired or went bankrupt are mostly ABSENT (Yahoo keeps only live symbols) \u2014 survivorship bias remains, measured above. Adjusted closes include dividends and splits, but spin-offs are not reliably adjusted. Volume is split-adjusted. Sectors are current, not point-in-time."
+  }
+}

@@ -32,6 +32,7 @@ class ResearchSpec:
     neutralization: str = "none"     # 'none' | 'sector' | 'factors'
     direction: int = 1               # +1 = long high signal; -1 = bet the opposite way
     formula: str = ""                # used when hypothesis == "custom"
+    dataset: str = "v1"              # which processed dataset ('v1' or 'v3')
 
     def signal_params(self) -> dict:
         from quantlab.signals.library import HYPOTHESES
@@ -55,6 +56,12 @@ def build_universe(mkt: Market, spec: ResearchSpec) -> pd.DataFrame:
 
 def build_signal(mkt: Market, spec: ResearchSpec, universe: pd.DataFrame,
                  chars: dict | None = None) -> pd.DataFrame:
+    out = _build_signal(mkt, spec, universe, chars)
+    return out.astype("float32") if mkt.dataset != "v1" else out
+
+
+def _build_signal(mkt: Market, spec: ResearchSpec, universe: pd.DataFrame,
+                  chars: dict | None = None) -> pd.DataFrame:
     if spec.hypothesis == "custom":
         from quantlab.signals.formula import evaluate
         raw = evaluate(spec.formula, mkt) * spec.direction
@@ -90,6 +97,13 @@ def fm_progression(mkt: Market, signal: pd.DataFrame, universe: pd.DataFrame,
         ("+ momentum, volatility", ["beta", "size", "rev1", "rev5", "mom", "vol"], False),
         ("+ sector effects", ["beta", "size", "rev1", "rev5", "mom", "vol"], True),
     ]
+    extra = [k for k in ("mcap", "value", "profit", "invest") if k in chars]
+    if extra:
+        models.append(("+ size, value, profitability, investment",
+                       ["beta", "rev1", "rev5", "mom", "vol"] + extra, True))
+    if "earn" in chars:
+        models.append(("+ recent earnings", ["beta", "rev1", "rev5", "mom", "vol"] + extra +
+                       ["earn"], True))
     rows = []
     for name, ctrl, sec in models:
         regs = {"signal": signal, **{k: chars[k] for k in ctrl}}
@@ -104,8 +118,8 @@ def fm_progression(mkt: Market, signal: pd.DataFrame, universe: pd.DataFrame,
 def restrict(r: pd.Series, sample: str, horizon: int, lag: int) -> pd.Series:
     """Restrict a DAILY P&L series to a sample. P&L dated j is earned on interval j,
     so the research sample ends the day before the holdout starts."""
-    from quantlab.config import HOLDOUT_START
-    hs = pd.Timestamp(HOLDOUT_START)
+    from quantlab.config import holdout_for
+    hs = pd.Timestamp(holdout_for(r.index))
     if sample == "research":
         return r[r.index < hs]
     if sample == "holdout":

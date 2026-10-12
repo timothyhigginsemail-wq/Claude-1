@@ -146,6 +146,42 @@ The 2017–18 holdout has **not** been opened.
 - **Speed:** library IC series are precomputed (`scripts/precompute_library.py`) for the
   default universe and timing.
 
+## Version 3: 20 years of data, earnings, fundamentals
+
+| Data | Source | Coverage / notes |
+|---|---|---|
+| Daily OHLCV, total-return prices | Yahoo Finance chart API (`scripts/fetch_yahoo.py`) | 2005-01 to 2026-10, 627 of the 982 companies that were S&P 500 members in that period |
+| Point-in-time membership | fja05680/sp500 | 1996–2026 |
+| Earnings-announcement dates | SEC EDGAR 8-K Item 2.02 (`scripts/fetch_sec.py`) | 42k events, 507 companies; reaction day from the filing's acceptance time |
+| Fundamentals | SEC EDGAR XBRL company facts (`scripts/fetch_fundamentals.py`) | 2009+: market cap, book-to-market, ROE, asset growth; first-reported values, usable the day after filing |
+| Factors | Kenneth French Data Library | Mkt-RF, SMB, HML, RMW, CMA, MOM, ST reversal, RF |
+
+Validation built into `quantlab/data/build_v3.py`:
+- **Symbol reuse.** Yahoo hands old symbols to new companies (AVB, EA and others now
+  point to 2026 listings). Each membership period is accepted only if Yahoo covers
+  ≥ 80% of its days and median trading is ≥ $5m/day; 84 periods were rejected.
+- **Renames** are mapped to current symbols (`data/reference/yahoo_renames.csv`).
+- **Splits.** Market cap uses share counts converted to today's split basis at their
+  own as-of date. A naive version was off by 10× for Nvidia after its 2024 split; that
+  was caught and fixed, and the fix is tested.
+- **Point-in-time fundamentals.** Restated values are ignored, and an older period filed
+  late never overrides a newer one (unit-tested).
+
+**Survivorship is reduced, not removed.** We have data for 54% of the 2005 index, 75% of
+2015 and 97% of 2026, because Yahoo drops companies that later failed or were acquired.
+The Data page charts this.
+
+**First results (research sample 2005–2021).** H1, the pre-registered abnormal-volume
+test, is still null (5-day IC t = 0.6). Across 27 library signals, three survive Holm
+correction: small size within the S&P 500 (t = 4.7 at 20 days, flattered by
+survivorship), 1-day reversal (t = 4.2) and industry-adjusted reversal (t = 3.9). Value
+had the wrong sign over 2005–21, the "value winter". The best signal beats the
+reality-check null (p < 0.001), whereas on the 4-year v1 sample nothing did. Sample
+length matters.
+
+Rebuild everything with `python scripts/build_data_v3.py`; this needs network access to
+Yahoo, SEC and Ken French.
+
 ## Putting it on your iPhone (Streamlit Community Cloud, free)
 
 1. Go to <https://share.streamlit.io> and sign in with the GitHub account that owns this repo.

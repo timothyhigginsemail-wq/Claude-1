@@ -21,6 +21,11 @@ CONTROL_LABELS = {
     "rev1": "1-day return",
     "mom": "Momentum (6-1 month return)",
     "vol": "Volatility (20d)",
+    "mcap": "Size: log market cap (SEC shares × price)",
+    "value": "Value: book-to-market",
+    "profit": "Profitability: return on equity",
+    "invest": "Investment: asset growth",
+    "earn": "Earnings in the last 3 days",
 }
 
 
@@ -45,7 +50,7 @@ def rolling_beta(mkt: Market, universe: pd.DataFrame, window: int = 60) -> pd.Da
 def characteristics(mkt: Market, universe: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """All controls, each known at the close of day t."""
     r = mkt.daily_returns("close")
-    return {
+    out = {
         "beta": rolling_beta(mkt, universe),
         "size": np.log(mkt.dollar_volume.rolling(60, min_periods=20).mean()),
         "rev5": past_return(mkt, window=5),
@@ -53,6 +58,18 @@ def characteristics(mkt: Market, universe: pd.DataFrame) -> dict[str, pd.DataFra
         "mom": past_return(mkt, window=105, skip=21),
         "vol": r.rolling(20, min_periods=10).std(),
     }
+    # Better controls when the data have them (dataset v3). Missing fundamentals are
+    # filled with the cross-sectional median so a stock is not dropped from regressions.
+    if mkt.fund:
+        def filled(x):
+            return x.T.fillna(x.median(axis=1)).T
+        out["mcap"] = filled(np.log(mkt.fund["mcap"].where(mkt.fund["mcap"] > 0)))
+        out["value"] = filled(np.log(mkt.fund["book_to_market"].where(mkt.fund["book_to_market"] > 0)))
+        out["profit"] = filled(mkt.fund["roe"].clip(-1, 1))
+        out["invest"] = filled(mkt.fund["asset_growth"].clip(-0.5, 2))
+    if mkt.events is not None:
+        out["earn"] = mkt.events.astype(float).rolling(3, min_periods=1).max()
+    return out
 
 
 def sector_dummies(mkt: Market) -> pd.DataFrame:

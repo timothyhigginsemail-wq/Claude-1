@@ -29,6 +29,8 @@ def summarize(ics: pd.DataFrame, names: dict[str, str], families: dict[str, str]
     rows = []
     for key, g in c.groupby("key", sort=False):
         g = g.set_index("h")
+        if g["t"].notna().sum() == 0:      # no data for this signal on this dataset
+            continue
         best_h = g["t"].abs().idxmax()
         row = {"key": key, "signal": names.get(key, key), "family": families.get(key, ""),
                "best_h": int(best_h), "best_t": g.loc[best_h, "t"],

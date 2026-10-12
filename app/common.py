@@ -13,7 +13,7 @@ import pandas as pd  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from quantlab.config import HOLDOUT_START  # noqa: E402
+from quantlab.config import DATASETS, DEFAULT_DATASET, holdout_for  # noqa: E402
 from quantlab.content import interpret  # noqa: E402,F401
 from quantlab.content.glossary import GLOSSARY, help_text, stars  # noqa: E402,F401
 from quantlab.content.org import STAGES  # noqa: E402
@@ -33,8 +33,24 @@ from quantlab.signals.library import HYPOTHESES  # noqa: E402
 HORIZONS = (1, 2, 5, 10, 20)
 COLORS = {"gross": "#2563eb", "net": "#dc2626", "long": "#059669", "short": "#d97706",
           "neutral": "#6b7280", "accent": "#7c3aed"}
-SAMPLE_LABELS = {"research": "Research sample (2013–2016)", "full": "Full sample (2013–2018)",
-                 "holdout": "Holdout vault (2017–2018)"}
+def periods(ds: str | None = None) -> dict:
+    from quantlab.config import PERIODS
+    return PERIODS[ds or current_dataset()]
+
+
+class _SampleLabels(dict):
+    """Sample names that follow the selected dataset."""
+    def __getitem__(self, k):
+        p = periods()
+        return {"research": f"Research sample ({p['research']})",
+                "full": f"Full sample ({p['full']})",
+                "holdout": f"Holdout vault ({p['holdout']})"}[k]
+
+    def get(self, k, default=None):
+        return self[k]
+
+
+SAMPLE_LABELS = _SampleLabels()
 
 
 # ---------------------------------------------------------------- state
@@ -76,6 +92,11 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
     _init_state()
     with st.sidebar:
         st.markdown("### Research specification")
+        ds = persist(st.selectbox, "Dataset", "dataset", DEFAULT_DATASET, options=list(DATASETS),
+                     format_func=lambda k: DATASETS[k]["label"],
+                     help="v3 (default): 2005–2026, 627 stocks, total returns, earnings dates "
+                          "and fundamentals. v1: the original 2013–2018 data, kept for "
+                          "comparison.")
         keys = list(HYPOTHESES)
         custom = st.session_state["p"].get("custom_formula")
         if custom:
@@ -128,8 +149,8 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
                             horizon=int(horizon), execution=execution,
                             min_price=float(min_price), liquidity_pct=liq / 100.0,
                             neutralization=neutral, direction=-1 if flip else 1,
-                            formula=custom if hyp == "custom" else "")
-        trial = (hyp, spec.signal_params().__repr__(), spec.formula, horizon, execution,
+                            formula=custom if hyp == "custom" else "", dataset=ds)
+        trial = (ds, hyp, spec.signal_params().__repr__(), spec.formula, horizon, execution,
                  neutral, flip)
         st.session_state.trials.add(trial)
         n = len(st.session_state.trials)
@@ -138,7 +159,7 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
         persist(st.toggle, "Plain-English readings", "plain", True,
                 help="Show a short interpretation under each result.")
         if not st.session_state.holdout_unlocked:
-            st.caption(f"🔒 Holdout ({HOLDOUT_START[:4]}+) is locked.")
+            st.caption(f"🔒 Holdout ({DATASETS[ds]['holdout'][:4]}+) is locked.")
     return spec, sample
 
 
@@ -158,83 +179,104 @@ def cost_controls() -> CostSpec:
 
 
 # ---------------------------------------------------------------- cached data
-@st.cache_resource(show_spinner="Loading market data…")
-def market():
-    return load_market()
+def current_dataset() -> str:
+    return st.session_state.get("p", {}).get("dataset", DEFAULT_DATASET)
 
 
-@st.cache_resource(show_spinner=False)
-def universe(min_price: float, liq: float):
-    return build_universe(market(), ResearchSpec(min_price=min_price, liquidity_pct=liq))
+@st.cache_resource(show_spinner="Loading market data (≈10 s the first time)…", max_entries=2)
+def _market(ds: str):
+    return load_market(ds)
 
 
-@st.cache_resource(show_spinner="Computing factor exposures…")
-def chars(min_price: float, liq: float):
-    return characteristics(market(), universe(min_price, liq))
+def market(ds: str | None = None):
+    return _market(ds or current_dataset())
+
+
+@st.cache_resource(show_spinner=False, max_entries=4)
+def universe(min_price: float, liq: float, ds: str | None = None):
+    ds = ds or current_dataset()
+    return build_universe(market(ds), ResearchSpec(min_price=min_price, liquidity_pct=liq,
+                                                   dataset=ds))
+
+
+@st.cache_resource(show_spinner="Computing factor exposures…", max_entries=2)
+def chars(min_price: float, liq: float, ds: str | None = None):
+    ds = ds or current_dataset()
+    return characteristics(market(ds), universe(min_price, liq, ds))
 
 
 def uni(spec: ResearchSpec):
-    return universe(spec.min_price, spec.liquidity_pct)
+    return universe(spec.min_price, spec.liquidity_pct, spec.dataset)
 
 
 def ch(spec: ResearchSpec):
-    return chars(spec.min_price, spec.liquidity_pct)
+    return chars(spec.min_price, spec.liquidity_pct, spec.dataset)
 
 
-@st.cache_resource(show_spinner="Computing signal…", max_entries=12)
+@st.cache_resource(show_spinner="Computing signal…", max_entries=6)
 def signal(spec: ResearchSpec):
-    return build_signal(market(), spec, uni(spec), ch(spec) if spec.neutralization == "factors" else None)
+    return build_signal(market(spec.dataset), spec, uni(spec), ch(spec) if spec.neutralization == "factors" else None)
 
 
 @st.cache_data(show_spinner="Testing predictive power…", max_entries=32)
 def ic_table(spec: ResearchSpec, sample: str):
-    return an.ic_by_horizon(market(), signal(spec), uni(spec), HORIZONS, spec.execution, sample)
+    return an.ic_by_horizon(market(spec.dataset), signal(spec), uni(spec), HORIZONS, spec.execution, sample)
 
 
 @st.cache_data(show_spinner=False, max_entries=32)
 def ic_series(spec: ResearchSpec, horizon: int):
     from quantlab.research.returns import forward_returns
-    return rank_ic(signal(spec), forward_returns(market(), horizon, spec.execution), uni(spec))
+    return rank_ic(signal(spec), forward_returns(market(spec.dataset), horizon, spec.execution), uni(spec))
 
 
 @st.cache_data(show_spinner="Sorting stocks into quantiles…", max_entries=32)
 def quantiles(spec: ResearchSpec, sample: str, n_q: int = 5):
-    return an.quantile_spreads(market(), signal(spec), uni(spec), spec.horizon, n_q,
+    return an.quantile_spreads(market(spec.dataset), signal(spec), uni(spec), spec.horizon, n_q,
                                spec.execution, sample)
 
 
 @st.cache_data(show_spinner="Measuring signal decay…", max_entries=16)
 def decay(spec: ResearchSpec, sample: str):
-    return an.ic_decay(market(), signal(spec), uni(spec), 20, spec.execution, sample)
+    return an.ic_decay(market(spec.dataset), signal(spec), uni(spec), 20, spec.execution, sample)
 
 
 @st.cache_data(show_spinner="Double-sorting on past returns…", max_entries=16)
 def double_sort(spec: ResearchSpec, sample: str, cond_window: int):
     from quantlab.signals.library import past_return
-    return an.double_sort(market(), signal(spec), past_return(market(), cond_window), uni(spec),
+    return an.double_sort(market(spec.dataset), signal(spec), past_return(market(spec.dataset), cond_window), uni(spec),
                           spec.horizon, 3, spec.execution, sample)
 
 
-@st.cache_resource(show_spinner=False)
-def regimes(min_price: float, liq: float):
-    return an.regime_labels(market(), universe(min_price, liq))
+@st.cache_resource(show_spinner=False, max_entries=2)
+def regimes(min_price: float, liq: float, ds: str | None = None):
+    ds = ds or current_dataset()
+    return an.regime_labels(market(ds), universe(min_price, liq, ds))
 
 
 @st.cache_data(show_spinner="Running Fama-MacBeth regressions…", max_entries=16)
 def fm_table(spec: ResearchSpec, sample: str):
-    return fm_progression(market(), signal(spec), uni(spec), ch(spec), spec.horizon,
+    return fm_progression(market(spec.dataset), signal(spec), uni(spec), ch(spec), spec.horizon,
                           spec.execution, sample)
 
 
-@st.cache_resource(show_spinner="Backtesting portfolio…", max_entries=8)
+@st.cache_data(show_spinner="Separating earnings days from the rest…", max_entries=8)
+def earn_split(spec: ResearchSpec, sample: str):
+    from quantlab.research.earnings_tools import earnings_split
+    m = market(spec.dataset)
+    if m.events is None:
+        return None
+    return earnings_split(m, signal(spec), uni(spec), spec.horizon, spec.execution, sample)
+
+
+@st.cache_resource(show_spinner="Backtesting portfolio…", max_entries=4)
 def backtest(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec):
-    return run_backtest(market(), signal(spec), uni(spec), pspec, cspec, spec.execution,
-                        beta=ch(spec)["beta"])
+    return run_backtest(market(spec.dataset), signal(spec), uni(spec), pspec, cspec,
+                        spec.execution, beta=ch(spec)["beta"], compact=spec.dataset != "v1")
 
 
 @st.cache_data(show_spinner="Building factor portfolios…", max_entries=8)
 def factor_rets(spec: ResearchSpec, holding: int):
-    return rb.factor_returns(market(), ch(spec), uni(spec), holding, spec.execution)
+    return rb.factor_returns(market(spec.dataset), ch(spec), uni(spec), holding, spec.execution)
 
 
 @st.cache_data(show_spinner="Testing the whole parameter grid (≈10 s)…", max_entries=8)
@@ -243,33 +285,44 @@ def grid(spec: ResearchSpec):
     Fixed signals and custom formulas: the whole signal library plus this signal."""
     key = spec.hypothesis
     if key != "custom" and key != "placebo" and HYPOTHESES[key].tunable:
-        return rb.grid_ic(market(), key, uni(spec), execution=spec.execution)
-    lib = library_ics(spec.min_price, spec.liquidity_pct, spec.execution)
+        from quantlab.research.library_cache import is_default, load_grid
+        if is_default(spec.min_price, spec.liquidity_pct, spec.execution):
+            g = load_grid(spec.dataset, key)
+            if g is not None:
+                return g
+        return rb.grid_ic(market(spec.dataset), key, uni(spec), execution=spec.execution)
+    lib = library_ics(spec.min_price, spec.liquidity_pct, spec.execution, spec.dataset)
     from quantlab.research.returns import forward_returns
     ics = lib.copy()
     if key == "custom" or key == "placebo":
         sig = signal(spec)
         for h in (1, 5, 10, 20):
-            ics[f"{key}@{h}"] = rank_ic(sig, forward_returns(market(), h, spec.execution),
+            ics[f"{key}@{h}"] = rank_ic(sig, forward_returns(market(spec.dataset), h, spec.execution),
                                         uni(spec))
     rows = [{"config": c, "lookback": c.rsplit("@", 1)[0], "window": 0,
              "horizon": int(c.rsplit("@", 1)[1])} for c in ics]
     return ics, pd.DataFrame(rows).set_index("config")
 
 
-@st.cache_data(show_spinner="Scoring the signal library (≈20 s the first time)…", max_entries=4)
-def library_ics(min_price: float, liq: float, execution: str):
+@st.cache_data(show_spinner="Scoring the signal library (can take a minute)…", max_entries=4)
+def library_ics(min_price: float, liq: float, execution: str, ds: str | None = None):
     from quantlab.research.library_cache import compute_library_ics, is_default, load_cached
+    ds = ds or current_dataset()
     if is_default(min_price, liq, execution):
-        cached = load_cached()
+        cached = load_cached(ds)
         if cached is not None:
             return cached.astype(float)
-    return compute_library_ics(market(), universe(min_price, liq), execution)
+    return compute_library_ics(market(ds), universe(min_price, liq, ds), execution)
 
 
 @st.cache_data(show_spinner="Simulating noise signals (≈15 s)…", max_entries=4)
 def placebo(spec: ResearchSpec, n_sims: int = 200):
-    return rb.placebo_tstats(market(), uni(spec), spec.horizon, n_sims, spec.execution, "research")
+    from quantlab.research.library_cache import is_default, load_placebo
+    if is_default(spec.min_price, spec.liquidity_pct, spec.execution) and n_sims == 200:
+        cached = load_placebo(spec.dataset, spec.horizon)
+        if cached is not None:
+            return cached
+    return rb.placebo_tstats(market(spec.dataset), uni(spec), spec.horizon, n_sims, spec.execution, "research")
 
 
 # ---------------------------------------------------------------- UI helpers
@@ -385,7 +438,7 @@ def sample_note(sample: str):
 
 def in_sample_dates(index: pd.DatetimeIndex, sample: str) -> pd.DatetimeIndex:
     """Dates a page may DISPLAY for the chosen sample (keeps the holdout unseen)."""
-    hs = pd.Timestamp(HOLDOUT_START)
+    hs = pd.Timestamp(holdout_for(index))
     if sample == "research":
         return index[index < hs]
     if sample == "holdout":

@@ -2,9 +2,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from common import (G, backtest, hyp_info, terms, cost_controls, fm_table, grid, ic_series, ic_table,
+from common import (G, backtest, hyp_info, market, periods, terms, cost_controls, fm_table, grid, ic_series, ic_table,
                     lag_of, org_box, portfolio_controls, technical)
-from quantlab.config import HOLDOUT_START
 from quantlab.portfolio.backtest import performance
 from quantlab.research import robustness as rb
 from quantlab.research.analysis import sample_mask
@@ -15,7 +14,7 @@ from quantlab.research.stats import deflated_sharpe, holm
 spec = st.session_state.spec
 st.title("9 · Research decision")
 st.markdown("The decision rules below were fixed **before** looking at results. Every "
-            "number is recomputed from the research sample (2013–2016) for the "
+            f"number is recomputed from the research sample ({periods()['research']}) for the "
             "specification in the sidebar.")
 terms("pre_registration", "holm", "walk_forward", "dsr", "breakeven")
 st.markdown(f"**Hypothesis:** {hyp_info(spec).name} · lookback {spec.lookback} · "
@@ -38,7 +37,7 @@ with st.spinner("Assembling the evidence…"):
         p_holm = float(gs.loc[key, "p_holm"])
     else:  # current spec is outside the grid: add it as one more test
         p_holm = float(holm(np.append(gs["p_nw"].values, ic.p_nw))[-1])
-    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(HOLDOUT_START))
+    wf = rb.walk_forward(ics, cfg, lag=lag, end=pd.Timestamp(market().holdout_start))
     bt = backtest(spec, pspec, cspec)
     g = restrict(bt.daily["gross"], "research", pspec.holding, lag)
     n = restrict(bt.daily["net"], "research", pspec.holding, lag)
@@ -60,6 +59,7 @@ with st.spinner("Assembling the evidence…"):
     }
     # FM t, signed so that the rule also checks the direction matches the raw IC.
     ev["t_fm_full"] = fm.iloc[-1].t_nw if np.sign(fm.iloc[-1].coef_bps) == sign else -abs(fm.iloc[-1].t_nw)
+    ev["period_labels"] = periods()
     res = evaluate(ev)
 
 color = {"REJECT": "error", "REVISE": "warning", "ADVANCE": "success"}
@@ -74,7 +74,7 @@ for c in res["criteria"]:
         st.markdown(f"**Why it matters.** {c.why}")
 
 st.subheader("What this research establishes")
-est = [f"On 2013–2016 S&P 500 survivors, the {h}-day rank IC of this specification is "
+est = [f"On {periods()['research']} S&P 500 survivors, the {h}-day rank IC of this specification is "
        f"{ic.mean_ic:+.4f} (Newey-West t = {ic.t_nw:+.2f}).",
        f"Its sign agrees with the full-period average in {ev['years_same_sign']} of "
        f"{ev['n_years']} years.",

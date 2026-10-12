@@ -332,6 +332,54 @@ for _k, _n, _f, _st, _me, _sg, _fn, _rf in [
 ]:
     _add(_k, _n, _f, _st, _me, _sg, _fn, _rf)
 
+def _pead(mkt, **_):
+    if mkt.events is None:
+        return pd.DataFrame(np.nan, index=mkt.dates, columns=mkt.tickers)
+    from quantlab.research.earnings_tools import post_earnings_drift
+    return post_earnings_drift(mkt)
+
+
+HYPOTHESES["pead"] = Hypothesis(
+    key="pead", name="E1 · Post-earnings drift", family="Earnings",
+    statement="Stocks that jumped on their last earnings announcement keep outperforming for "
+              "weeks; those that fell keep underperforming.",
+    mechanism="Investors under-react to earnings news, so prices adjust slowly (one of the "
+              "longest-documented anomalies). Proxy: the return on the earnings-reaction day.",
+    predicted_sign="Positive", compute=_pead, reference="Bernard & Thomas (1989); "
+    "Chan, Jegadeesh & Lakonishok (1996)", tunable=False)
+
+def _fund(name, transform):
+    def f(mkt, **_):
+        if not mkt.fund or name not in mkt.fund:
+            return pd.DataFrame(np.nan, index=mkt.dates, columns=mkt.tickers)
+        return transform(mkt.fund[name].astype(float))
+    return f
+
+
+for _k, _n, _st, _me, _sg, _fn, _rf in [
+    ("value_bm", "F1 · Value (book-to-market)",
+     "Stocks that are cheap relative to their book value outperform expensive ones.",
+     "Risk compensation for distressed firms, or investor over-extrapolation of growth.",
+     "Positive", _fund("book_to_market", lambda x: np.log(x.where(x > 0))),
+     "Fama & French (1992); Lakonishok, Shleifer & Vishny (1994)"),
+    ("small_size", "F2 · Small size (within the S&P 500)",
+     "Smaller companies outperform larger ones.",
+     "Size premium; weak in large caps and since the 1980s.", "Positive",
+     _fund("mcap", lambda x: -np.log(x.where(x > 0))), "Banz (1981); Fama & French (1993)"),
+    ("profitability", "F3 · Profitability (ROE)",
+     "More profitable firms outperform less profitable ones.",
+     "Investors underweight the persistence of profitability; also a 'quality' premium.",
+     "Positive", _fund("roe", lambda x: x.clip(-1, 1)),
+     "Novy-Marx (2013); Fama & French (2015)"),
+    ("low_investment", "F4 · Low asset growth",
+     "Firms that grow their assets slowly outperform aggressive investors.",
+     "Managers over-invest; markets over-extrapolate growth.", "Positive",
+     _fund("asset_growth", lambda x: -x.clip(-0.5, 2)),
+     "Cooper, Gulen & Schill (2008); Fama & French (2015)"),
+]:
+    HYPOTHESES[_k] = Hypothesis(key=_k, name=_n, statement=_st, mechanism=_me, predicted_sign=_sg,
+                                compute=_fn, family="Fundamental", reference=_rf, tunable=False)
+
 for _k in ("abnormal_volume", "volume_reversal", "volume_trend"):
     HYPOTHESES[_k].family = "Volume"
 HYPOTHESES["abnormal_volume"].reference = "Gervais, Kaniel & Mingelgrin (2001)"

@@ -23,8 +23,10 @@ def perturbed_market(panel):
 
 
 @pytest.fixture(scope="module")
-def pair(panel):
-    return market_from_long(panel), perturbed_market(panel)
+def pair(panel, mkt):
+    a, b = market_from_long(panel), perturbed_market(panel)
+    a.events = b.events = mkt.events        # earnings DATES are not perturbed
+    return a, b
 
 
 @pytest.mark.parametrize("key", [k for k in HYPOTHESES])
@@ -33,6 +35,8 @@ def test_signals_have_no_lookahead(pair, key, window):
     a, b = pair
     sa = compute_signal(a, key, window=window)
     sb = compute_signal(b, key, window=window)
+    if sa.isna().all().all():
+        pytest.skip("signal needs data the synthetic market lacks (fundamentals)")
     pd.testing.assert_frame_equal(sa.iloc[: CUT + 1], sb.iloc[: CUT + 1])
     if not HYPOTHESES[key].is_placebo:
         # sanity: the perturbation does change the future, so the test has power

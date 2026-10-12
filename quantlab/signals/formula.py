@@ -43,6 +43,8 @@ FIELDS = {
     "r": "Today's close-to-close return",
     "ovn": "Today's overnight return (open vs. previous close)",
     "intraday": "Today's intraday return (close vs. open)",
+    "earn": "1 on an earnings-reaction day, else 0 (v3 data only)",
+    "days_since_earn": "Trading days since the last earnings reaction (v3 data only)",
 }
 FUNCTIONS = {
     "ret(n)": "Return over the last n days (close to close)",
@@ -72,6 +74,8 @@ EXAMPLES = [
     ("Abnormal volume only on down days", "where(r < 0, log(volume / mean(lag(volume, 1), 20)), 0)"),
     ("Distance from 50-day average", "-(close / mean(close, 50) - 1)"),
     ("Sector-relative 1-month reversal", "-sector_demean(ret(21))"),
+    ("Abnormal volume, non-earnings days only (v3)",
+     "where(days_since_earn > 3, log(volume / mean(lag(volume, 1), 20)), 0)"),
 ]
 
 _BINOPS = {ast.Add: np.add, ast.Sub: np.subtract, ast.Mult: np.multiply, ast.Div: np.divide,
@@ -211,6 +215,12 @@ def evaluate(text_or_parsed, mkt: Market) -> pd.DataFrame:
         "ovn": (mkt.open / mkt.close.shift(1) - 1).where(mkt.ret_valid),
         "intraday": mkt.close / mkt.open - 1,
     }
+    if mkt.events is not None and ("earn" in p.fields or "days_since_earn" in p.fields):
+        from quantlab.research.earnings_tools import days_since_earnings
+        data["earn"] = mkt.events.astype(float).where(mkt.close.notna())
+        data["days_since_earn"] = days_since_earnings(mkt)
+    elif "earn" in p.fields or "days_since_earn" in p.fields:
+        raise FormulaError("Earnings dates are only available on the v3 dataset.")
     sector = mkt.sector
 
     def ev(node):
@@ -303,13 +313,21 @@ def lookahead_check(text: str, mkt: Market, n_tickers: int = 60, seed: int = 0) 
         return df[cols].copy()
 
     fields = ["open", "high", "low", "close", "volume"]
+    ev = sub(mkt.events) if mkt.events is not None else None
     a = M(**{f: sub(getattr(mkt, f)) for f in fields}, ret_valid=sub(mkt.ret_valid),
-          member=sub(mkt.member), sector=mkt.sector.reindex(cols), coverage=mkt.coverage)
+          member=sub(mkt.member), sector=mkt.sector.reindex(cols), coverage=mkt.coverage,
+          events=ev)
     b = M(**{f: sub(getattr(mkt, f)) for f in fields}, ret_valid=sub(mkt.ret_valid),
-          member=sub(mkt.member), sector=mkt.sector.reindex(cols), coverage=mkt.coverage)
+          member=sub(mkt.member), sector=mkt.sector.reindex(cols), coverage=mkt.coverage,
+          events=ev)
+    if mkt.adj_close is not None:
+        a.adj_close = sub(mkt.adj_close)
+        b.adj_close = sub(mkt.adj_close)
     noise = np.exp(rng.normal(0, 0.3, b.close.iloc[cut + 1:].shape))
     for f in ["open", "high", "low", "close"]:
         getattr(b, f).iloc[cut + 1:] *= noise
+    if b.adj_close is not None:
+        b.adj_close.iloc[cut + 1:] *= noise
     b.volume.iloc[cut + 1:] *= np.exp(rng.normal(0, 1, b.volume.iloc[cut + 1:].shape))
     sa, sb = evaluate(text, a), evaluate(text, b)
     return bool(np.allclose(sa.iloc[: cut + 1].values, sb.iloc[: cut + 1].values,

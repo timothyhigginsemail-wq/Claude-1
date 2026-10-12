@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, G, fm_table, interpret, reading, terms, ic_table, org_box, pitfalls, sample_note, show, style,
+from common import (COLORS, G, earn_split, fm_table, interpret, reading, terms, ic_table, org_box, pitfalls, sample_note, show, style,
                     technical, tstat_badge)
 from quantlab.research.pipeline import ResearchSpec
 
@@ -37,6 +37,28 @@ elif abs(last.t_nw) >= 2:
     st.success("The coefficient remains significant with all available controls.")
 else:
     st.info("Not significant with or without controls.")
+
+st.subheader("Is it just earnings news?")
+es = earn_split(spec, sample)
+if es is None:
+    st.info("Earnings dates are available on the v3 dataset (switch in the sidebar).")
+else:
+    terms("ic")
+    st.dataframe(es, column_config={
+        "mean_ic": st.column_config.NumberColumn("Mean IC", format="%+.4f", help=G("ic")),
+        "t_nw": st.column_config.NumberColumn("t", format="%+.2f", help=G("t_stat")),
+        "obs_per_day": st.column_config.NumberColumn("Stocks per day", format="%.0f")})
+    a, x = es.iloc[0], es.iloc[1]
+    if abs(a.t_nw) >= 2 and abs(x.t_nw) < 2:
+        reading("The effect disappears once stocks that just reported earnings are removed: "
+                "the signal is mostly an earnings-news proxy.")
+    elif abs(x.t_nw) >= 2:
+        reading(f"The effect survives outside earnings windows (t = {x.t_nw:+.2f}), so it is "
+                "not just earnings news.")
+    else:
+        reading("Neither with nor without earnings days is the effect distinguishable from noise.")
+    st.caption("'Recent earnings' = an earnings reaction day (SEC 8-K Item 2.02) on t or the "
+               "two days before — known at the close of t, so no look-ahead.")
 
 st.subheader("Raw vs. neutralised signal")
 rows = []

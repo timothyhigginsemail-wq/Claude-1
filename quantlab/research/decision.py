@@ -100,13 +100,15 @@ def evaluate(ev: dict) -> dict:
         "non-normal returns (Bailey & López de Prado, 2014)."))
 
     ho = ev.get("holdout")
+    labels = ev.get("period_labels") or {"holdout": "holdout", "data_note": "survivors only"}
+    hold = labels["holdout"]
     if ho is None:
-        c.append(Criterion("Holdout confirmation", "Does it work on untouched 2017-18 data?",
+        c.append(Criterion("Holdout confirmation", f"Does it work on untouched {hold} data?",
                            "Same sign and |t| ≥ 1.5 on the holdout", "locked", UNCLEAR,
                            "The holdout is opened once, after the specification is frozen."))
     else:
         ok = np.sign(ho["mean_ic"]) == sign and abs(ho["t_ic"]) >= 1.5
-        c.append(Criterion("Holdout confirmation", "Does it work on untouched 2017-18 data?",
+        c.append(Criterion("Holdout confirmation", f"Does it work on untouched {hold} data?",
                            "Same sign and |t| ≥ 1.5 on the holdout", _fmt(ho["t_ic"]),
                            PASS if ok else FAIL,
                            "A one-shot test the specification could not have been tuned on."))
@@ -114,7 +116,7 @@ def evaluate(ev: dict) -> dict:
     c.append(Criterion(
         "Data adequacy", "Is the dataset good enough for a production decision?",
         "Survivorship-free, ≥ 10 years, point-in-time, with spreads & events",
-        "5 yrs, survivors only", FAIL,
+        labels["data_note"], FAIL,
         "Free data caps how far ANY conclusion can go: at best 'worth testing on "
         "institutional data'."))
 

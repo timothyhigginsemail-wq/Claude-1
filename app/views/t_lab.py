@@ -139,7 +139,7 @@ with tab_new:
                 "source": mode, "formula": formula, "library_key": None if formula else key}
         if formula:
             with st.spinner("Checking for look-ahead…"):
-                card["lookahead_ok"] = lookahead_check(formula, market())
+                card["lookahead_ok"] = lookahead_check(formula, market(spec.dataset))
         else:
             card["lookahead_ok"] = True
         ss.lab_cards.append(card)
@@ -153,17 +153,17 @@ def card_spec(card) -> ResearchSpec:
     if card.get("formula"):
         return ResearchSpec(hypothesis="custom", formula=card["formula"], horizon=card["horizon"],
                             min_price=spec.min_price, liquidity_pct=spec.liquidity_pct,
-                            execution=spec.execution)
+                            execution=spec.execution, dataset=spec.dataset)
     return ResearchSpec(hypothesis=card["library_key"], horizon=card["horizon"],
                         min_price=spec.min_price, liquidity_pct=spec.liquidity_pct,
-                        execution=spec.execution)
+                        execution=spec.execution, dataset=spec.dataset)
 
 
 @st.cache_resource(show_spinner="Computing library signals for comparison…")
-def library_ranks_sampled(min_price, liq):
+def library_ranks_sampled(min_price, liq, ds):
     """Daily ranks of every library signal on every 5th day (for fast correlations)."""
-    m = market()
-    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq))
+    m = market(ds)
+    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq, dataset=ds))
     out = {}
     for k, h in HYPOTHESES.items():
         if h.is_placebo:
@@ -173,12 +173,12 @@ def library_ranks_sampled(min_price, liq):
 
 
 @st.cache_data(show_spinner="Measuring overlap with known signals…", max_entries=16)
-def overlap(formula, library_key, min_price, liq):
-    s = card_signal(formula, library_key, min_price, liq)
-    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq))
+def overlap(formula, library_key, min_price, liq, ds):
+    s = card_signal(formula, library_key, min_price, liq, ds)
+    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq, dataset=ds))
     r = s.where(u).iloc[::5].rank(axis=1)
     rows = []
-    for k, R in library_ranks_sampled(min_price, liq).items():
+    for k, R in library_ranks_sampled(min_price, liq, ds).items():
         if k == library_key:
             continue
         rows.append({"key": k, "signal": HYPOTHESES[k].name,
@@ -187,17 +187,18 @@ def overlap(formula, library_key, min_price, liq):
 
 
 @st.cache_resource(show_spinner="Computing your signal…", max_entries=16)
-def card_signal(formula, library_key, min_price, liq):
-    return evaluate(formula, market()) if formula else compute_signal(market(), library_key)
+def card_signal(formula, library_key, min_price, liq, ds):
+    m = market(ds)
+    return evaluate(formula, m) if formula else compute_signal(m, library_key)
 
 
 @st.cache_data(show_spinner="Testing what is new about it…", max_entries=16)
-def incremental(formula, library_key, min_price, liq, execution, top_keys):
+def incremental(formula, library_key, min_price, liq, execution, top_keys, ds):
     from quantlab.research.analysis import ic_by_horizon
-    m = market()
-    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq))
-    s = card_signal(formula, library_key, min_price, liq)
-    controls = dict(ch(ResearchSpec(min_price=min_price, liquidity_pct=liq)))
+    m = market(ds)
+    u = uni(ResearchSpec(min_price=min_price, liquidity_pct=liq, dataset=ds))
+    s = card_signal(formula, library_key, min_price, liq, ds)
+    controls = dict(ch(ResearchSpec(min_price=min_price, liquidity_pct=liq, dataset=ds)))
     for k in top_keys:
         controls[f"lib_{k}"] = compute_signal(m, k)
     resid = neutralize(s, controls, u, sector_dummies(m))
@@ -263,7 +264,8 @@ with tab_res:
 
         st.subheader("Is it new?")
         terms("correlation", "incremental", "neutralize")
-        ov = overlap(card.get("formula"), card.get("library_key"), spec.min_price, spec.liquidity_pct)
+        ov = overlap(card.get("formula"), card.get("library_key"), spec.min_price, spec.liquidity_pct,
+                     spec.dataset)
         top = ov.head(5)
         fig = go.Figure(go.Bar(x=top["corr"], y=top["signal"], orientation="h",
                                marker_color=[COLORS["long"] if v > 0 else COLORS["short"] for v in top["corr"]]))
@@ -271,7 +273,8 @@ with tab_res:
         show(style(fig, 230, "Most similar known signals (avg. daily rank correlation)"))
         reading(interpret.correlation(top.iloc[0]["corr"], top.iloc[0]["signal"]))
         inc = incremental(card.get("formula"), card.get("library_key"), spec.min_price,
-                          spec.liquidity_pct, spec.execution, tuple(top.head(3)["key"]))
+                          spec.liquidity_pct, spec.execution, tuple(top.head(3)["key"]),
+                          spec.dataset)
         cmp = pd.DataFrame({"raw IC": tab["mean_ic"], "raw t": tab["t_nw"],
                             "incremental IC": inc["mean_ic"], "incremental t": inc["t_nw"]})
         st.dataframe(cmp.style.format("{:+.4f}"))

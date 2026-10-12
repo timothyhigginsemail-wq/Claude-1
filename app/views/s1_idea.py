@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, hyp_info, in_sample_dates, market, org_box, persist, pitfalls,
+from common import (COLORS, hyp_info, periods, in_sample_dates, market, org_box, persist, pitfalls,
                     show, signal, style, technical)
 
 spec = st.session_state.spec
@@ -37,12 +37,12 @@ if spec.hypothesis in ("abnormal_volume", "volume_reversal"):
 st.markdown("#### Pre-registered test (written before looking at results)")
 st.markdown(f"""
 - **Primary test:** mean daily Spearman rank IC between the signal and the next
-  **{spec.horizon}-day** return, research sample 2013–2016, next-open execution.
+  **{spec.horizon}-day** return, research sample {periods()['research']}, next-open execution.
 - **Reject if:** |Newey-West t| < 2, *or* the effect disappears after controlling for
   short-term reversal and other price-based factors, *or* it fails out of sample.
 - **Secondary questions:** does the sign depend on the accompanying price move? Does it
   survive realistic costs? Is it stable across years and volatility regimes?
-- The 2017–2018 data are **locked** until the specification is frozen.
+- The {periods()['holdout']} data are **locked** until the specification is frozen.
 """)
 
 st.markdown("#### A concrete example")

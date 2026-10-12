@@ -46,7 +46,9 @@ class BacktestResult:
 
 def run_backtest(mkt: Market, signal: pd.DataFrame, universe: pd.DataFrame,
                  spec: PortfolioSpec, costs: CostSpec, execution: str = "open_t1",
-                 beta: pd.DataFrame | None = None) -> BacktestResult:
+                 beta: pd.DataFrame | None = None, compact: bool = False) -> BacktestResult:
+    """compact=True stores the per-stock matrices in 32-bit floats (used by the web app
+    on the large dataset to halve memory); daily results are unaffected."""
     price, lag = execution_params(execution)
     target = target_weights(signal, universe, spec, mkt.sector, beta)
     H = held_weights(target, spec.holding, lag, spec.overlap)
@@ -95,9 +97,10 @@ def run_backtest(mkt: Market, signal: pd.DataFrame, universe: pd.DataFrame,
     live = daily["gross_exposure"] > 0
     first = live.idxmax() if live.any() else daily.index[0]
     daily = daily.loc[first:]
-    return BacktestResult(daily=daily, held=H.loc[first:], trades=trades.loc[first:],
-                          returns_used=r.loc[first:], cost_bps=cost_bps.loc[first:],
-                          participation=participation.loc[first:], spec=spec, costs=costs,
+    f32 = (lambda x: x.astype("float32")) if compact else (lambda x: x)
+    return BacktestResult(daily=daily, held=f32(H.loc[first:]), trades=f32(trades.loc[first:]),
+                          returns_used=f32(r.loc[first:]), cost_bps=f32(cost_bps.loc[first:]),
+                          participation=f32(participation.loc[first:]), spec=spec, costs=costs,
                           execution=execution,
                           meta={"held_with_missing_return": int(missing_held), "lag": lag})
 
