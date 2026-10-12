@@ -129,13 +129,16 @@ def factor_returns(mkt: Market, chars: dict[str, pd.DataFrame], universe: pd.Dat
 def factor_regression(strategy: pd.Series, factors: pd.DataFrame, periods: int = 252) -> dict:
     """OLS of daily strategy returns on factor returns with Newey-West t-stats."""
     df = pd.concat([strategy.rename("y"), factors], axis=1).dropna()
+    # drop factors with (near) zero variance — they make the regression singular
+    keep = [c for c in factors.columns if df[c].std() > 1e-12]
+    factors = factors[keep]
     y = df["y"].values
     X = np.column_stack([np.ones(len(df)), df[factors.columns].values])
     coef, *_ = np.linalg.lstsq(X, y, rcond=None)
     resid = y - X @ coef
     n, k = X.shape
     lags = nw_lags(n, 5)
-    XtX_inv = np.linalg.inv(X.T @ X)
+    XtX_inv = np.linalg.pinv(X.T @ X)
     u = X * resid[:, None]
     S = u.T @ u
     for l in range(1, lags + 1):

@@ -276,7 +276,10 @@ def backtest(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec):
 
 @st.cache_data(show_spinner="Building factor portfolios…", max_entries=8)
 def factor_rets(spec: ResearchSpec, holding: int):
-    return rb.factor_returns(market(spec.dataset), ch(spec), uni(spec), holding, spec.execution)
+    # continuous characteristics only: a 0/1 flag (recent earnings) cannot be sorted
+    # into top/bottom 30% portfolios
+    c = {k: v for k, v in ch(spec).items() if k != "earn"}
+    return rb.factor_returns(market(spec.dataset), c, uni(spec), holding, spec.execution)
 
 
 @st.cache_data(show_spinner="Testing the whole parameter grid (≈10 s)…", max_entries=8)

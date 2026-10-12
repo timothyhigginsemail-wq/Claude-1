@@ -1,9 +1,10 @@
-run_id,git,hypothesis,lookback,window,horizon,execution,neutralization,direction,mean_ic,t_ic,net_sharpe,verdict,holdout_used,note
-20261012T032737Z_63971ec6,7523e96,abnormal_volume,20,1,5,open_t1,none,1,-0.00318,-0.93,-3.38,REJECT (as specified),False,PRE-REGISTERED primary test
-20261012T032756Z_893cbc07,7523e96,volume_reversal,20,1,5,open_t1,none,1,0.00170,0.54,-3.87,REJECT (as specified),False,H2 mechanism test: do high-volume moves reverse?
-20261012T032813Z_30d17860,7523e96,reversal,20,5,5,open_t1,none,1,0.00494,0.59,-1.21,REJECT (as specified),False,B1 benchmark: plain 5d reversal
-20261012T032831Z_d7b4246d,7523e96,abnormal_volume,20,1,20,open_t1,none,1,-0.01003,-2.42,-2.27,REVISE,False,H1 at 20d horizon
-20261012T032849Z_93c60c03,7523e96,abnormal_volume,20,5,10,open_t1,none,1,-0.01592,-2.92,-2.25,REVISE,False,"POST-HOC: best grid cell (weekly volume, 10d) - selection-biased"
-20261012T032908Z_b55b5ca5,7523e96,abnormal_volume,20,5,10,open_t1,none,-1,0.01592,2.92,-0.62,REVISE,False,POST-HOC: grid best with sign flipped after seeing negative IC
-20261012T032926Z_f3385820,7523e96,abnormal_volume,20,5,10,open_t1,factors,-1,0.00731,1.91,-1.51,REJECT (as specified),False,"POST-HOC: flipped grid best, factor-neutralised"
-20261012T032944Z_2dd86f68,7523e96,placebo,20,1,5,open_t1,none,1,-0.00092,-0.58,-8.20,REJECT (as specified),False,calibration: pure noise
+run_id,git,dataset,hypothesis,lookback,window,horizon,execution,neutralization,direction,mean_ic,t_ic,net_sharpe,verdict,holdout_used,note
+20261012T032737Z_63971ec6,7523e96,v1,abnormal_volume,20,1,5,open_t1,none,1,-0.00318,-0.93,-3.38,REJECT (as specified),False,PRE-REGISTERED primary test
+20261012T032756Z_893cbc07,7523e96,v1,volume_reversal,20,1,5,open_t1,none,1,0.00170,0.54,-3.87,REJECT (as specified),False,H2 mechanism test: do high-volume moves reverse?
+20261012T032813Z_30d17860,7523e96,v1,reversal,20,5,5,open_t1,none,1,0.00494,0.59,-1.21,REJECT (as specified),False,B1 benchmark: plain 5d reversal
+20261012T032831Z_d7b4246d,7523e96,v1,abnormal_volume,20,1,20,open_t1,none,1,-0.01003,-2.42,-2.27,REVISE,False,H1 at 20d horizon
+20261012T032849Z_93c60c03,7523e96,v1,abnormal_volume,20,5,10,open_t1,none,1,-0.01592,-2.92,-2.25,REVISE,False,"POST-HOC: best grid cell (weekly volume, 10d) - selection-biased"
+20261012T032908Z_b55b5ca5,7523e96,v1,abnormal_volume,20,5,10,open_t1,none,-1,0.01592,2.92,-0.62,REVISE,False,POST-HOC: grid best with sign flipped after seeing negative IC
+20261012T032926Z_f3385820,7523e96,v1,abnormal_volume,20,5,10,open_t1,factors,-1,0.00731,1.91,-1.51,REJECT (as specified),False,"POST-HOC: flipped grid best, factor-neutralised"
+20261012T032944Z_2dd86f68,7523e96,v1,placebo,20,1,5,open_t1,none,1,-0.00092,-0.58,-8.20,REJECT (as specified),False,calibration: pure noise
+20261012T234301Z_c3928f89,7284900,v3,abnormal_volume,20,1,5,open_t1,none,1,0.00112,0.64,-2.47,REJECT (as specified),False,"PRE-REGISTERED primary test, replicated on v3 (2005-2021)"
