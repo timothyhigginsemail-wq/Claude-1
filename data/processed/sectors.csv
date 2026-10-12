@@ -1,0 +1,506 @@
+ticker,sector,sector_source
+A,Health Care,datahub current GICS
+AAL,Industrials,manual label (verify)
+AAP,Consumer Discretionary,manual label (verify)
+AAPL,Information Technology,datahub current GICS
+ABBV,Health Care,datahub current GICS
+ABC,Health Care,datahub current GICS
+ABT,Health Care,datahub current GICS
+ACN,Information Technology,datahub current GICS
+ADBE,Information Technology,datahub current GICS
+ADI,Information Technology,datahub current GICS
+ADM,Consumer Staples,datahub current GICS
+ADP,Industrials,datahub current GICS
+ADS,Financials,manual label (verify)
+ADSK,Information Technology,datahub current GICS
+AEE,Utilities,datahub current GICS
+AEP,Utilities,datahub current GICS
+AES,Utilities,datahub current GICS
+AET,Health Care,manual label (verify)
+AFL,Financials,datahub current GICS
+AGN,Health Care,manual label (verify)
+AIG,Financials,datahub current GICS
+AIV,Real Estate,manual label (verify)
+AIZ,Financials,datahub current GICS
+AJG,Financials,datahub current GICS
+AKAM,Information Technology,datahub current GICS
+ALB,Materials,datahub current GICS
+ALGN,Health Care,datahub current GICS
+ALK,Industrials,manual label (verify)
+ALL,Financials,datahub current GICS
+ALLE,Industrials,datahub current GICS
+ALXN,Health Care,manual label (verify)
+AMAT,Information Technology,datahub current GICS
+AMD,Information Technology,datahub current GICS
+AME,Industrials,datahub current GICS
+AMG,Financials,manual label (verify)
+AMGN,Health Care,datahub current GICS
+AMP,Financials,datahub current GICS
+AMT,Real Estate,datahub current GICS
+AMZN,Consumer Discretionary,datahub current GICS
+ANDV,Energy,manual label (verify)
+ANSS,Information Technology,manual label (verify)
+ANTM,Health Care,datahub current GICS
+AON,Financials,datahub current GICS
+AOS,Industrials,datahub current GICS
+APA,Energy,datahub current GICS
+APC,Energy,manual label (verify)
+APD,Materials,datahub current GICS
+APH,Information Technology,datahub current GICS
+APTV,Consumer Discretionary,datahub current GICS
+ARE,Real Estate,datahub current GICS
+ARNC,Industrials,manual label (verify)
+ATVI,Communication Services,manual label (verify)
+AVB,Real Estate,manual label (verify)
+AVGO,Information Technology,datahub current GICS
+AVY,Materials,datahub current GICS
+AWK,Utilities,datahub current GICS
+AXP,Financials,datahub current GICS
+AYI,Industrials,manual label (verify)
+AZO,Consumer Discretionary,datahub current GICS
+BA,Industrials,datahub current GICS
+BAC,Financials,datahub current GICS
+BAX,Health Care,datahub current GICS
+BBT,Financials,manual label (verify)
+BBY,Consumer Discretionary,datahub current GICS
+BDX,Health Care,datahub current GICS
+BEN,Financials,datahub current GICS
+BF.B,Consumer Staples,datahub current GICS
+BHF,Financials,manual label (verify)
+BHGE,Energy,manual label (verify)
+BIIB,Health Care,datahub current GICS
+BK,Financials,manual label (verify)
+BLK,Financials,datahub current GICS
+BLL,Materials,datahub current GICS
+BMY,Health Care,datahub current GICS
+BRK.B,Financials,datahub current GICS
+BSX,Health Care,datahub current GICS
+BWA,Consumer Discretionary,manual label (verify)
+BXP,Real Estate,datahub current GICS
+C,Financials,datahub current GICS
+CA,Information Technology,manual label (verify)
+CAG,Consumer Staples,manual label (verify)
+CAH,Health Care,datahub current GICS
+CAT,Industrials,datahub current GICS
+CB,Financials,datahub current GICS
+CBG,Real Estate,datahub current GICS
+CBOE,Financials,datahub current GICS
+CBS,Communication Services,manual label (verify)
+CCI,Real Estate,datahub current GICS
+CCL,Consumer Discretionary,datahub current GICS
+CDNS,Information Technology,datahub current GICS
+CELG,Health Care,manual label (verify)
+CERN,Health Care,manual label (verify)
+CF,Materials,datahub current GICS
+CFG,Financials,datahub current GICS
+CHD,Consumer Staples,datahub current GICS
+CHK,Energy,manual label (verify)
+CHRW,Industrials,datahub current GICS
+CHTR,Communication Services,datahub current GICS
+CI,Health Care,datahub current GICS
+CINF,Financials,datahub current GICS
+CL,Consumer Staples,datahub current GICS
+CLX,Consumer Staples,datahub current GICS
+CMA,Financials,manual label (verify)
+CMCSA,Communication Services,datahub current GICS
+CME,Financials,datahub current GICS
+CMG,Consumer Discretionary,datahub current GICS
+CMI,Industrials,datahub current GICS
+CMS,Utilities,datahub current GICS
+CNC,Health Care,datahub current GICS
+CNP,Utilities,datahub current GICS
+COF,Financials,datahub current GICS
+COG,Energy,manual label (verify)
+COL,Industrials,manual label (verify)
+COO,Health Care,datahub current GICS
+COP,Energy,datahub current GICS
+COST,Consumer Staples,datahub current GICS
+COTY,Consumer Staples,manual label (verify)
+CPB,Consumer Staples,manual label (verify)
+CRM,Information Technology,datahub current GICS
+CSCO,Information Technology,datahub current GICS
+CSRA,Information Technology,manual label (verify)
+CSX,Industrials,datahub current GICS
+CTAS,Industrials,datahub current GICS
+CTL,Communication Services,manual label (verify)
+CTSH,Information Technology,datahub current GICS
+CTXS,Information Technology,manual label (verify)
+CVS,Health Care,datahub current GICS
+CVX,Energy,datahub current GICS
+CXO,Energy,manual label (verify)
+D,Utilities,datahub current GICS
+DAL,Industrials,datahub current GICS
+DE,Industrials,datahub current GICS
+DFS,Financials,manual label (verify)
+DG,Consumer Staples,datahub current GICS
+DGX,Health Care,datahub current GICS
+DHI,Consumer Discretionary,datahub current GICS
+DHR,Health Care,datahub current GICS
+DIS,Communication Services,datahub current GICS
+DISCA,Communication Services,manual label (verify)
+DISCK,Communication Services,manual label (verify)
+DISH,Communication Services,manual label (verify)
+DLR,Real Estate,datahub current GICS
+DLTR,Consumer Staples,datahub current GICS
+DOV,Industrials,datahub current GICS
+DPS,Consumer Staples,datahub current GICS
+DRE,Real Estate,manual label (verify)
+DRI,Consumer Discretionary,datahub current GICS
+DTE,Utilities,datahub current GICS
+DUK,Utilities,datahub current GICS
+DVA,Health Care,datahub current GICS
+DVN,Energy,datahub current GICS
+DWDP,Materials,manual label (verify)
+DXC,Information Technology,manual label (verify)
+EA,Communication Services,manual label (verify)
+EBAY,Consumer Discretionary,datahub current GICS
+ECL,Materials,datahub current GICS
+ED,Utilities,datahub current GICS
+EFX,Industrials,datahub current GICS
+EIX,Utilities,datahub current GICS
+EL,Consumer Staples,datahub current GICS
+EMN,Materials,manual label (verify)
+EMR,Industrials,datahub current GICS
+EOG,Energy,datahub current GICS
+EQIX,Real Estate,datahub current GICS
+EQR,Real Estate,manual label (verify)
+EQT,Energy,datahub current GICS
+ES,Utilities,datahub current GICS
+ESRX,Health Care,manual label (verify)
+ESS,Real Estate,datahub current GICS
+ETFC,Financials,manual label (verify)
+ETN,Industrials,datahub current GICS
+ETR,Utilities,datahub current GICS
+EVHC,Health Care,manual label (verify)
+EW,Health Care,datahub current GICS
+EXC,Utilities,datahub current GICS
+EXPD,Industrials,datahub current GICS
+EXPE,Consumer Discretionary,datahub current GICS
+EXR,Real Estate,datahub current GICS
+F,Consumer Discretionary,datahub current GICS
+FAST,Industrials,datahub current GICS
+FB,Communication Services,datahub current GICS
+FBHS,Industrials,manual label (verify)
+FCX,Materials,datahub current GICS
+FDX,Industrials,datahub current GICS
+FE,Utilities,datahub current GICS
+FFIV,Information Technology,datahub current GICS
+FIS,Financials,datahub current GICS
+FISV,Unknown,missing
+FITB,Financials,datahub current GICS
+FL,Consumer Discretionary,manual label (verify)
+FLIR,Information Technology,datahub current GICS
+FLR,Industrials,manual label (verify)
+FLS,Industrials,manual label (verify)
+FMC,Materials,manual label (verify)
+FOX,Communication Services,datahub current GICS
+FOXA,Communication Services,datahub current GICS
+FRT,Real Estate,datahub current GICS
+FTI,Energy,manual label (verify)
+FTV,Industrials,datahub current GICS
+GD,Industrials,datahub current GICS
+GE,Industrials,datahub current GICS
+GGP,Real Estate,manual label (verify)
+GILD,Health Care,datahub current GICS
+GIS,Consumer Staples,datahub current GICS
+GLW,Information Technology,datahub current GICS
+GM,Consumer Discretionary,datahub current GICS
+GOOG,Communication Services,datahub current GICS
+GOOGL,Communication Services,datahub current GICS
+GPC,Consumer Discretionary,datahub current GICS
+GPN,Financials,datahub current GICS
+GPS,Consumer Discretionary,manual label (verify)
+GRMN,Consumer Discretionary,datahub current GICS
+GS,Financials,datahub current GICS
+GT,Consumer Discretionary,manual label (verify)
+GWW,Industrials,datahub current GICS
+HAL,Energy,datahub current GICS
+HAS,Consumer Discretionary,datahub current GICS
+HBAN,Financials,datahub current GICS
+HBI,Consumer Discretionary,manual label (verify)
+HCA,Health Care,datahub current GICS
+HCN,Real Estate,datahub current GICS
+HCP,Real Estate,manual label (verify)
+HD,Consumer Discretionary,datahub current GICS
+HES,Energy,manual label (verify)
+HIG,Financials,datahub current GICS
+HII,Industrials,datahub current GICS
+HLT,Consumer Discretionary,datahub current GICS
+HOG,Consumer Discretionary,manual label (verify)
+HOLX,Health Care,manual label (verify)
+HON,Industrials,datahub current GICS
+HP,Energy,manual label (verify)
+HPE,Information Technology,datahub current GICS
+HPQ,Information Technology,datahub current GICS
+HRB,Consumer Discretionary,manual label (verify)
+HRL,Consumer Staples,datahub current GICS
+HRS,Industrials,datahub current GICS
+HSIC,Health Care,datahub current GICS
+HST,Real Estate,datahub current GICS
+HSY,Consumer Staples,datahub current GICS
+HUM,Health Care,datahub current GICS
+IBM,Information Technology,datahub current GICS
+ICE,Financials,datahub current GICS
+IDXX,Health Care,datahub current GICS
+IFF,Materials,datahub current GICS
+ILMN,Health Care,datahub current GICS
+INCY,Health Care,datahub current GICS
+INFO,Industrials,manual label (verify)
+INTC,Information Technology,datahub current GICS
+INTU,Information Technology,datahub current GICS
+IP,Materials,datahub current GICS
+IPG,Communication Services,manual label (verify)
+IQV,Health Care,datahub current GICS
+IR,Industrials,datahub current GICS
+IRM,Real Estate,datahub current GICS
+ISRG,Health Care,datahub current GICS
+IT,Information Technology,datahub current GICS
+ITW,Industrials,datahub current GICS
+IVZ,Financials,datahub current GICS
+JBHT,Industrials,datahub current GICS
+JCI,Industrials,datahub current GICS
+JEC,Industrials,datahub current GICS
+JNJ,Health Care,datahub current GICS
+JNPR,Information Technology,manual label (verify)
+JPM,Financials,datahub current GICS
+JWN,Consumer Discretionary,manual label (verify)
+K,Consumer Staples,manual label (verify)
+KEY,Financials,datahub current GICS
+KHC,Consumer Staples,datahub current GICS
+KIM,Real Estate,datahub current GICS
+KLAC,Information Technology,datahub current GICS
+KMB,Consumer Staples,datahub current GICS
+KMI,Energy,datahub current GICS
+KMX,Consumer Discretionary,manual label (verify)
+KO,Consumer Staples,datahub current GICS
+KORS,Consumer Discretionary,manual label (verify)
+KR,Consumer Staples,datahub current GICS
+KSS,Consumer Discretionary,manual label (verify)
+KSU,Industrials,manual label (verify)
+L,Financials,datahub current GICS
+LB,Consumer Discretionary,manual label (verify)
+LEG,Consumer Discretionary,manual label (verify)
+LEN,Consumer Discretionary,datahub current GICS
+LH,Health Care,datahub current GICS
+LKQ,Consumer Discretionary,manual label (verify)
+LLL,Industrials,manual label (verify)
+LLY,Health Care,datahub current GICS
+LMT,Industrials,datahub current GICS
+LNC,Financials,manual label (verify)
+LNT,Utilities,datahub current GICS
+LOW,Consumer Discretionary,datahub current GICS
+LRCX,Information Technology,datahub current GICS
+LUK,Financials,manual label (verify)
+LUV,Industrials,datahub current GICS
+LYB,Materials,datahub current GICS
+M,Consumer Discretionary,manual label (verify)
+MA,Financials,datahub current GICS
+MAA,Real Estate,datahub current GICS
+MAC,Real Estate,manual label (verify)
+MAR,Consumer Discretionary,datahub current GICS
+MAS,Industrials,datahub current GICS
+MAT,Consumer Discretionary,manual label (verify)
+MCD,Consumer Discretionary,datahub current GICS
+MCHP,Information Technology,datahub current GICS
+MCK,Health Care,datahub current GICS
+MCO,Financials,datahub current GICS
+MDLZ,Consumer Staples,datahub current GICS
+MDT,Health Care,datahub current GICS
+MET,Financials,datahub current GICS
+MGM,Consumer Discretionary,datahub current GICS
+MHK,Consumer Discretionary,manual label (verify)
+MKC,Consumer Staples,datahub current GICS
+MLM,Materials,datahub current GICS
+MMC,Financials,manual label (verify)
+MMM,Industrials,datahub current GICS
+MNST,Consumer Staples,datahub current GICS
+MO,Consumer Staples,datahub current GICS
+MON,Materials,manual label (verify)
+MOS,Materials,datahub current GICS
+MPC,Energy,datahub current GICS
+MRK,Health Care,datahub current GICS
+MRO,Energy,manual label (verify)
+MS,Financials,datahub current GICS
+MSFT,Information Technology,datahub current GICS
+MSI,Information Technology,datahub current GICS
+MTB,Financials,datahub current GICS
+MTD,Health Care,datahub current GICS
+MU,Information Technology,datahub current GICS
+MYL,Health Care,manual label (verify)
+NAVI,Financials,manual label (verify)
+NBL,Energy,manual label (verify)
+NCLH,Consumer Discretionary,datahub current GICS
+NDAQ,Financials,datahub current GICS
+NEE,Utilities,datahub current GICS
+NEM,Materials,datahub current GICS
+NFLX,Communication Services,datahub current GICS
+NFX,Energy,manual label (verify)
+NI,Utilities,datahub current GICS
+NKE,Consumer Discretionary,datahub current GICS
+NLSN,Industrials,manual label (verify)
+NOC,Industrials,datahub current GICS
+NOV,Energy,manual label (verify)
+NRG,Utilities,datahub current GICS
+NSC,Industrials,datahub current GICS
+NTAP,Information Technology,datahub current GICS
+NTRS,Financials,datahub current GICS
+NUE,Materials,datahub current GICS
+NVDA,Information Technology,datahub current GICS
+NWL,Consumer Discretionary,manual label (verify)
+NWS,Communication Services,datahub current GICS
+NWSA,Communication Services,datahub current GICS
+O,Real Estate,datahub current GICS
+OKE,Energy,datahub current GICS
+OMC,Communication Services,datahub current GICS
+ORCL,Information Technology,datahub current GICS
+ORLY,Consumer Discretionary,datahub current GICS
+OXY,Energy,datahub current GICS
+PAYX,Industrials,datahub current GICS
+PBCT,Financials,manual label (verify)
+PCAR,Industrials,datahub current GICS
+PCG,Utilities,datahub current GICS
+PCLN,Consumer Discretionary,datahub current GICS
+PDCO,Health Care,manual label (verify)
+PEG,Utilities,datahub current GICS
+PEP,Consumer Staples,datahub current GICS
+PFE,Health Care,datahub current GICS
+PFG,Financials,datahub current GICS
+PG,Consumer Staples,datahub current GICS
+PGR,Financials,datahub current GICS
+PH,Industrials,datahub current GICS
+PHM,Consumer Discretionary,datahub current GICS
+PKG,Materials,datahub current GICS
+PKI,Health Care,datahub current GICS
+PLD,Real Estate,datahub current GICS
+PM,Consumer Staples,datahub current GICS
+PNC,Financials,datahub current GICS
+PNR,Industrials,datahub current GICS
+PNW,Utilities,datahub current GICS
+PPG,Materials,datahub current GICS
+PPL,Utilities,datahub current GICS
+PRGO,Health Care,manual label (verify)
+PRU,Financials,datahub current GICS
+PSA,Real Estate,datahub current GICS
+PSX,Energy,datahub current GICS
+PVH,Consumer Discretionary,manual label (verify)
+PWR,Industrials,datahub current GICS
+PX,Materials,manual label (verify)
+PXD,Energy,manual label (verify)
+PYPL,Financials,datahub current GICS
+QCOM,Information Technology,datahub current GICS
+QRVO,Information Technology,manual label (verify)
+RCL,Consumer Discretionary,datahub current GICS
+RE,Financials,datahub current GICS
+REG,Real Estate,datahub current GICS
+REGN,Health Care,datahub current GICS
+RF,Financials,datahub current GICS
+RHI,Industrials,manual label (verify)
+RHT,Information Technology,manual label (verify)
+RJF,Financials,datahub current GICS
+RL,Consumer Discretionary,datahub current GICS
+RMD,Health Care,datahub current GICS
+ROK,Industrials,datahub current GICS
+ROP,Information Technology,datahub current GICS
+ROST,Consumer Discretionary,datahub current GICS
+RRC,Energy,manual label (verify)
+RSG,Industrials,datahub current GICS
+RTN,Industrials,manual label (verify)
+SBAC,Real Estate,datahub current GICS
+SBUX,Consumer Discretionary,datahub current GICS
+SCG,Utilities,manual label (verify)
+SCHW,Financials,datahub current GICS
+SEE,Materials,manual label (verify)
+SHW,Materials,datahub current GICS
+SIG,Consumer Discretionary,manual label (verify)
+SJM,Consumer Staples,datahub current GICS
+SLB,Energy,datahub current GICS
+SLG,Real Estate,manual label (verify)
+SNA,Industrials,datahub current GICS
+SNI,Communication Services,manual label (verify)
+SNPS,Information Technology,datahub current GICS
+SO,Utilities,datahub current GICS
+SPG,Real Estate,datahub current GICS
+SPGI,Financials,datahub current GICS
+SRCL,Industrials,manual label (verify)
+SRE,Utilities,datahub current GICS
+STI,Financials,manual label (verify)
+STT,Financials,datahub current GICS
+STX,Information Technology,datahub current GICS
+STZ,Consumer Staples,datahub current GICS
+SWK,Industrials,datahub current GICS
+SWKS,Information Technology,datahub current GICS
+SYF,Financials,datahub current GICS
+SYK,Health Care,datahub current GICS
+SYMC,Information Technology,manual label (verify)
+SYY,Consumer Staples,datahub current GICS
+T,Communication Services,datahub current GICS
+TAP,Consumer Staples,manual label (verify)
+TDG,Industrials,datahub current GICS
+TEL,Information Technology,datahub current GICS
+TGT,Consumer Staples,datahub current GICS
+TIF,Consumer Discretionary,manual label (verify)
+TJX,Consumer Discretionary,datahub current GICS
+TMK,Financials,manual label (verify)
+TMO,Health Care,datahub current GICS
+TPR,Consumer Discretionary,datahub current GICS
+TRIP,Communication Services,manual label (verify)
+TROW,Financials,datahub current GICS
+TRV,Financials,datahub current GICS
+TSCO,Consumer Discretionary,datahub current GICS
+TSN,Consumer Staples,datahub current GICS
+TSS,Information Technology,manual label (verify)
+TWX,Communication Services,manual label (verify)
+TXN,Information Technology,datahub current GICS
+TXT,Industrials,datahub current GICS
+UA,Consumer Discretionary,manual label (verify)
+UAA,Consumer Discretionary,manual label (verify)
+UAL,Industrials,datahub current GICS
+UDR,Real Estate,datahub current GICS
+UHS,Health Care,datahub current GICS
+ULTA,Consumer Discretionary,datahub current GICS
+UNH,Health Care,datahub current GICS
+UNM,Financials,manual label (verify)
+UNP,Industrials,datahub current GICS
+UPS,Industrials,datahub current GICS
+URI,Industrials,datahub current GICS
+USB,Financials,datahub current GICS
+UTX,Industrials,datahub current GICS
+V,Financials,datahub current GICS
+VAR,Health Care,manual label (verify)
+VFC,Consumer Discretionary,manual label (verify)
+VIAB,Communication Services,manual label (verify)
+VLO,Energy,datahub current GICS
+VMC,Materials,datahub current GICS
+VNO,Real Estate,manual label (verify)
+VRSK,Industrials,datahub current GICS
+VRSN,Information Technology,datahub current GICS
+VRTX,Health Care,datahub current GICS
+VTR,Real Estate,datahub current GICS
+VZ,Communication Services,datahub current GICS
+WAT,Health Care,datahub current GICS
+WBA,Consumer Staples,manual label (verify)
+WDC,Information Technology,datahub current GICS
+WEC,Utilities,datahub current GICS
+WFC,Financials,datahub current GICS
+WHR,Consumer Discretionary,manual label (verify)
+WLTW,Financials,manual label (verify)
+WM,Industrials,datahub current GICS
+WMB,Energy,datahub current GICS
+WMT,Consumer Staples,datahub current GICS
+WRK,Materials,manual label (verify)
+WU,Financials,manual label (verify)
+WY,Real Estate,datahub current GICS
+WYN,Consumer Discretionary,manual label (verify)
+WYNN,Consumer Discretionary,datahub current GICS
+XEC,Energy,manual label (verify)
+XEL,Utilities,datahub current GICS
+XL,Financials,manual label (verify)
+XLNX,Information Technology,manual label (verify)
+XOM,Energy,datahub current GICS
+XRAY,Health Care,manual label (verify)
+XRX,Information Technology,manual label (verify)
+XYL,Industrials,datahub current GICS
+YUM,Consumer Discretionary,datahub current GICS
+ZBH,Health Care,datahub current GICS
+ZION,Financials,manual label (verify)
+ZTS,Health Care,datahub current GICS

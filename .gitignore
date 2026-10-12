@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+# raw downloads are re-fetched (and checksum-verified) by scripts/build_data.py
+data/raw/
+# never commit credentials
+.streamlit/secrets.toml
+.env
+*.key

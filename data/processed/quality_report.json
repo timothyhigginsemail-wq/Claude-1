@@ -1,0 +1,215 @@
+{
+  "cleaning": {
+    "raw_rows": 619040,
+    "duplicate_rows_dropped": 0,
+    "rows_dropped_nonpositive_close": 0,
+    "missing_open_high_low_cells": 27,
+    "zero_volume_rows_set_to_missing": 4,
+    "ohlc_inconsistent_rows_flagged": 12,
+    "bad_close_outside_range_set_missing": [
+      "AOS 2014-05-19",
+      "CHK 2014-06-30",
+      "LNT 2016-05-19",
+      "SPG 2014-05-28",
+      "WRK 2016-05-13"
+    ],
+    "spike_reversal_rows_set_missing": [
+      "FLR 2017-09-14",
+      "MRO 2017-09-14",
+      "NWL 2017-09-14"
+    ],
+    "corporate_action_returns_invalidated": 5,
+    "extreme_return_flags": [
+      {
+        "ticker": "AMD",
+        "date": "2016-04-22",
+        "return": 0.5229
+      },
+      {
+        "ticker": "BAX",
+        "date": "2015-07-01",
+        "return": -0.4443
+      },
+      {
+        "ticker": "DISCA",
+        "date": "2014-08-07",
+        "return": -0.5064
+      },
+      {
+        "ticker": "DISCK",
+        "date": "2014-08-07",
+        "return": -0.5102
+      },
+      {
+        "ticker": "EBAY",
+        "date": "2015-07-20",
+        "return": -0.569
+      },
+      {
+        "ticker": "NI",
+        "date": "2015-07-02",
+        "return": -0.6262
+      },
+      {
+        "ticker": "VRTX",
+        "date": "2013-04-19",
+        "return": 0.6191
+      },
+      {
+        "ticker": "VRTX",
+        "date": "2014-06-24",
+        "return": 0.4041
+      }
+    ],
+    "tickers_with_internal_gaps": {
+      "BMY": 2,
+      "DHR": 16,
+      "ES": 10,
+      "ICE": 5,
+      "O": 16,
+      "ORCL": 2
+    },
+    "clean_rows": 619040,
+    "n_tickers": 505,
+    "n_dates": 1259,
+    "first_date": "2013-02-08",
+    "last_date": "2018-02-07"
+  },
+  "survivorship": {
+    "members_on_first_date": 497,
+    "members_on_first_date_with_data": 395,
+    "members_on_first_date_missing": [
+      "AABA",
+      "ADT",
+      "ALTR",
+      "AN",
+      "ANF",
+      "APOL",
+      "ARG",
+      "ATI",
+      "AVP",
+      "BBBY",
+      "BCR",
+      "BEAM",
+      "BIG",
+      "BMC",
+      "BMS",
+      "BRCM",
+      "BTUUQ",
+      "CAM",
+      "CCE",
+      "CFN",
+      "CLF",
+      "CNX",
+      "COV",
+      "CVC",
+      "CVH",
+      "DD",
+      "DELL",
+      "DF",
+      "DNB",
+      "DNR",
+      "DO",
+      "DOW",
+      "DTV",
+      "EMC",
+      "ESV",
+      "FDO",
+      "FHN",
+      "FOSL",
+      "FRX",
+      "FSLR",
+      "FTR",
+      "GAS",
+      "GHC",
+      "GME",
+      "GNW",
+      "HAR",
+      "HCBK",
+      "HNZ",
+      "HOT",
+      "HSP",
+      "IGT",
+      "JBL",
+      "JCP",
+      "JOY",
+      "KRFT",
+      "LDOS",
+      "LIFE",
+      "LLTC",
+      "LM",
+      "LO",
+      "LSI",
+      "MJN",
+      "MOLX",
+      "MUR",
+      "MWV",
+      "NBR",
+      "NE",
+      "NYX",
+      "OI",
+      "PBI",
+      "PCL",
+      "PCP",
+      "PETM",
+      "PLL",
+      "POM",
+      "QEP",
+      "R",
+      "RAI",
+      "RDC",
+      "S",
+      "SE",
+      "SIAL",
+      "SLM",
+      "SNDK",
+      "SPLS",
+      "STJ",
+      "SWN",
+      "SWY",
+      "TDC",
+      "TE",
+      "TEG",
+      "TER",
+      "TGNA",
+      "THC",
+      "TMUS",
+      "TWC",
+      "URBN",
+      "VIAV",
+      "WFM",
+      "WIN",
+      "WPX",
+      "X"
+    ],
+    "members_on_last_date": 506,
+    "members_on_last_date_with_data": 505,
+    "avg_daily_coverage": 0.8865533521660536,
+    "dataset_tickers_never_members": []
+  },
+  "sector_sources": {
+    "datahub current GICS": 366,
+    "manual label (verify)": 138,
+    "missing": 1
+  },
+  "sources": {
+    "prices": {
+      "url": "https://raw.githubusercontent.com/plotly/datasets/master/all_stocks_5yr.csv",
+      "sha256": "6aea253cd19de60b568143991aaf1fa482456565c389205658d236e595e716cf",
+      "description": "Daily open/high/low/close/volume for the 505 tickers that were S&P 500 members in Feb 2018, covering 2013-02-08 to 2018-02-07. Originally published on Kaggle ('S&P 500 stock data', C. Nugent) and mirrored in Plotly's public datasets repository.",
+      "limitations": "SURVIVORSHIP BIAS: only stocks still in the index in 2018 are included; companies that were removed, acquired or went bankrupt during 2013-2018 are missing. Prices and volumes appear split-adjusted but NOT dividend-adjusted (returns are price returns). No bid/ask, no intraday data, no shares outstanding (so no market capitalisation), no earnings dates. Vendor and exact adjustment method are undocumented."
+    },
+    "membership": {
+      "url": "https://raw.githubusercontent.com/fja05680/sp500/master/S%26P%20500%20Historical%20Components%20%26%20Changes%20(Updated).csv",
+      "sha256": "36326709d46d6cd25834de5df457b16f5f96fad3a06b9beac28f7b88aa0b0d54",
+      "description": "Point-in-time S&P 500 membership lists since 1996 (one row per change date), maintained by F. Jacobs, seeded from data accompanying A. Clenow's 'Trading Evolved'.",
+      "limitations": "Community-maintained, not an official S&P Dow Jones Indices file. Some tickers are recorded under later symbols (e.g. PCLN appears as BKNG)."
+    },
+    "sectors": {
+      "url": "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv",
+      "sha256": "a8045f043ea7e68d4254a07470a5e95ca5759ded4656657eac514162e6e82e06",
+      "description": "Current S&P 500 constituents with GICS sector (datahub.io / Wikipedia).",
+      "limitations": "CURRENT classifications, not point-in-time. Companies that left the index are missing and were hand-labelled (data/reference/sector_manual.csv)."
+    }
+  }
+}
