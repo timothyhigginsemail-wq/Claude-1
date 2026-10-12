@@ -1,6 +1,7 @@
+import pandas as pd
 import streamlit as st
 
-from common import HYPOTHESES, SAMPLE_LABELS, ic_table, market, tstat_badge
+from common import HYPOTHESES, ROOT, SAMPLE_LABELS, ic_table, market, tstat_badge
 
 spec, sample = st.session_state.spec, st.session_state.sample
 st.title("📈 Quant Research Lab")
@@ -43,3 +44,14 @@ st.warning(
     "the S&P 500 in 2018 (survivorship bias), only 5 years, with no bid/ask spreads or "
     "earnings dates. The platform is built so that conclusions here are, at best, "
     "*'worth testing on institutional data'* — never *'ready to trade'*.")
+
+st.markdown("#### Research log (every recorded experiment)")
+reg_path = ROOT / "experiments" / "registry.csv"
+if reg_path.exists():
+    reg = pd.read_csv(reg_path)
+    st.dataframe(reg[["hypothesis", "window", "horizon", "direction", "neutralization",
+                      "mean_ic", "t_ic", "net_sharpe", "verdict", "note"]],
+                 hide_index=True)
+    st.caption(f"{len(reg)} recorded trials (from `scripts/run_experiment.py`). Post-hoc "
+               "runs are labelled as such: they were chosen after seeing results and are "
+               "not independent evidence.")

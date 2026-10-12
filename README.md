@@ -87,12 +87,35 @@ itself. Conclusions are therefore capped at *"worth testing on institutional dat
   volatility, borrow fees, break-even cost, capacity curve.
 - **Statistical vs economic significance** — separate criteria in the decision scorecard.
 
-## Version 1 findings (research sample, 2013–2016)
+## Version 1 findings (research sample 2013–2016, next-open execution, $100m, 3 bps + √-impact)
 
-Pre-registered primary test — 1-day abnormal volume (20-day baseline) vs. next 5-day
-return, next-open execution: mean rank IC **−0.003, Newey-West t = −0.93** → **REJECT as
-specified**. Details and follow-up experiments are in `experiments/registry.csv` and
-in the app's Decision page.
+| Run | 5d/10d/20d IC | NW t | Net Sharpe | Verdict |
+|---|---|---|---|---|
+| **H1 pre-registered**: 1-day abnormal volume → 5d return | −0.003 | −0.93 | −3.4 | **Reject** |
+| H2 volume-amplified reversal (−return × AV), 5d | +0.002 | +0.54 | −3.9 | Reject |
+| B1 plain 5-day reversal (benchmark), 5d | +0.005 | +0.59 | −1.2 | Reject |
+| H1 at 20d | −0.010 | −2.42 | −2.3 | Revise |
+| *Post-hoc*: weekly (5-day) abnormal volume, 10d, **sign flipped** | +0.016 | +2.92 | −0.6 | Revise |
+| *Post-hoc*, same, factor-neutralised | +0.007 | +1.91 | −1.5 | Reject |
+| Placebo (noise) | −0.001 | −0.58 | −8.2 | Reject |
+
+What this means:
+
+1. **The hypothesis as stated is rejected.** There is no detectable relationship between a
+   1-day volume shock and the next 5-day return in these large caps.
+2. **The interesting pattern is the opposite of the "high-volume return premium".** Stocks
+   with a *week* of abnormally high volume tended to **underperform** over the next
+   10–20 days (t ≈ −2.9). It was found by searching a 24-cell grid, though, and it
+   does not hold up: Holm-adjusted p ≈ 0.08, walk-forward out-of-sample t ≈ 1.0,
+   and the t-stat falls to ≈ 1.5 once sector effects are controlled. After costs it
+   loses money (break-even ≈ 3.7 bps vs ≈ 6 bps modelled). That makes it a candidate
+   for a *new, pre-registered* hypothesis on better data, not a finding.
+3. Even the textbook short-term reversal effect is not significant in 2013–16 S&P 500 names,
+   consistent with reports that it has weakened in large, liquid stocks.
+4. The placebo behaves as it should (|t| > 2 in ≈ 5–6% of noise signals), so the
+   standard errors are calibrated.
+
+The 2017–18 holdout has **not** been opened.
 
 ## Putting it on your iPhone (Streamlit Community Cloud, free)
 

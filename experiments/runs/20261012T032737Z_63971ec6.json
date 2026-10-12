@@ -1,0 +1,258 @@
+{
+  "spec": {
+    "hypothesis": "abnormal_volume",
+    "lookback": 20,
+    "window": 1,
+    "horizon": 5,
+    "execution": "open_t1",
+    "min_price": 5.0,
+    "liquidity_pct": 0.0,
+    "neutralization": "none",
+    "direction": 1
+  },
+  "portfolio": {
+    "scheme": "quantile",
+    "quantile": 0.2,
+    "holding": 5,
+    "overlap": true,
+    "gross": 2.0,
+    "max_weight": 0.02,
+    "sector_neutral": false,
+    "beta_neutral": false
+  },
+  "costs": {
+    "half_spread_bps": 3.0,
+    "impact_coef": 0.7,
+    "aum": 100000000.0,
+    "borrow_bps_annual": 30.0
+  },
+  "ic_by_horizon": [
+    {
+      "horizon": 1,
+      "mean_ic": 0.0038380086252378333,
+      "t_nw": 1.4725075744126115,
+      "t_naive": 1.526485373362823,
+      "p_nw": 0.140883863128001,
+      "ic_ir_annual": 0.7984782717446057,
+      "hit_rate": 0.4846938775510204,
+      "n_days": 921,
+      "nw_lags": 6
+    },
+    {
+      "horizon": 2,
+      "mean_ic": 0.001993240040549259,
+      "t_nw": 0.676615117359222,
+      "t_naive": 0.8056851582193216,
+      "p_nw": 0.4986501849679733,
+      "ic_ir_annual": 0.2981650410099657,
+      "hit_rate": 0.4627170582226762,
+      "n_days": 920,
+      "nw_lags": 6
+    },
+    {
+      "horizon": 5,
+      "mean_ic": -0.003179095934160603,
+      "t_nw": -0.9254613979439804,
+      "t_naive": -1.3389485800412508,
+      "p_nw": 0.35472595431646503,
+      "ic_ir_annual": -0.3139023011323511,
+      "hit_rate": 0.4487704918032787,
+      "n_days": 917,
+      "nw_lags": 6
+    },
+    {
+      "horizon": 10,
+      "mean_ic": -0.007448322874354863,
+      "t_nw": -1.92905914838386,
+      "t_naive": -2.9849413001700467,
+      "p_nw": 0.0537235197206145,
+      "ic_ir_annual": -0.4961793047545226,
+      "hit_rate": 0.427394438722966,
+      "n_days": 912,
+      "nw_lags": 9
+    },
+    {
+      "horizon": 20,
+      "mean_ic": -0.010026452364081548,
+      "t_nw": -2.4226044864534395,
+      "t_naive": -4.058982846725745,
+      "p_nw": 0.015409693608517202,
+      "ic_ir_annual": -0.47973258678435593,
+      "hit_rate": 0.40790842872008326,
+      "n_days": 902,
+      "nw_lags": 19
+    }
+  ],
+  "ic_by_year": {
+    "2013": -0.006826289298335584,
+    "2014": -0.00027066913066995366,
+    "2015": -0.0025689190453310915,
+    "2016": -0.004307579018093362
+  },
+  "fama_macbeth": [
+    {
+      "model": "Signal only",
+      "coef_bps": 0.20212081399518844,
+      "t_nw": 0.1857583572018595,
+      "n_days": 917
+    },
+    {
+      "model": "+ beta, size",
+      "coef_bps": 0.04305176389264384,
+      "t_nw": 0.04502331566071833,
+      "n_days": 897
+    },
+    {
+      "model": "+ 1d & 5d reversal",
+      "coef_bps": 0.07279826296819399,
+      "t_nw": 0.08035179531260936,
+      "n_days": 897
+    },
+    {
+      "model": "+ momentum, volatility",
+      "coef_bps": 0.21431016505759418,
+      "t_nw": 0.23972122213357835,
+      "n_days": 850
+    },
+    {
+      "model": "+ sector effects",
+      "coef_bps": 1.0928519332458717,
+      "t_nw": 1.415274518492093,
+      "n_days": 850
+    }
+  ],
+  "walk_forward": {
+    "mean": 0.006458722201215699,
+    "se_nw": 0.006430239270793666,
+    "t_nw": 1.0044295288592764,
+    "t_naive": 2.225366579191112,
+    "p_nw": 0.31517162287395273,
+    "n": 730.0,
+    "lags": 19.0
+  },
+  "gross": {
+    "ann_return": 0.00421407320692742,
+    "ann_vol": 0.03369374254032793,
+    "sharpe": 0.12506990584033845,
+    "sortino": 0.1934271972024891,
+    "max_drawdown": -0.06247117575600236,
+    "calmar": 0.06745628133183523,
+    "hit_rate": 0.494028230184582,
+    "skew": 0.2967592329730651,
+    "kurtosis": 6.088320660620744,
+    "n_days": 921
+  },
+  "net": {
+    "ann_return": -0.11357089370223583,
+    "ann_vol": 0.0336447230961647,
+    "sharpe": -3.375593057420117,
+    "sortino": -5.044831845021192,
+    "max_drawdown": -0.3408448232259915,
+    "calmar": -0.3332041033433403,
+    "hit_rate": 0.3995656894679696,
+    "skew": 0.2722280337023943,
+    "kurtosis": 6.065184493647413,
+    "n_days": 921
+  },
+  "evidence": {
+    "t_ic": -0.9254613979439804,
+    "mean_ic": -0.003179095934160603,
+    "years_same_sign": 4.0,
+    "n_years": 4.0,
+    "p_holm": 1.0,
+    "t_fm_full": -1.415274518492093,
+    "t_wf_oos": 1.0044295288592764,
+    "net_sharpe": -3.375593057420117,
+    "breakeven_bps": 0.269373193109484,
+    "assumed_cost_bps": 7.381679683627664,
+    "dsr": 7.156143702033206e-16,
+    "holdout": null
+  },
+  "verdict": "REJECT (as specified)",
+  "criteria": [
+    {
+      "name": "Statistical evidence",
+      "question": "Is the average IC distinguishable from zero after accounting for overlapping returns?",
+      "threshold": "|Newey-West t| \u2265 2 (\u2265 3 for 'strong')",
+      "value": "-0.93",
+      "status": "fail",
+      "why": "Below 2, the result is consistent with noise; Harvey, Liu & Zhu (2016) argue for ~3 given how many factors have been tried in the literature."
+    },
+    {
+      "name": "Multiple-testing adjusted",
+      "question": "Does it survive the number of variants we tried?",
+      "threshold": "Holm-adjusted p < 0.05 across the parameter grid",
+      "value": "1.000",
+      "status": "fail",
+      "why": "Searching many lookbacks and horizons and reporting the best one inflates significance; Holm controls the chance of ANY false discovery."
+    },
+    {
+      "name": "Stability over time",
+      "question": "Does the effect have the same sign in most years?",
+      "threshold": "Same sign as full-sample IC in \u2265 75% of years",
+      "value": "4/4",
+      "status": "pass",
+      "why": "An effect driven by one episode is a story about that episode, not a repeatable signal."
+    },
+    {
+      "name": "Survives factor controls",
+      "question": "Is it more than beta, size, reversal, momentum, volatility and sector?",
+      "threshold": "Fama-MacBeth t \u2265 2 with all controls, same sign",
+      "value": "-1.42",
+      "status": "fail",
+      "why": "If known factors explain the signal, it is a repackaging of cheap, already-owned exposures, not new alpha."
+    },
+    {
+      "name": "Out-of-sample (walk-forward)",
+      "question": "Does re-selecting parameters using only past data still work on the next quarter?",
+      "threshold": "Walk-forward OOS IC t \u2265 2",
+      "value": "1.00",
+      "status": "inconclusive",
+      "why": "In-sample selection always looks better than reality; this is the closest we get to live trading without spending the holdout."
+    },
+    {
+      "name": "Economic significance",
+      "question": "After realistic costs, does the portfolio earn a worthwhile risk-adjusted return?",
+      "threshold": "Net Sharpe \u2265 0.5 at the assumed AUM",
+      "value": "-3.38",
+      "status": "fail",
+      "why": "A statistically significant IC can still be too small, or too fast-decaying, to pay for trading."
+    },
+    {
+      "name": "Cost margin of safety",
+      "question": "How wrong can our cost model be before profits vanish?",
+      "threshold": "Break-even cost \u2265 2 \u00d7 modelled cost",
+      "value": "0.3 vs 7.4 bps",
+      "status": "fail",
+      "why": "Cost models for free data are rough; strategies that only work with optimistic costs usually fail in production."
+    },
+    {
+      "name": "Deflated Sharpe",
+      "question": "Is the Sharpe higher than the best of N lucky trials?",
+      "threshold": "DSR \u2265 0.95",
+      "value": "0.00",
+      "status": "fail",
+      "why": "Corrects the Sharpe for the number of configurations tried and for non-normal returns (Bailey & L\u00f3pez de Prado, 2014)."
+    },
+    {
+      "name": "Holdout confirmation",
+      "question": "Does it work on untouched 2017-18 data?",
+      "threshold": "Same sign and |t| \u2265 1.5 on the holdout",
+      "value": "locked",
+      "status": "inconclusive",
+      "why": "The holdout is opened once, after the specification is frozen."
+    },
+    {
+      "name": "Data adequacy",
+      "question": "Is the dataset good enough for a production decision?",
+      "threshold": "Survivorship-free, \u2265 10 years, point-in-time, with spreads & events",
+      "value": "5 yrs, survivors only",
+      "status": "fail",
+      "why": "Free data caps how far ANY conclusion can go: at best 'worth testing on institutional data'."
+    }
+  ],
+  "run_id": "20261012T032737Z_63971ec6",
+  "git": "7523e96",
+  "note": "PRE-REGISTERED primary test",
+  "holdout_used": false
+}
