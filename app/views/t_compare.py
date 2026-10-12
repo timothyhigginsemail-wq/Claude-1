@@ -10,17 +10,18 @@ from quantlab.research.pipeline import ResearchSpec, restrict
 from quantlab.research.stats import rowwise_corr
 
 spec, sample = st.session_state.spec, st.session_state.sample
-st.title("🆚 Compare hypotheses")
+st.title("🆚 Compare volume hypotheses")
 st.markdown("Each hypothesis run with its own default parameters, the same universe, "
             "horizon, execution and portfolio settings. The **placebo** shows what pure "
             "noise looks like.")
 sample_note(sample)
 
+KEYS = ["abnormal_volume", "volume_reversal", "volume_trend", "reversal", "placebo"]
 pspec, cspec = portfolio_controls(), cost_controls()
 specs = {k: ResearchSpec(**{**spec.as_dict(), "hypothesis": k,
                             "lookback": 20 if k != "volume_trend" else 120,
                             "window": {"reversal": 5, "volume_trend": 20}.get(k, 1)})
-         for k in HYPOTHESES}
+         for k in KEYS}
 rows, ic_rows = [], []
 for k, s in specs.items():
     t = ic_table(s, sample)
@@ -49,7 +50,7 @@ show(style(fig, 300, "IC t-stat (Newey-West) by horizon"))
 
 st.subheader("How similar are the signals?")
 u = uni(spec)
-keys = list(HYPOTHESES)
+keys = KEYS
 S = {k: signal(specs[k]).where(u).rank(axis=1) for k in keys}
 C = pd.DataFrame(index=[HYPOTHESES[k].name for k in keys],
                  columns=[HYPOTHESES[k].name for k in keys], dtype=float)
@@ -63,5 +64,5 @@ show(style(fig, 300, "Average daily cross-sectional rank correlation"))
 st.caption("Two signals with high correlation are largely the same bet. A new signal is "
            "most valuable when it predicts returns *and* is uncorrelated with what you "
            "already have.")
-st.info("To add your own hypothesis: describe it in chat (statement, mechanism, horizon) "
-        "and it will be coded into `quantlab/signals/library.py` with look-ahead tests.")
+st.info("This page compares the volume hypotheses with their benchmarks, including costs. "
+        "For all 22 library signals and your own, see 🏆 Signal leaderboard.")

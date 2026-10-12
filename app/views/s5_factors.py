@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, fm_table, ic_table, org_box, pitfalls, sample_note, show, style,
+from common import (COLORS, G, fm_table, interpret, reading, terms, ic_table, org_box, pitfalls, sample_note, show, style,
                     technical, tstat_badge)
 from quantlab.research.pipeline import ResearchSpec
 
@@ -14,6 +14,7 @@ st.markdown(
     "high-beta stocks, or recent losers, then the signal earns returns we can already get "
     "cheaply. Here we ask what is **left over** after controlling for known effects.")
 sample_note(sample)
+terms("fama_macbeth", "neutralize", "t_stat")
 
 st.subheader("Fama-MacBeth: the signal's return as controls are added")
 fm = fm_table(spec, sample)
@@ -25,6 +26,7 @@ fig.update_yaxes(autorange="reversed")
 show(style(fig, 300, f"{spec.horizon}-day return per 1 s.d. of signal (bps), 95% CI"))
 st.dataframe(fm.style.format({"coef_bps": "{:+.2f}", "t_nw": "{:+.2f}", "n_days": "{:.0f}"}))
 first, last = fm.iloc[0], fm.iloc[-1]
+reading(interpret.fm(first.coef_bps, first.t_nw, last.coef_bps, last.t_nw))
 if np.sign(first.coef_bps) != np.sign(last.coef_bps):
     st.warning("The sign **flips** once controls are added: the raw effect was a proxy for "
                "something else.")

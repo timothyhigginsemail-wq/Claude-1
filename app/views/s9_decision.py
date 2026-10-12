@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from common import (HYPOTHESES, backtest, cost_controls, fm_table, grid, ic_series, ic_table,
+from common import (G, backtest, hyp_info, terms, cost_controls, fm_table, grid, ic_series, ic_table,
                     lag_of, org_box, portfolio_controls, technical)
 from quantlab.config import HOLDOUT_START
 from quantlab.portfolio.backtest import performance
@@ -17,7 +17,8 @@ st.title("9 · Research decision")
 st.markdown("The decision rules below were fixed **before** looking at results. Every "
             "number is recomputed from the research sample (2013–2016) for the "
             "specification in the sidebar.")
-st.markdown(f"**Hypothesis:** {HYPOTHESES[spec.hypothesis].name} · lookback {spec.lookback} · "
+terms("pre_registration", "holm", "walk_forward", "dsr", "breakeven")
+st.markdown(f"**Hypothesis:** {hyp_info(spec).name} · lookback {spec.lookback} · "
             f"window {spec.window} · horizon {spec.horizon}d · {spec.execution} · "
             f"neutralisation: {spec.neutralization}")
 

@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, backtest, cost_controls, fmt_pct, org_box, persist, pitfalls,
+from common import (COLORS, G, backtest, interpret, reading, terms, cost_controls, fmt_pct, org_box, persist, pitfalls,
                     portfolio_controls, sample_note, show, style, technical)
 from quantlab.portfolio.backtest import performance
 from quantlab.research.pipeline import restrict
@@ -14,6 +14,7 @@ st.markdown("Turn the ranking into positions: **long** the stocks the signal lik
             "**short** the ones it dislikes, in equal dollar amounts so the market's "
             "direction largely cancels.")
 sample_note(sample)
+terms("dollar_neutral", "beta", "sharpe", "drawdown")
 
 with st.expander("⚙️ Portfolio settings", expanded=True):
     c1, c2 = st.columns(2)
@@ -43,10 +44,11 @@ S = restrict(d["short_leg"], sample, pspec.holding, lag)
 perf = performance(g)
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Gross return (ann.)", fmt_pct(perf["ann_return"]))
+c1.metric("Gross return (ann.)", fmt_pct(perf["ann_return"]), help=G("gross_net"))
 c2.metric("Volatility (ann.)", fmt_pct(perf["ann_vol"]))
-c3.metric("Gross Sharpe", f"{perf['sharpe']:.2f}")
-c4.metric("Max drawdown", fmt_pct(perf["max_drawdown"]))
+c3.metric("Gross Sharpe", f"{perf['sharpe']:.2f}", help=G("sharpe"))
+c4.metric("Max drawdown", fmt_pct(perf["max_drawdown"]), help=G("drawdown"))
+reading(interpret.sharpe(perf["sharpe"], net=False))
 st.caption("Before trading costs — see stage 7 for net results.")
 
 fig = go.Figure()

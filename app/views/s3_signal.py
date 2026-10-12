@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HYPOTHESES, ch, in_sample_dates, market, org_box, persist, pitfalls,
-                    show, signal, style, technical, uni)
+from common import (COLORS, G, ch, hyp_info, in_sample_dates, market, org_box, persist, pitfalls,
+                    show, signal, style, technical, terms, uni)
 from quantlab.research.factors import CONTROL_LABELS
 from quantlab.research.stats import rowwise_corr
 
@@ -25,8 +25,14 @@ elif spec.hypothesis == "volume_reversal":
                 "volume. z(·) is the cross-sectional z-score of the recent return.")
 elif spec.hypothesis == "reversal":
     st.latex(r"S_{i,t} = -\,r_{i,[t-w+1,t]}")
+elif spec.hypothesis == "custom":
+    st.markdown("Your own formula (from 🧪 Signal lab):")
+    st.code(spec.formula, language=None)
 else:
-    st.markdown(HYPOTHESES[spec.hypothesis].statement)
+    h_ = hyp_info(spec)
+    st.markdown(f"**{h_.name}.** {h_.statement}  \n*Source:* {h_.reference}")
+    st.caption("The exact calculation is in `quantlab/signals/library.py`.")
+terms("persistence", "correlation", "lookahead")
 
 m = market()
 sig = signal(spec)
@@ -36,11 +42,9 @@ s_u = sig.where(u)
 c1, c2, c3 = st.columns(3)
 c1.metric("Coverage (avg names/day)", f"{s_u.notna().sum(axis=1).mean():.0f}")
 ac = rowwise_corr(s_u, s_u.shift(1)).mean()
-c2.metric("Day-to-day rank persistence", f"{ac:.2f}",
-          help="Correlation between today's and yesterday's signal across stocks. Low "
-               "persistence ⇒ high turnover ⇒ high trading costs.")
+c2.metric("Day-to-day rank persistence", f"{ac:.2f}", help=G("persistence"))
 ac5 = rowwise_corr(s_u, s_u.shift(5)).mean()
-c3.metric("5-day persistence", f"{ac5:.2f}")
+c3.metric("5-day persistence", f"{ac5:.2f}", help=G("persistence"))
 
 st.subheader("Distribution")
 dates = in_sample_dates(s_u.dropna(how="all").index, st.session_state.sample)

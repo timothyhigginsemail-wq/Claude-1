@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, backtest, cost_controls, fmt_pct, org_box, persist, pitfalls,
+from common import (COLORS, G, backtest, interpret, reading, terms, cost_controls, fmt_pct, org_box, persist, pitfalls,
                     portfolio_controls, sample_note, show, style, technical)
 from quantlab.portfolio.backtest import performance, rescale_trading_cost
 from quantlab.portfolio.construct import PortfolioSpec
@@ -15,6 +15,7 @@ st.markdown("A signal is only worth something if its edge exceeds the cost of tr
             "Fast signals trade a lot; every trade pays the bid-ask spread and pushes the "
             "price against you (market impact), and bigger funds push harder.")
 sample_note(sample)
+terms("turnover", "breakeven", "impact", "capacity", "gross_net")
 
 with st.expander("⚙️ Cost assumptions", expanded=True):
     c1, c2 = st.columns(2)
@@ -39,8 +40,8 @@ pg, pn = performance(g), performance(n)
 to = R(d["turnover"])
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Gross Sharpe", f"{pg['sharpe']:.2f}")
-c2.metric("Net Sharpe", f"{pn['sharpe']:.2f}")
+c1.metric("Gross Sharpe", f"{pg['sharpe']:.2f}", help=G("sharpe"))
+c2.metric("Net Sharpe", f"{pn['sharpe']:.2f}", help=G("gross_net"))
 c3.metric("Net return (ann.)", fmt_pct(pn["ann_return"]))
 c4.metric("Cost drag (ann.)", fmt_pct((g.mean() - n.mean()) * 252))
 
@@ -50,15 +51,14 @@ fig.add_scatter(x=n.index, y=n.cumsum() * 100, name="Net of costs", line=dict(co
 show(style(fig, 300, "Cumulative return, % of capital"))
 
 c1, c2, c3 = st.columns(3)
-c1.metric("Turnover / day", f"{to.mean():.0%} of capital",
-          help="Sum of |trades| as a fraction of capital. 2× gross book ⇒ 100% means half "
-               "the book is replaced daily.")
+c1.metric("Turnover / day", f"{to.mean():.0%} of capital", help=G("turnover"))
 hold = 2 * d["gross_exposure"].mean() / to.mean() if to.mean() > 0 else np.nan
 c2.metric("Implied avg holding", f"{hold:.1f} days")
 be = g.mean() / to.mean() * 1e4 if to.mean() > 0 else np.nan
 paid = R(d["trading_cost"]).mean() / to.mean() * 1e4 if to.mean() > 0 else np.nan
 c3.metric("Break-even cost", f"{be:.1f} bps", delta=f"vs {paid:.1f} bps modelled",
-          delta_color="off")
+          delta_color="off", help=G("breakeven"))
+reading(interpret.costs(be, paid, to.mean()) + " " + interpret.sharpe(pn["sharpe"], net=True))
 st.caption("Break-even cost = gross return per $ traded. If realistic all-in costs exceed "
            "it, the strategy loses money no matter how good its IC looks.")
 

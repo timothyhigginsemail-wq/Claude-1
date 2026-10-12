@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import HYPOTHESES, ROOT, SAMPLE_LABELS, ic_table, market, tstat_badge
+from common import G, ROOT, SAMPLE_LABELS, hyp_info, ic_table, interpret, market, reading, terms, tstat_badge
 
 spec, sample = st.session_state.spec, st.session_state.sample
 st.title("📈 Quant Research Lab")
@@ -10,7 +10,7 @@ st.markdown(
     "lifecycle a systematic fund would use — from idea to a defensible **reject / revise / "
     "advance** decision. Every number is computed live from real historical data.")
 
-st.info("**Current hypothesis:** " + HYPOTHESES[spec.hypothesis].statement)
+st.info("**Current hypothesis:** " + hyp_info(spec).statement)
 
 m = market()
 c1, c2, c3 = st.columns(3)
@@ -23,11 +23,23 @@ tab = ic_table(spec, sample)
 h = spec.horizon
 row = tab.loc[h]
 c1, c2 = st.columns(2)
-c1.metric(f"Mean rank IC, {h}-day", f"{row.mean_ic:+.4f}")
-c2.metric("Newey-West t-stat", tstat_badge(row.t_nw))
+c1.metric(f"Mean rank IC, {h}-day", f"{row.mean_ic:+.4f}", help=G("ic"))
+c2.metric("Newey-West t-stat", tstat_badge(row.t_nw), help=G("t_stat"))
+reading(interpret.ic(row.mean_ic, row.t_nw, h))
 st.caption(f"{SAMPLE_LABELS[sample]}. IC = correlation between today's signal ranking and "
            "the next-h-day return ranking across stocks. See **4 · Predictive tests** for "
            "the full picture and **9 · Decision** for the verdict.")
+
+st.markdown("#### New in v2")
+st.markdown("""
+- **🧪 Signal lab** — write a hypothesis card, build a signal by point-and-click or formula,
+  lock it, then see results. Run any locked idea through all nine stages.
+- **🏆 Signal leaderboard** — 22 published signals plus yours, with significance adjusted
+  for everything tried, and a test of whether the best is better than luck.
+- **Tap any ⓘ chip or ? icon** for a plain-English definition, how to read the number,
+  a rule of thumb and the usual trap. 💬 lines interpret each result.
+""")
+terms("ic", "t_stat", "survivorship")
 
 st.markdown("#### How to use this")
 st.markdown("""

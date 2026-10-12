@@ -8,6 +8,7 @@ standard errors and block bootstraps fix this.
 from __future__ import annotations
 
 import math
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -176,3 +177,37 @@ def benjamini_hochberg(pvals) -> np.ndarray:
         run = min(run, p[i] * m / rank)
         adj[i] = run
     return adj
+
+
+def reality_check(ic: pd.DataFrame, horizon: int = 5, n_boot: int = 500, block: int | None = None,
+                  seed: int = 0) -> dict:
+    """White's (2000) reality check on the BEST of many signals, two-sided.
+
+    ic: dates x signals matrix of daily ICs. The statistic is the largest |t| across
+    signals. The null distribution re-samples the (demeaned) IC matrix in circular
+    blocks — rows are kept together, so correlation BETWEEN signals is preserved —
+    and records the largest |t| each time. p = share of bootstrap maxima ≥ observed.
+    """
+    X = ic.dropna(how="all")
+    T, K = X.shape
+    if T < 50 or K == 0:
+        return {"p": float("nan"), "max_t": float("nan"), "best": None, "n": K}
+    block = block or max(10, 2 * horizon)
+    lags = nw_lags(T, horizon)
+    means = X.mean()
+    se = pd.Series({c: newey_west_se(X[c], lags) for c in X})
+    t_obs = (means / se).abs()
+    vals = X.values - means.values          # impose the null: every signal has mean 0
+    rng = np.random.default_rng(seed)
+    n_blocks = int(np.ceil(T / block))
+    maxima = np.empty(n_boot)
+    with np.errstate(invalid="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        for b in range(n_boot):
+            starts = rng.integers(0, T, n_blocks)
+            idx = ((starts[:, None] + np.arange(block)[None, :]) % T).ravel()[:T]
+            m = np.nanmean(vals[idx], axis=0)
+            maxima[b] = np.nanmax(np.abs(m / se.values))
+    best = t_obs.idxmax()
+    return {"p": float(np.mean(maxima >= t_obs.max())), "max_t": float(t_obs.max()),
+            "best": best, "n": K, "null_95": float(np.quantile(maxima, 0.95))}

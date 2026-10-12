@@ -14,6 +14,8 @@ import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from quantlab.config import HOLDOUT_START  # noqa: E402
+from quantlab.content import interpret  # noqa: E402,F401
+from quantlab.content.glossary import GLOSSARY, help_text, stars  # noqa: E402,F401
 from quantlab.content.org import STAGES  # noqa: E402
 from quantlab.data.loader import load_market  # noqa: E402
 from quantlab.portfolio.backtest import CostSpec, run_backtest  # noqa: E402
@@ -75,20 +77,38 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
     with st.sidebar:
         st.markdown("### Research specification")
         keys = list(HYPOTHESES)
+        custom = st.session_state["p"].get("custom_formula")
+        if custom:
+            keys = ["custom"] + keys
+        cname = st.session_state["p"].get("custom_name", "custom")
+        label = (lambda k: f"★ My signal: {cname}"
+                 if k == "custom" else f"{HYPOTHESES[k].family} · {HYPOTHESES[k].name}")
         hyp = persist(st.selectbox, "Hypothesis", "hyp", "abnormal_volume", options=keys,
-                      format_func=lambda k: HYPOTHESES[k].name)
-        c1, c2 = st.columns(2)
-        with c1:
-            lookback = persist(st.selectbox, "Baseline days", "lookback", 20,
-                               options=[5, 10, 20, 60, 120],
-                               help="Days of the stock's own history that define 'normal' volume.")
-        with c2:
-            window = persist(st.selectbox, "Recent window", "window", 1, options=[1, 2, 5, 10, 20],
-                             help="Days averaged to measure 'recent' volume (or return).")
+                      format_func=label,
+                      help="Pick any library signal, or build your own in 🧪 Signal lab.")
+        tunable = hyp != "custom" and HYPOTHESES[hyp].tunable
+        p_ = st.session_state["p"]
+        if tunable:
+            c1, c2 = st.columns(2)
+            with c1:
+                lookback = persist(st.selectbox, "Baseline days", "lookback", 20,
+                                   options=[5, 10, 20, 60, 120],
+                                   help="Days of the stock's own history that define 'normal' "
+                                        "volume.")
+            with c2:
+                window = persist(st.selectbox, "Recent window", "window", 1,
+                                 options=[1, 2, 5, 10, 20],
+                                 help="Days averaged to measure 'recent' volume (or return).")
+        else:
+            lookback, window = p_.get("lookback", 20), p_.get("window", 1)
+            st.caption("Parameters are fixed by the formula or the original paper — "
+                       "changing them would be a new hypothesis.")
         horizon = persist(st.selectbox, "Prediction horizon (days)", "horizon", 5,
-                          options=list(HORIZONS))
+                          options=list(HORIZONS),
+                          help="How many trading days ahead the signal tries to predict.")
         execution = persist(st.selectbox, "Execution timing", "execution", "open_t1",
-                            options=list(EXECUTION_LABELS), format_func=EXECUTION_LABELS.get)
+                            options=list(EXECUTION_LABELS), format_func=EXECUTION_LABELS.get,
+                            help=help_text("lookahead"))
         neutral = persist(st.selectbox, "Signal neutralisation", "neutral", "none",
                           options=["none", "sector", "factors"],
                           format_func={"none": "None (raw signal)", "sector": "Sector-demeaned",
@@ -107,12 +127,16 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
         spec = ResearchSpec(hypothesis=hyp, lookback=int(lookback), window=int(window),
                             horizon=int(horizon), execution=execution,
                             min_price=float(min_price), liquidity_pct=liq / 100.0,
-                            neutralization=neutral, direction=-1 if flip else 1)
-        trial = (hyp, spec.signal_params().__repr__(), horizon, execution, neutral, flip)
+                            neutralization=neutral, direction=-1 if flip else 1,
+                            formula=custom if hyp == "custom" else "")
+        trial = (hyp, spec.signal_params().__repr__(), spec.formula, horizon, execution,
+                 neutral, flip)
         st.session_state.trials.add(trial)
         n = len(st.session_state.trials)
         st.caption(f"🧪 **{n}** distinct configurations viewed this session. Every one "
                    "counts as a trial in the multiple-testing corrections.")
+        persist(st.toggle, "Plain-English readings", "plain", True,
+                help="Show a short interpretation under each result.")
         if not st.session_state.holdout_unlocked:
             st.caption(f"🔒 Holdout ({HOLDOUT_START[:4]}+) is locked.")
     return spec, sample
@@ -215,11 +239,32 @@ def factor_rets(spec: ResearchSpec, holding: int):
 
 @st.cache_data(show_spinner="Testing the whole parameter grid (≈10 s)…", max_entries=8)
 def grid(spec: ResearchSpec):
+    """The family of tests to correct for. Tunable signals: their own parameter grid.
+    Fixed signals and custom formulas: the whole signal library plus this signal."""
     key = spec.hypothesis
-    if key in ("placebo",):
-        key = "abnormal_volume"
-    ics, cfg = rb.grid_ic(market(), key, uni(spec), execution=spec.execution)
-    return ics, cfg
+    if key != "custom" and key != "placebo" and HYPOTHESES[key].tunable:
+        return rb.grid_ic(market(), key, uni(spec), execution=spec.execution)
+    lib = library_ics(spec.min_price, spec.liquidity_pct, spec.execution)
+    from quantlab.research.returns import forward_returns
+    ics = lib.copy()
+    if key == "custom" or key == "placebo":
+        sig = signal(spec)
+        for h in (1, 5, 10, 20):
+            ics[f"{key}@{h}"] = rank_ic(sig, forward_returns(market(), h, spec.execution),
+                                        uni(spec))
+    rows = [{"config": c, "lookback": c.rsplit("@", 1)[0], "window": 0,
+             "horizon": int(c.rsplit("@", 1)[1])} for c in ics]
+    return ics, pd.DataFrame(rows).set_index("config")
+
+
+@st.cache_data(show_spinner="Scoring the signal library (≈20 s the first time)…", max_entries=4)
+def library_ics(min_price: float, liq: float, execution: str):
+    from quantlab.research.library_cache import compute_library_ics, is_default, load_cached
+    if is_default(min_price, liq, execution):
+        cached = load_cached()
+        if cached is not None:
+            return cached.astype(float)
+    return compute_library_ics(market(), universe(min_price, liq), execution)
 
 
 @st.cache_data(show_spinner="Simulating noise signals (≈15 s)…", max_entries=4)
@@ -232,6 +277,47 @@ def page_setup(title: str, stage: str | None = None, intro: str = ""):
     st.title(title)
     if intro:
         st.markdown(intro)
+
+
+def hyp_info(spec: ResearchSpec):
+    """Name/statement/mechanism of the active hypothesis, including lab-built ones."""
+    from types import SimpleNamespace
+    if spec.hypothesis != "custom":
+        return HYPOTHESES[spec.hypothesis]
+    name = st.session_state.get("p", {}).get("custom_name", "My signal")
+    card = next((c for c in reversed(st.session_state.get("lab_cards", []))
+                 if c.get("formula") == spec.formula), None)
+    return SimpleNamespace(
+        key="custom", name=f"★ {name}", family="Mine",
+        statement=card["statement"] if card else f"Custom formula: {spec.formula}",
+        mechanism=card["mechanism"] if card else "Not recorded.",
+        predicted_sign=card["predicted_sign"] if card else "Unknown",
+        reference="Your own hypothesis (Signal lab)", tunable=False, is_placebo=False)
+
+
+def terms(*keys: str):
+    """A row of tappable chips, each opening a plain-English definition."""
+    with st.container(horizontal=True, gap="small"):
+        for k in keys:
+            g = GLOSSARY[k]
+            with st.popover(g["term"], icon=":material/info:", type="tertiary"):
+                st.markdown(f"**{g['term']}**")
+                st.markdown(g["what"])
+                st.markdown(f"**How to read it.** {g['read']}")
+                st.markdown(f"**Rule of thumb.** {g['guide']}")
+                st.markdown(f"**Watch out.** {g['trap']}")
+
+
+def reading(text: str):
+    """A plain-English interpretation line (hidden when the user turns them off)."""
+    if text and st.session_state.get("p", {}).get("plain", True):
+        st.markdown(f"<div style='border-left:3px solid #2563eb;padding:.35rem .7rem;"
+                    f"margin:.2rem 0 .8rem 0;font-size:.92rem'>💬 {text}</div>",
+                    unsafe_allow_html=True)
+
+
+def G(key: str) -> str:
+    return help_text(key)
 
 
 def technical(md: str, title: str = "Technical details"):

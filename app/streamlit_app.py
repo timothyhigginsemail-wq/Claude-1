@@ -40,8 +40,10 @@ pages = {
         st.Page(P + "s9_decision.py", title="9 · Decision", icon="🧭"),
     ],
     "Tools": [
+        st.Page(P + "t_lab.py", title="Signal lab", icon="🧪"),
+        st.Page(P + "t_leaderboard.py", title="Signal leaderboard", icon="🏆"),
         st.Page(P + "t_inspect.py", title="Trade inspector", icon="🔍"),
-        st.Page(P + "t_compare.py", title="Compare hypotheses", icon="🆚"),
+        st.Page(P + "t_compare.py", title="Compare volume ideas", icon="🆚"),
     ],
     "Learn": [
         st.Page(P + "l_org.py", title="How quant firms work", icon="🏛️"),

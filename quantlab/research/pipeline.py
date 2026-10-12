@@ -31,8 +31,12 @@ class ResearchSpec:
     liquidity_pct: float = 0.0
     neutralization: str = "none"     # 'none' | 'sector' | 'factors'
     direction: int = 1               # +1 = long high signal; -1 = bet the opposite way
+    formula: str = ""                # used when hypothesis == "custom"
 
     def signal_params(self) -> dict:
+        from quantlab.signals.library import HYPOTHESES
+        if self.hypothesis == "custom" or not HYPOTHESES[self.hypothesis].tunable:
+            return {}
         if self.hypothesis == "reversal":
             return {"window": self.window if self.window > 1 else 5}
         if self.hypothesis == "placebo":
@@ -51,7 +55,11 @@ def build_universe(mkt: Market, spec: ResearchSpec) -> pd.DataFrame:
 
 def build_signal(mkt: Market, spec: ResearchSpec, universe: pd.DataFrame,
                  chars: dict | None = None) -> pd.DataFrame:
-    raw = compute_signal(mkt, spec.hypothesis, **spec.signal_params()) * spec.direction
+    if spec.hypothesis == "custom":
+        from quantlab.signals.formula import evaluate
+        raw = evaluate(spec.formula, mkt) * spec.direction
+    else:
+        raw = compute_signal(mkt, spec.hypothesis, **spec.signal_params()) * spec.direction
     if spec.neutralization == "none":
         return raw
     if spec.neutralization == "sector":

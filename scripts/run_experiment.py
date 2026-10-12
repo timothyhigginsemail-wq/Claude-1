@@ -70,8 +70,19 @@ def run(spec: ResearchSpec, pspec: PortfolioSpec, cspec: CostSpec, unlock_holdou
     by_year = s.groupby(s.index.year).mean()
     sign = np.sign(ic.mean_ic) or 1
     fm = fm_progression(mkt, sig, u, chars, h, spec.execution, "research")
-    grid_key = spec.hypothesis if spec.hypothesis != "placebo" else "abnormal_volume"
-    ics, cfg = rb.grid_ic(mkt, grid_key, u, execution=spec.execution)
+    from quantlab.signals.library import HYPOTHESES
+    if spec.hypothesis in HYPOTHESES and HYPOTHESES[spec.hypothesis].tunable:
+        ics, cfg = rb.grid_ic(mkt, spec.hypothesis, u, execution=spec.execution)
+    else:   # fixed-parameter or custom signal: the family is the whole library + this one
+        from quantlab.research.library_cache import compute_library_ics, is_default, load_cached
+        lib = load_cached() if is_default(spec.min_price, spec.liquidity_pct, spec.execution) else None
+        ics = (lib.astype(float) if lib is not None
+               else compute_library_ics(mkt, u, spec.execution)).copy()
+        if spec.hypothesis not in ics.columns.str.rsplit("@", n=1).str[0]:
+            for hh in (1, 5, 10, 20):
+                ics[f"{spec.hypothesis}@{hh}"] = rank_ic(sig, forward_returns(mkt, hh, spec.execution), u)
+        cfg = pd.DataFrame([{"config": c, "lookback": c.rsplit("@", 1)[0], "window": 0,
+                             "horizon": int(c.rsplit("@", 1)[1])} for c in ics]).set_index("config")
     gs = rb.grid_summary(ics, cfg, "research", lag)
     key = f"lb={spec.lookback} w={spec.window} h={h}"
     p_holm = float(gs.loc[key, "p_holm"]) if (key in gs.index and spec.neutralization == "none") \
@@ -123,6 +134,7 @@ def main():
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--execution", default="open_t1")
     ap.add_argument("--neutralization", default="none")
+    ap.add_argument("--formula", default="", help="custom signal (use --hypothesis custom)")
     ap.add_argument("--direction", type=int, default=1, choices=[1, -1])
     ap.add_argument("--holding", type=int, default=None)
     ap.add_argument("--aum", type=float, default=100e6)
@@ -132,7 +144,7 @@ def main():
     a = ap.parse_args()
     spec = ResearchSpec(hypothesis=a.hypothesis, lookback=a.lookback, window=a.window,
                         horizon=a.horizon, execution=a.execution, neutralization=a.neutralization,
-                        direction=a.direction)
+                        direction=a.direction, formula=a.formula)
     pspec = PortfolioSpec(holding=a.holding or a.horizon)
     cspec = CostSpec(aum=a.aum)
     res = run(spec, pspec, cspec, a.unlock_holdout)

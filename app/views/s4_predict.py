@@ -3,9 +3,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HORIZONS, SAMPLE_LABELS, decay, double_sort, ic_series, ic_table,
+from common import (COLORS, G, HORIZONS, SAMPLE_LABELS, decay, interpret, reading, terms, double_sort, ic_series, ic_table,
                     lag_of, org_box, persist, pitfalls, quantiles, regimes, sample_note, show,
-                    style, technical, tstat_badge)
+                    stars, style, technical, tstat_badge)
 from quantlab.research.analysis import ic_by_regime, sample_mask
 from quantlab.research.pipeline import ResearchSpec
 
@@ -15,6 +15,7 @@ st.markdown("Does the signal **rank** stocks by their future returns? We check e
             "horizon, look at the whole distribution (not just the extremes), and see "
             "whether the effect depends on price moves or market conditions.")
 sample_note(sample)
+terms("ic", "newey_west", "quantile_spread", "decay", "stars")
 
 tab = ic_table(spec, sample)
 h = spec.horizon
@@ -27,9 +28,20 @@ show(style(fig, 280, "Mean daily rank IC with 95% Newey-West interval"))
 show_tab = tab[["mean_ic", "t_nw", "t_naive", "ic_ir_annual", "hit_rate", "n_days"]].copy()
 show_tab.columns = ["Mean IC", "t (Newey-West)", "t (naive, WRONG)", "IC IR (ann.)",
                     "% days IC>0", "Days"]
-st.dataframe(show_tab.style.format({"Mean IC": "{:+.4f}", "t (Newey-West)": "{:+.2f}",
-                                    "t (naive, WRONG)": "{:+.2f}", "IC IR (ann.)": "{:+.2f}",
-                                    "% days IC>0": "{:.0%}", "Days": "{:.0f}"}))
+show_tab["★"] = tab["p_nw"].map(stars)
+st.dataframe(show_tab, column_config={
+    "Mean IC": st.column_config.NumberColumn(format="%+.4f", help=G("ic")),
+    "t (Newey-West)": st.column_config.NumberColumn(format="%+.2f", help=G("newey_west")),
+    "t (naive, WRONG)": st.column_config.NumberColumn(format="%+.2f", help=G("naive_t")),
+    "IC IR (ann.)": st.column_config.NumberColumn(format="%+.2f",
+                                                 help="Mean IC divided by its volatility, "
+                                                      "annualised: consistency of the signal."),
+    "% days IC>0": st.column_config.NumberColumn(format="percent",
+                                                help="Share of days the signal ranked stocks "
+                                                     "in the right direction. 50% = coin flip."),
+    "Days": st.column_config.NumberColumn(format="%d"),
+    "★": st.column_config.TextColumn(help=G("stars"))})
+reading(interpret.ic(tab.loc[h, "mean_ic"], tab.loc[h, "t_nw"], h))
 st.caption("Compare the two t-stat columns at long horizons: ignoring overlap between "
            "consecutive h-day returns inflates significance roughly by √h.")
 
@@ -43,8 +55,9 @@ fig = go.Figure(go.Bar(x=buckets, y=qt.loc[buckets, "mean_bps"],
 show(style(fig, 280, f"Average {h}-day return vs. universe (bps), Q1 = lowest signal"))
 ls = qt.iloc[-1]
 c1, c2 = st.columns(2)
-c1.metric(f"Top − bottom ({h}d)", f"{ls.mean_bps:+.1f} bps", help="Before any costs.")
-c2.metric("t-stat", tstat_badge(ls.t_nw))
+c1.metric(f"Top − bottom ({h}d)", f"{ls.mean_bps:+.1f} bps", help=G("quantile_spread"))
+c2.metric("t-stat", tstat_badge(ls.t_nw), help=G("t_stat"))
+reading(interpret.spread(ls.mean_bps, ls.t_nw, h))
 
 st.subheader("When is the information realised?")
 dc = decay(spec, sample)

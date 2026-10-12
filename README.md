@@ -21,6 +21,7 @@ python -m pytest -m "not slow"              # unit tests (~5 s)
 python -m pytest                            # + render every app page (~1 min)
 python scripts/run_experiment.py --help     # run & log an experiment from the CLI
 python scripts/build_data.py                # rebuild data/processed from pinned sources
+python scripts/precompute_library.py        # refresh the leaderboard cache after signal changes
 ```
 
 ## Project structure
@@ -116,6 +117,34 @@ What this means:
    standard errors are calibrated.
 
 The 2017–18 holdout has **not** been opened.
+
+## Version 2: build and test your own signals
+
+- **🧪 Signal lab.** Write a hypothesis card first: statement, mechanism, predicted
+  direction, primary horizon and rejection rule. Build the signal by point-and-click, by
+  formula, or from the library, then **lock** the card. Results appear only after locking:
+  the verdict on the pre-registered test, all horizons, quantiles, the most similar known
+  signals, and the *incremental* IC after removing standard factors and the three most
+  similar library signals. One tap sends the idea through all nine stages. Export and
+  import of cards as JSON, because the free host forgets files on restart.
+- **Formula language** (`quantlab/signals/formula.py`), e.g.
+  `-ret(5) * zscore(log(volume / mean(volume, 20)))`. It is parsed with an allow-list, never
+  `eval`'d. Every function looks backward only, windows are literal integers from 1 to 252,
+  and each locked formula also gets an automatic perturbation look-ahead check.
+- **Signal library: 22 published price/volume signals** in momentum, reversal, risk,
+  liquidity, intraday and volume families, each with its source paper and mechanism.
+- **🏆 Signal leaderboard.** Every library signal and every locked hypothesis, with raw and
+  Holm/BH-adjusted p-values across all signal × horizon tests, adjusted ★s, and a
+  White (2000) **reality check** on the best of them. First result on 2013–16 data:
+  the best |t| at 5 days is 1.4, while the luckiest of 22 noise signals would reach
+  about 3.1 (p ≈ 0.88). No signal survives the adjustment.
+- **Explanations everywhere.** ⓘ chips open a definition with four parts: what it is,
+  how to read it, a rule of thumb, and the usual trap. Every headline number has a ?
+  tooltip from the same glossary (`quantlab/content/glossary.py`), and each key result
+  gets a 💬 plain-English reading generated from the actual numbers
+  (`quantlab/content/interpret.py`). You can turn the readings off in the sidebar.
+- **Speed:** library IC series are precomputed (`scripts/precompute_library.py`) for the
+  default universe and timing.
 
 ## Putting it on your iPhone (Streamlit Community Cloud, free)
 

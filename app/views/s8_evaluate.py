@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HORIZONS, backtest, cost_controls, factor_rets, fmt_pct, grid,
+from common import (COLORS, G, HORIZONS, backtest, interpret, reading, terms, cost_controls, factor_rets, fmt_pct, grid,
                     ic_table, lag_of, org_box, pitfalls, placebo, portfolio_controls,
                     sample_note, show, style, technical)
 from quantlab.config import HOLDOUT_START
@@ -18,6 +18,7 @@ st.markdown("Attractive backtests are cheap. This stage asks **how much of the r
             "skill, how much is risk we already know, and how much is luck from trying "
             "many variants**.")
 sample_note(sample)
+terms("sharpe_ci", "dsr", "alpha", "placebo", "walk_forward", "holdout")
 pspec, cspec = portfolio_controls(), cost_controls()
 bt = backtest(spec, pspec, cspec)
 lag = bt.meta["lag"]
@@ -37,7 +38,8 @@ with tabs[0]:
          "kurtosis": "{:.1f}"}))
     lo, hi = block_bootstrap_sharpe(n, block=max(10, 2 * pspec.holding))
     st.metric("Net Sharpe, 95% block-bootstrap interval", f"{pn['sharpe']:+.2f}",
-              delta=f"[{lo:+.2f}, {hi:+.2f}]", delta_color="off")
+              delta=f"[{lo:+.2f}, {hi:+.2f}]", delta_color="off", help=G("sharpe_ci"))
+    reading(interpret.sharpe(pn["sharpe"], lo, hi, net=True))
     st.caption("With ~4 years of daily data, a Sharpe ratio's uncertainty is roughly "
                "±1.0 — even a true Sharpe of 1 can look like 0 or 2.")
     dd = drawdown(n)
@@ -62,8 +64,9 @@ with tabs[1]:
     fr = factor_rets(spec, pspec.holding)
     fx = rb.factor_regression(g, fr.loc[g.index.min():g.index.max()])
     c1, c2, c3 = st.columns(3)
-    c1.metric("Alpha (ann.)", fmt_pct(fx["alpha_annual"]))
-    c2.metric("Alpha t-stat", f"{fx['table'].loc['alpha', 't_nw']:+.2f}")
+    c1.metric("Alpha (ann.)", fmt_pct(fx["alpha_annual"]), help=G("alpha"))
+    c2.metric("Alpha t-stat", f"{fx['table'].loc['alpha', 't_nw']:+.2f}", help=G("t_stat"))
+    reading(interpret.alpha(fx["alpha_annual"], fx["table"].loc["alpha", "t_nw"], fx["r2"]))
     c3.metric("R² (variance explained)", f"{fx['r2']:.0%}")
     t = fx["table"].copy()
     t["coef"] = t["coef"].where(t.index != "alpha", t["coef"] * 252)
@@ -95,12 +98,20 @@ with tabs[2]:
     st.markdown("#### 2. The parameter grid you could have searched")
     ics, cfg = grid(spec)
     gs = rb.grid_summary(ics, cfg, "research", lag)
-    hm = gs.pivot_table(index=["lookback", "window"], columns="horizon", values="t_nw")
-    hm.index = [f"L={a}, w={b}" for a, b in hm.index]
+    family_mode = (gs["window"] == 0).all()
+    if family_mode:
+        from common import HYPOTHESES
+        st.caption("This signal has fixed parameters, so the family of tests is the whole "
+                   "signal library plus this signal.")
+        hm = gs.pivot_table(index="lookback", columns="horizon", values="t_nw")
+        hm.index = [HYPOTHESES[k].name if k in HYPOTHESES else f"★ {k}" for k in hm.index]
+    else:
+        hm = gs.pivot_table(index=["lookback", "window"], columns="horizon", values="t_nw")
+        hm.index = [f"L={a}, w={b}" for a, b in hm.index]
     fig = go.Figure(go.Heatmap(z=hm.values, x=[f"{c}d" for c in hm.columns], y=hm.index,
                                colorscale="RdBu", zmid=0, text=np.round(hm.values, 1),
                                texttemplate="%{text}", showscale=False))
-    show(style(fig, 320, "Newey-West t-stat of IC, abnormal-volume family (research sample)"))
+    show(style(fig, max(320, 26 * len(hm) + 60), "Newey-West t-stat of IC across the family of tests"))
     n_raw = int((gs.p_nw < 0.05).sum())
     n_holm = int((gs.p_holm < 0.05).sum())
     n_bh = int((gs.p_bh < 0.05).sum())
@@ -117,9 +128,8 @@ with tabs[2]:
     c1, c2, c3 = st.columns(3)
     c1.metric("Trials counted", n_trials)
     c2.metric("Sharpe needed to beat luck", f"{ds['benchmark_sharpe_annual']:.2f}")
-    c3.metric("Deflated Sharpe (prob.)", f"{ds['dsr']:.2f}",
-              help="Probability the true Sharpe exceeds what the best of N unskilled trials "
-                   "would show. ≥ 0.95 is a common bar.")
+    c3.metric("Deflated Sharpe (prob.)", f"{ds['dsr']:.2f}", help=G("dsr"))
+    reading(interpret.dsr(ds["dsr"], n_trials))
 
 with tabs[3]:
     st.markdown("Every quarter, pick the configuration with the best t-stat using **only "

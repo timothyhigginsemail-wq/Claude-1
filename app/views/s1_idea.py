@@ -3,11 +3,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HYPOTHESES, in_sample_dates, market, org_box, persist, pitfalls,
+from common import (COLORS, hyp_info, in_sample_dates, market, org_box, persist, pitfalls,
                     show, signal, style, technical)
 
 spec = st.session_state.spec
-h = HYPOTHESES[spec.hypothesis]
+h = hyp_info(spec)
 st.title("1 · Idea generation")
 st.markdown("A research project starts with a **specific, falsifiable** claim and a reason "
             "it should be true. *Falsifiable* means we state in advance what result would "
@@ -17,6 +17,8 @@ st.subheader(h.name)
 st.markdown(f"**Hypothesis.** {h.statement}")
 st.markdown(f"**Proposed mechanism.** {h.mechanism}")
 st.markdown(f"**Predicted sign.** {h.predicted_sign}")
+if getattr(h, "reference", ""):
+    st.caption(f"Source: {h.reference}")
 
 if spec.hypothesis in ("abnormal_volume", "volume_reversal"):
     st.markdown("#### Competing explanations — and what each predicts")
@@ -94,5 +96,5 @@ with st.form("own"):
     st.text_area("Mechanism (who is on the other side of the trade, and why?)", key="own_mech")
     st.text_area("What result would make you reject it?", key="own_reject")
     if st.form_submit_button("Save draft to this session"):
-        st.success("Saved for this session. Share it in chat and it can be added to the "
-                   "hypothesis library as a coded, testable signal.")
+        st.success("Saved. To test it, open 🧪 Signal lab: it turns a hypothesis card like "
+                   "this into a signal you can lock and evaluate.")
