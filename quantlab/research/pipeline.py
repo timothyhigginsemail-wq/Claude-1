@@ -30,6 +30,7 @@ class ResearchSpec:
     min_price: float = 5.0
     liquidity_pct: float = 0.0
     neutralization: str = "none"     # 'none' | 'sector' | 'factors'
+    direction: int = 1               # +1 = long high signal; -1 = bet the opposite way
 
     def signal_params(self) -> dict:
         if self.hypothesis == "reversal":
@@ -50,7 +51,7 @@ def build_universe(mkt: Market, spec: ResearchSpec) -> pd.DataFrame:
 
 def build_signal(mkt: Market, spec: ResearchSpec, universe: pd.DataFrame,
                  chars: dict | None = None) -> pd.DataFrame:
-    raw = compute_signal(mkt, spec.hypothesis, **spec.signal_params())
+    raw = compute_signal(mkt, spec.hypothesis, **spec.signal_params()) * spec.direction
     if spec.neutralization == "none":
         return raw
     if spec.neutralization == "sector":
@@ -61,11 +62,19 @@ def build_signal(mkt: Market, spec: ResearchSpec, universe: pd.DataFrame,
     raise ValueError(spec.neutralization)
 
 
+def winsorize_cs(x: pd.DataFrame, q: float = 0.01) -> pd.DataFrame:
+    """Clip each day's cross-section at its q and 1-q quantiles (limits outlier leverage
+    in OLS; a single biotech jump should not drive a daily regression)."""
+    lo = x.quantile(q, axis=1)
+    hi = x.quantile(1 - q, axis=1)
+    return x.clip(lo, hi, axis=0)
+
+
 def fm_progression(mkt: Market, signal: pd.DataFrame, universe: pd.DataFrame,
                    chars: dict, horizon: int, execution: str, sample: str = "research") -> pd.DataFrame:
     """Fama-MacBeth coefficient on the signal as controls are added step by step."""
     _, lag = execution_params(execution)
-    y = forward_returns(mkt, horizon, execution)
+    y = winsorize_cs(forward_returns(mkt, horizon, execution).where(universe))
     models = [
         ("Signal only", [], False),
         ("+ beta, size", ["beta", "size"], False),

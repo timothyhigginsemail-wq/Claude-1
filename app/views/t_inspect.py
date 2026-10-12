@@ -3,36 +3,41 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, backtest, cost_controls, market, persist, portfolio_controls, show,
-                    signal, style)
+from common import (COLORS, backtest, cost_controls, in_sample_dates, market, persist,
+                    portfolio_controls, sample_note, show, signal, style)
 from quantlab.research.returns import forward_returns
 
-spec = st.session_state.spec
+spec, sample = st.session_state.spec, st.session_state.sample
 st.title("🔍 Trade inspector")
 st.markdown("Aggregate statistics hide what the strategy actually does. Inspect specific "
             "days and stocks to check the positions make sense.")
+sample_note(sample)
 m = market()
 pspec, cspec = portfolio_controls(), cost_controls()
 bt = backtest(spec, pspec, cspec)
-d = bt.daily
+keep = in_sample_dates(bt.daily.index, sample)
+d = bt.daily.loc[keep]
+held, contribs = bt.held.loc[keep], bt.contributions().loc[keep]
 
 st.subheader("Best and worst days")
 c1, c2 = st.columns(2)
 c1.markdown("**Worst 8 days (net)**")
-c1.dataframe(d["net"].nsmallest(8).to_frame("net return").style.format("{:+.2%}"))
+fmt_days = lambda x: x.set_axis(x.index.strftime("%Y-%m-%d")).to_frame("net return")  # noqa: E731
+c1.dataframe(fmt_days(d["net"].nsmallest(8)).style.format("{:+.2%}"))
 c2.markdown("**Best 8 days (net)**")
-c2.dataframe(d["net"].nlargest(8).to_frame("net return").style.format("{:+.2%}"))
+c2.dataframe(fmt_days(d["net"].nlargest(8)).style.format("{:+.2%}"))
 
 st.subheader("One day's book")
 dates = list(d.index)
 default = d["net"].idxmin()
 day = persist(st.select_slider, "Date", "insp_day", default, options=dates,
               format_func=lambda x: f"{x:%Y-%m-%d}")
-w = bt.held.loc[day]
-contrib = bt.contributions().loc[day]
+w = held.loc[day]
+contrib = contribs.loc[day]
 sig = signal(spec)
-pos = dates.index(day)
-sig_day = dates[max(pos - 1 - bt.meta["lag"], 0)]
+all_dates = list(bt.daily.index)
+pos = all_dates.index(day)
+sig_day = all_dates[max(pos - 1 - bt.meta["lag"], 0)]
 fr = forward_returns(m, pspec.holding, spec.execution).loc[sig_day]
 book = pd.DataFrame({"weight %": w * 100, "P&L today (bps)": contrib * 1e4,
                      "signal (formation day)": sig.loc[sig_day],
@@ -56,9 +61,9 @@ st.dataframe(sec.style.format("{:+.2f}"))
 st.subheader("One stock through time")
 tick = persist(st.selectbox, "Ticker", "insp_tick", book.index[0] if len(book) else "AAPL",
                options=list(m.tickers))
-px = m.close[tick]
-wt = bt.held[tick]
-cum = bt.contributions()[tick].cumsum()
+px = m.close[tick].loc[keep]
+wt = held[tick]
+cum = contribs[tick].cumsum()
 fig = go.Figure()
 fig.add_scatter(x=px.index, y=px, name="Price", line=dict(color=COLORS["neutral"]))
 fig.add_bar(x=wt.index, y=wt * 100, name="Weight %", yaxis="y2",
@@ -68,7 +73,7 @@ style(fig, 320, f"{tick}: price and position", yaxis2=dict(overlaying="y", side=
 show(fig)
 fig = go.Figure(go.Scatter(x=cum.index, y=cum * 1e4, line=dict(color=COLORS["gross"])))
 show(style(fig, 220, f"Cumulative P&L contribution of {tick} (bps of capital)"))
-tot = bt.contributions().sum().sort_values()
+tot = contribs.sum().sort_values()
 c1, c2 = st.columns(2)
 c1.markdown("**Biggest losers (whole sample, bps)**")
 c1.dataframe((tot.head(10) * 1e4).to_frame("bps").style.format("{:+.1f}"))

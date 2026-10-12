@@ -123,6 +123,7 @@ def main():
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--execution", default="open_t1")
     ap.add_argument("--neutralization", default="none")
+    ap.add_argument("--direction", type=int, default=1, choices=[1, -1])
     ap.add_argument("--holding", type=int, default=None)
     ap.add_argument("--aum", type=float, default=100e6)
     ap.add_argument("--note", default="")
@@ -130,7 +131,8 @@ def main():
                     help="Evaluate on the 2017-18 holdout. Use once, on a frozen spec.")
     a = ap.parse_args()
     spec = ResearchSpec(hypothesis=a.hypothesis, lookback=a.lookback, window=a.window,
-                        horizon=a.horizon, execution=a.execution, neutralization=a.neutralization)
+                        horizon=a.horizon, execution=a.execution, neutralization=a.neutralization,
+                        direction=a.direction)
     pspec = PortfolioSpec(holding=a.holding or a.horizon)
     cspec = CostSpec(aum=a.aum)
     res = run(spec, pspec, cspec, a.unlock_holdout)
@@ -147,11 +149,11 @@ def main():
         w = csv.writer(f)
         if new:
             w.writerow(["run_id", "git", "hypothesis", "lookback", "window", "horizon",
-                        "execution", "neutralization", "mean_ic", "t_ic", "net_sharpe",
+                        "execution", "neutralization", "direction", "mean_ic", "t_ic", "net_sharpe",
                         "verdict", "holdout_used", "note"])
         e = res["evidence"]
         w.writerow([res["run_id"], res["git"], spec.hypothesis, spec.lookback, spec.window,
-                    spec.horizon, spec.execution, spec.neutralization, f"{e['mean_ic']:.5f}",
+                    spec.horizon, spec.execution, spec.neutralization, spec.direction, f"{e['mean_ic']:.5f}",
                     f"{e['t_ic']:.2f}", f"{e['net_sharpe']:.2f}", res["verdict"],
                     a.unlock_holdout, a.note])
     print(f"{res['run_id']}: IC={e['mean_ic']:+.4f} t={e['t_ic']:+.2f} "

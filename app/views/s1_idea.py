@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HYPOTHESES, market, org_box, persist, pitfalls, show, signal, style,
-                    technical)
+from common import (COLORS, HYPOTHESES, in_sample_dates, market, org_box, persist, pitfalls,
+                    show, signal, style, technical)
 
 spec = st.session_state.spec
 h = HYPOTHESES[spec.hypothesis]
@@ -46,9 +46,10 @@ st.markdown(f"""
 st.markdown("#### A concrete example")
 m = market()
 tick = persist(st.selectbox, "Stock", "idea_ticker", "AAPL", options=list(m.tickers))
-sig = signal(spec)[tick]
-vol = m.volume[tick]
-px = m.close[tick]
+keep = in_sample_dates(m.dates, st.session_state.sample)
+sig = signal(spec)[tick].loc[keep]
+vol = m.volume[tick].loc[keep]
+px = m.close[tick].loc[keep]
 fig = go.Figure()
 fig.add_bar(x=vol.index, y=vol / 1e6, name="Volume (m shares)", marker_color=COLORS["neutral"],
             opacity=0.6, yaxis="y2")

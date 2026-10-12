@@ -58,7 +58,8 @@ st.caption("Tip: set *Signal neutralisation* in the sidebar to 'Residual vs. fac
 technical(r"""
 **Fama-MacBeth (1973).** Each day run a cross-sectional regression
 $R^h_{i,t} = a_t + b_t\,z(S_{i,t}) + \sum_k c_{k,t}\,z(X_{k,i,t}) + \text{sector}_{i} + e_{i,t}$,
-then test whether the *time-series average* of $b_t$ is zero, using Newey-West errors
+with returns winsorised at each day's 1st/99th percentile so single extreme moves cannot
+dominate a regression, then test whether the *time-series average* of $b_t$ is zero, using Newey-West errors
 (the $b_t$ overlap like the ICs do). $z(\cdot)$ is a daily cross-sectional z-score clipped
 at ±3, so $b_t$ is the return to one standard deviation of signal holding the controls fixed.
 

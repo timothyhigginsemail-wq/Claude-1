@@ -50,8 +50,11 @@ def persist(widget, label, key, default, **kw):
     _init_state()
     p = st.session_state["p"]
     val = p.get(key, default)
-    if widget in (st.selectbox, st.radio):
+    if "options" in kw:
         opts = list(kw["options"])
+        if val not in opts:          # e.g. a date outside the newly chosen sample
+            val = default if default in opts else opts[0]
+    if widget in (st.selectbox, st.radio):
         kw["index"] = opts.index(val) if val in opts else 0
         out = widget(label, key=f"w_{key}", **kw)
     elif widget in (st.segmented_control, st.pills):
@@ -90,6 +93,9 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
                           options=["none", "sector", "factors"],
                           format_func={"none": "None (raw signal)", "sector": "Sector-demeaned",
                                        "factors": "Residual vs. factors + sector"}.get)
+        flip = persist(st.toggle, "Flip direction (long LOW signal)", "flip", False,
+                       help="Use when the evidence says the relationship is negative. "
+                            "Choosing the sign after seeing the data is itself a trial.")
         samples = ["research", "full"] + (["holdout"] if st.session_state.holdout_unlocked else [])
         sample = persist(st.selectbox, "Sample", "sample", "research", options=samples,
                          format_func=SAMPLE_LABELS.get)
@@ -101,8 +107,8 @@ def sidebar_spec() -> tuple[ResearchSpec, str]:
         spec = ResearchSpec(hypothesis=hyp, lookback=int(lookback), window=int(window),
                             horizon=int(horizon), execution=execution,
                             min_price=float(min_price), liquidity_pct=liq / 100.0,
-                            neutralization=neutral)
-        trial = (hyp, spec.signal_params().__repr__(), horizon, execution, neutral)
+                            neutralization=neutral, direction=-1 if flip else 1)
+        trial = (hyp, spec.signal_params().__repr__(), horizon, execution, neutral, flip)
         st.session_state.trials.add(trial)
         n = len(st.session_state.trials)
         st.caption(f"🧪 **{n}** distinct configurations viewed this session. Every one "
@@ -289,6 +295,16 @@ def sample_note(sample: str):
     elif sample == "full":
         st.info("Full sample includes the holdout period. Use for description only, not "
                 "for parameter choice.")
+
+
+def in_sample_dates(index: pd.DatetimeIndex, sample: str) -> pd.DatetimeIndex:
+    """Dates a page may DISPLAY for the chosen sample (keeps the holdout unseen)."""
+    hs = pd.Timestamp(HOLDOUT_START)
+    if sample == "research":
+        return index[index < hs]
+    if sample == "holdout":
+        return index[index >= hs]
+    return index
 
 
 def lag_of(spec: ResearchSpec) -> int:

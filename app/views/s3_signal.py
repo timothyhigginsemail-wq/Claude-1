@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from common import (COLORS, HYPOTHESES, ch, market, org_box, persist, pitfalls, show, signal,
-                    style, technical, uni)
+from common import (COLORS, HYPOTHESES, ch, in_sample_dates, market, org_box, persist, pitfalls,
+                    show, signal, style, technical, uni)
 from quantlab.research.factors import CONTROL_LABELS
 from quantlab.research.stats import rowwise_corr
 
@@ -43,7 +43,7 @@ ac5 = rowwise_corr(s_u, s_u.shift(5)).mean()
 c3.metric("5-day persistence", f"{ac5:.2f}")
 
 st.subheader("Distribution")
-dates = s_u.dropna(how="all").index
+dates = in_sample_dates(s_u.dropna(how="all").index, st.session_state.sample)
 d = persist(st.select_slider, "Cross-section on date", "sig_date", dates[len(dates) // 2],
             options=list(dates), format_func=lambda x: f"{x:%Y-%m-%d}")
 x = s_u.loc[d].dropna()
