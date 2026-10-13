@@ -30,6 +30,49 @@ from quantlab.research.returns import EXECUTION_LABELS, execution_params  # noqa
 from quantlab.research.stats import rank_ic  # noqa: E402
 from quantlab.signals.library import HYPOTHESES  # noqa: E402
 
+# ---------------------------------------------------------------- tap-to-explain
+# Streamlit's built-in `help=` tooltips open on HOVER, which phones don't have. Every
+# metric's help text is instead shown behind a tappable "ⓘ Explain" button, and a
+# table's column help behind one "ⓘ What do the columns mean?" button.
+from streamlit.delta_generator import DeltaGenerator as _DG  # noqa: E402
+
+_orig_metric = _DG.metric
+_orig_dataframe = _DG.dataframe
+
+
+def _explain(dg, text: str, label: str = "ⓘ Explain"):
+    with dg.popover(label, type="tertiary"):
+        st.markdown(text.replace("$", "\\$"))      # '$' would otherwise start maths
+
+
+def _metric(self, label, value, *args, help=None, **kwargs):
+    out = _orig_metric(self, label, value, *args, **kwargs)
+    if help:
+        _explain(self, help)
+    return out
+
+
+def _dataframe(self, data=None, *args, column_config=None, **kwargs):
+    if column_config:
+        notes = []
+        for col, cfg in column_config.items():
+            h = cfg.get("help") if isinstance(cfg, dict) else None
+            if h:
+                name = cfg.get("label") or col
+                notes.append(f"##### {name}\n{h}")
+                cfg = dict(cfg)
+                cfg.pop("help")
+                column_config = {**column_config, col: cfg}
+        if notes:
+            _explain(self, "\n\n---\n\n".join(notes), "ⓘ What do the columns mean?")
+    return _orig_dataframe(self, data, *args, column_config=column_config, **kwargs)
+
+
+if not getattr(_DG, "_tap_explain", False):
+    _DG.metric, _DG.dataframe, _DG._tap_explain = _metric, _dataframe, True
+    st.metric = lambda *a, **k: _metric(st._main, *a, **k)
+    st.dataframe = lambda *a, **k: _dataframe(st._main, *a, **k)
+
 HORIZONS = (1, 2, 5, 10, 20)
 COLORS = {"gross": "#2563eb", "net": "#dc2626", "long": "#059669", "short": "#d97706",
           "neutral": "#6b7280", "accent": "#7c3aed"}
@@ -66,6 +109,7 @@ def persist(widget, label, key, default, **kw):
     """A widget whose value survives page switches (Streamlit forgets widget state
     for widgets not drawn on the current page)."""
     _init_state()
+    help_md = kw.pop("help", None)          # shown via a tappable button, not a hover tooltip
     p = st.session_state["p"]
     val = p.get(key, default)
     if "options" in kw:
@@ -84,6 +128,8 @@ def persist(widget, label, key, default, **kw):
     else:
         out = widget(label, value=val, key=f"w_{key}", **kw)
     p[key] = out
+    if help_md:
+        _explain(st, help_md, f"ⓘ About “{label}”")
     return out
 
 
@@ -357,11 +403,12 @@ def terms(*keys: str):
         for k in keys:
             g = GLOSSARY[k]
             with st.popover(g["term"], icon=":material/info:", type="tertiary"):
-                st.markdown(f"**{g['term']}**")
-                st.markdown(g["what"])
-                st.markdown(f"**How to read it.** {g['read']}")
-                st.markdown(f"**Rule of thumb.** {g['guide']}")
-                st.markdown(f"**Watch out.** {g['trap']}")
+                esc = lambda x: x.replace("$", "\\$")  # noqa: E731
+                st.markdown(f"**{esc(g['term'])}**")
+                st.markdown(esc(g["what"]))
+                st.markdown(f"**How to read it.** {esc(g['read'])}")
+                st.markdown(f"**Rule of thumb.** {esc(g['guide'])}")
+                st.markdown(f"**Watch out.** {esc(g['trap'])}")
 
 
 def reading(text: str):

@@ -10,6 +10,12 @@ from common import sidebar_spec  # noqa: E402
 st.html("""
 <style>
 [data-testid="stMetricValue"] { font-size: 1.5rem; }
+/* tap-to-explain panels and any remaining tooltips: fit the screen, wrap text */
+[data-testid="stPopoverBody"] { max-width: min(92vw, 30rem) !important; }
+[data-testid="stPopoverBody"] p, [data-testid="stPopoverBody"] li { white-space: normal; }
+[data-testid="stTooltipContent"] { max-width: 85vw !important; white-space: normal !important; }
+[data-testid="stPopover"] button[kind="tertiary"] { padding: 0 .2rem; min-height: 1.6rem;
+  font-size: .82rem; color: #2563eb; }
 [data-testid="stMetricLabel"] p { font-size: 0.85rem; }
 @media (max-width: 640px) {
   h1 { font-size: 1.7rem !important; }

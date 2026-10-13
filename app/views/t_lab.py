@@ -66,12 +66,10 @@ with tab_new:
                              placeholder="Forced sellers (fund redemptions) push prices below "
                                          "value; liquidity providers are paid to absorb them.")
     c1, c2 = st.columns(2)
-    sign = c1.selectbox("Predicted direction", ["Positive", "Negative"], key="lab_sign",
-                        help="Positive: a higher signal value should mean a higher future "
-                             "return. Negative: the opposite.")
-    horizon = c2.selectbox("Primary horizon (days)", [1, 2, 5, 10, 20], index=2, key="lab_h",
-                           help="The ONE horizon your decision rests on. Others are "
-                                "reported but are secondary.")
+    sign = c1.selectbox("Predicted direction", ["Positive", "Negative"], key="lab_sign")
+    horizon = c2.selectbox("Primary horizon (days)", [1, 2, 5, 10, 20], index=2, key="lab_h")
+    st.caption("Positive = a higher signal value should mean a higher future return. The "
+               "primary horizon is the ONE your decision rests on; others are secondary.")
     reject = st.text_input("I will reject this if…", key="lab_reject",
                            value="|t| < 2 at the primary horizon, or the sign is wrong, or it "
                                  "vanishes after controlling for known signals")
@@ -291,8 +289,8 @@ with tab_res:
             reading("Neither the raw nor the incremental signal is distinguishable from noise.")
 
         st.subheader("Take it further")
-        if st.button("▶ Run it through all 9 stages (portfolio, costs, evaluation, decision)",
-                     help="Makes this the active hypothesis in the sidebar and opens stage 4."):
+        st.caption("Makes this the active hypothesis in the sidebar and opens stage 4.")
+        if st.button("▶ Run it through all 9 stages (portfolio, costs, evaluation, decision)"):
             ss.p["custom_formula"] = card.get("formula")
             ss.p["custom_name"] = card["name"]
             ss.p["hyp"] = "custom" if card.get("formula") else card["library_key"]
