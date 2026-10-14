@@ -512,7 +512,7 @@ export function defaultCloseOut(s: GameState, c: Client, fraction: number, speed
     if (loss > 0) {
       const otherClaims = c.fund.nav * (1 - c.walletShare) * 0.15;
       const estate = Math.max(0, c.fund.freeCash * 0.6 + c.fund.nav * 0.1);
-      const recov = Math.max(0.05, Math.min(0.6, estate / Math.max(1, loss + otherClaims)));
+      const recov = Math.max(0.05, Math.min(0.5, estate / Math.max(1, loss + otherClaims)));
       c.claim = { amount: loss, expectedRecovery: recov, resolveDay: s.day + 15 };
     }
     s.signals.liquidations.push({ clientId: c.id, loss });
@@ -1308,7 +1308,7 @@ function analyse(s: GameState, ev: GameEvent): string[] {
         `Orderly over 3 days: loss ≈ ${fm(orderly)} if prices hold (impact ≈ ${fm(lc * 0.5)}), plus market risk of ±${fm((av.gmv * vol * Math.sqrt(3 / 252)) * 1.65)} (95%) on the book.`,
         `Standstill: if the fund's NAV recovers 10%, the call is likely met; a further 10% fall adds ≈ ${fm(av.gmv * 0.1)} of losses with recovery dependent on the estate.`,
         `Legal position: Atlas has a first lien only over assets in its own account (${fm(Math.max(0, av.equity))} equity). Assets at ${cl.fund.otherPBs.map((o) => s.competitors[o.competitorId].name).join(', ')} are pledged to them. Unsecured claim recovery typically 10–50%, over months.`,
-        `Estimated recovery on a claim today: ${fpct(Math.max(0.05, Math.min(0.6, (cl.fund.freeCash * 0.6 + cl.fund.nav * 0.1) / Math.max(1, fire + cl.fund.nav * 0.15))), 0)}.`,
+        `Estimated recovery on a claim today: ${fpct(Math.max(0.05, Math.min(0.5, (cl.fund.freeCash * 0.6 + cl.fund.nav * 0.1) / Math.max(1, fire + cl.fund.nav * 0.15))), 0)}.`,
       ];
     }
     default:

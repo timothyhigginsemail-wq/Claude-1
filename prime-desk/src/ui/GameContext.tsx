@@ -134,6 +134,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }),
     [v, loaded, bump],
   );
+  if (Platform.OS === 'web' && typeof window !== 'undefined') (window as any).__atlas = api; // test/debug handle (web only)
   return <GameCtx.Provider value={api}>{children}</GameCtx.Provider>;
 }
 
