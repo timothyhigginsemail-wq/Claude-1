@@ -43,7 +43,7 @@ export function scriptedMarket(s: GameState): MarketMoveOpts {
     case 22:
       setRegime(s, 'crisis');
       s.competitors.kestrel.health = 0.45;
-      return { holdRegime: true, mktReturn: -0.038, secShocks: { CLDR: -0.6, VOLT: 0.08, HLXS: 0.06 } };
+      return { holdRegime: true, mktReturn: -0.038, secShocks: { CLDR: -0.7, VOLT: 0.08, HLXS: 0.06 } };
     case 23:
       return { holdRegime: true, mktReturn: -0.042, secShocks: { CLDR: -0.16 } };
     case 24:
@@ -119,7 +119,7 @@ export function scriptedEvents(s: GameState): GameEvent[] {
   }
   if (d === 17 && active('redwood')) {
     const av = accountValue(s, cl.redwood);
-    if (av.leverage < 4.5) ev.push(makeFinancingRequest(s, cl.redwood, Math.max(30e6, av.equity * 0.5), 175, av.leverage + 0.7));
+    if (av.leverage < 5) ev.push(makeFinancingRequest(s, cl.redwood, Math.max(40e6, av.equity * 0.8), 175, av.leverage + 1.0));
   }
   if (d === 20) ev.push(makeReview(s));
   if (d === 22) {

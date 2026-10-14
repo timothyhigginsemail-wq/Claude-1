@@ -270,6 +270,8 @@ export interface Client {
   constrained: number;
   /** Balance × accrual-day accumulators (for average balances and implied rates). */
   accum: { days: number; debit: number; credit: number; sp: number };
+  /** A default standstill has already been granted (it cannot be repeated). */
+  standstillUsed?: boolean;
   /** Last day the client asked for a locate in each security (request cooldown). */
   askCooldown: Record<SecId, number>;
 }

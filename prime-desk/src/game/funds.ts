@@ -99,7 +99,7 @@ const DEFS: FundDef[] = [
       maxBorrowFeeBps: 400,
       book: { CLDR: 0.38, EVRW: 0.22, FRGE: 0.14, SLCE: 0.1, USLC: -0.09, KYRL: -0.07 },
     },
-    ask: { financingSpreadBps: 150, imMultiplier: 0.75, concThresholdPct: 0.45, lockupDays: 60, maxGrossLeverage: 4, creditLimit: 400e6 },
+    ask: { financingSpreadBps: 150, imMultiplier: 0.75, concThresholdPct: 0.45, lockupDays: 60, maxGrossLeverage: 5, creditLimit: 500e6 },
   },
   {
     id: 'vector',

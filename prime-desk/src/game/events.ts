@@ -486,10 +486,14 @@ export function makeMarginDefault(s: GameState, c: Client): GameEvent {
       { label: 'Other PBs', value: c.fund.otherPBs.map((o) => s.competitors[o.competitorId].name).join(', ') },
     ],
     options: [
-      { id: 'fire', label: 'Default & liquidate now', detail: 'Declare an event of default, close out everything today. Certain, expensive, ends the relationship.', tone: 'danger' },
+      { id: 'fire', label: 'Default & liquidate now', detail: 'Declare an event of default, close out everything today. Certain, expensive, ends the relationship.', tone: 'danger' as const },
       { id: 'orderly', label: 'Default & liquidate over 3 days', detail: 'Lower impact, but you hold market risk on a defaulted book.' },
-      { id: 'standstill', label: 'Negotiate a 5-day standstill', detail: 'Take a pledge over the fund\'s unencumbered assets and +200bp. If markets recover, everyone is whole. If not, the hole is deeper.' },
-      { id: 'extend', label: 'Extend unsecured credit', detail: 'Convert the deficit into a term loan and keep the client. Maximum relationship, maximum risk.' },
+      ...(c.standstillUsed || av.equity <= 0
+        ? []
+        : [
+            { id: 'standstill', label: 'Negotiate a 5-day standstill', detail: 'Take a pledge over the fund\'s unencumbered assets and +200bp. If markets recover, everyone is whole. If not, the hole is deeper. Only once.' },
+            { id: 'extend', label: 'Extend unsecured credit', detail: 'Relax margin terms so the account is compliant and keep the client. Maximum relationship, maximum risk.' },
+          ]),
       { id: 'analyze', label: 'Ask risk for recovery analysis', detail: 'Estimate loss distributions and the legal claim. Uses analyst capacity.', usesAnalyst: true },
     ],
     data: { clientId: c.id, liqCost },
@@ -1007,6 +1011,7 @@ export function resolveEvent(s: GameState, ev: GameEvent, optionId: string, para
         out = 'Event of default declared. Liquidating a third of the book at each of the next three closes.';
       } else if (optionId === 'standstill') {
         cl.terms.financingSpreadBps += 200;
+        cl.standstillUsed = true;
         cl.marginCall = { id: ev.id, amount: computeMargin(s, cl).callAmount, issuedDay: s.day, dueDay: s.day + 5, status: 'open', paid: 0 };
         rel(cl, 6);
         out = 'Standstill agreed: 5 days, +200bp, pledge over unencumbered assets. You are now long the outcome.';
@@ -1015,6 +1020,7 @@ export function resolveEvent(s: GameState, ev: GameEvent, optionId: string, para
         cl.terms.imMultiplier = Math.max(0.5, computeMargin(s, cl).equity / Math.max(1, computeMargin(s, cl).houseInitial / cl.terms.imMultiplier) * 0.95);
         cl.terms.creditLimit = Math.max(cl.terms.creditLimit, clientDebit(s, cl.id) * 1.05);
         rel(cl, 15);
+        cl.standstillUsed = true;
         s.desk.compliance = Math.max(0, s.desk.compliance - 10);
         out = `Margin terms relaxed to ${cl.terms.imMultiplier.toFixed(2)}× so the account is compliant. ${cl.short} survives at Atlas — on your credit.`;
       }
