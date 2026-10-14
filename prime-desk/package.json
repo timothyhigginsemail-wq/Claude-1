@@ -1,5 +1,5 @@
 {
-  "name": "prime-desk",
+  "name": "atlas-prime",
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
@@ -24,7 +24,11 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "balance": "BALANCE=1 vitest run tests/balance.test.ts",
+    "web:export": "expo export --platform web --output-dir dist"
   },
   "private": true
 }

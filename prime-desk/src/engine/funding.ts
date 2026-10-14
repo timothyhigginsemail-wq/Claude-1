@@ -23,7 +23,25 @@ export const RESERVE_SPREAD_BPS = 35; // reserve bank account yield below SOFR
 export const CCP_SPREAD_BPS = 25;
 export const COMMITMENT_FEE_BPS = 15;
 export const EMERGENCY_SPREAD_BPS = 500;
-export const SERVICING_SHARE = 0.6; // share of desk opex allocated to clients by activity
+// Variable servicing cost attributed to clients (operations, reporting, margin & collateral
+// management). The rest of desk opex is fixed overhead and stays central.
+export const SERVICE_FIXED = 120e3; // per client per year
+export const SERVICE_BPS = 0.6; // per year on gross positions
+
+/** Annual servicing cost allocated to each active client (scaled so it never exceeds opex). */
+export function servicingAllocation(s: GameState): { perClient: Record<string, number>; total: number } {
+  const perClient: Record<string, number> = {};
+  let total = 0;
+  for (const c of activeClients(s)) {
+    const av = accountValue(s, c);
+    const v = SERVICE_FIXED + ((av.gmv + av.futGross * 0.2) * SERVICE_BPS) / 1e4;
+    perClient[c.id] = v;
+    total += v;
+  }
+  const scale = total > s.desk.opexPerYear ? s.desk.opexPerYear / total : 1;
+  for (const id in perClient) perClient[id] *= scale;
+  return { perClient, total: total * scale };
+}
 
 export interface ReserveCalc {
   freeCredits: number;
@@ -356,13 +374,7 @@ export function accrue(s: GameState, days: number): AccrualResult {
   let lenderAllocated = 0;
   const totalRepoCap = s.alloc.repoCapacity;
   const repoUsed = totalRepoCap > 0 ? Math.min(1, (repo + termRepoTotal(s)) / totalRepoCap) : 0;
-  let activityTotal = 0;
-  const activity: Record<string, number> = {};
-  for (const c of clients) {
-    const av = accountValue(s, c);
-    activity[c.id] = av.gmv + av.futGross * 0.2;
-    activityTotal += activity[c.id];
-  }
+  const serviceAlloc = servicingAllocation(s);
   for (const c of clients) {
     const rows = shortSourcing(s, c);
     let extColl = 0;
@@ -401,11 +413,10 @@ export function accrue(s: GameState, days: number): AccrualResult {
       c.pnlToday.collateralCredit += credit;
       allocatedFunding += credit;
     }
-    const serv = activityTotal > 0 ? -opex * SERVICING_SHARE * (activity[c.id] / activityTotal) : 0;
-    c.pnlToday.servicing += serv;
+    c.pnlToday.servicing -= (serviceAlloc.perClient[c.id] ?? 0) * dt;
   }
   const unallocatedLender = Object.values(lenderBySec).reduce((a, b) => a + b, 0) - lenderAllocated;
-  const servicingAllocated = activityTotal > 0 ? opex * SERVICING_SHARE : 0;
+  const servicingAllocated = serviceAlloc.total * dt;
   return {
     days,
     centralResidual: actualFunding - allocatedFunding + unallocatedLender,
@@ -433,13 +444,14 @@ export function liquidityMetrics(s: GameState): LiquidityMetrics {
   const overnightRepo = -bal(s.ledger, ACC.repo);
   let undrawnLines = 0;
   for (const c of activeClients(s)) undrawnLines += Math.max(0, c.terms.creditLimit - clientDebit(s, c.id));
-  const outCredits = 0.3 * rc.freeCredits;
-  const outShorts = 0.15 * rc.shortProceeds;
-  const outRepo = 0.25 * overnightRepo;
-  const outLines = 0.1 * undrawnLines;
+  const outCredits = 0.2 * rc.freeCredits;
+  const outShorts = 0.1 * rc.shortProceeds;
+  const outRepo = 0.2 * overnightRepo;
+  const outLines = 0.05 * undrawnLines;
   const stressed = outCredits + outShorts + outRepo + outLines;
-  const sources = buffer + 0.5 * undrawn;
-  const lcr = stressed > 0 ? sources / stressed : 9.99;
+  const unusedRepo = Math.max(0, s.alloc.repoCapacity - overnightRepo - termRepoTotal(s));
+  const sources = buffer + 0.5 * undrawn + 0.25 * unusedRepo;
+  const lcr = stressed > 0 ? Math.min(99, sources / stressed) : 99;
   return {
     buffer,
     undrawnFacility: undrawn,
@@ -450,15 +462,16 @@ export function liquidityMetrics(s: GameState): LiquidityMetrics {
     survivalDays: stressed > 0 ? Math.min(90, (30 * sources) / stressed) : 90,
     lines: calc('Liquidity coverage (30-day stress)', lcr, {
       fmt: 'x',
-      formula: '(cash buffer + 50% undrawn facility) / stressed outflows',
+      formula: '(cash buffer + 50% undrawn facility + 25% unused repo capacity) / stressed outflows',
       note: 'Internal stress test, illustrative weights. Prime brokerage liquidity risk comes from clients pulling free credits, covering shorts (removing short-proceeds funding), repo counterparties not rolling, and clients drawing on unused margin lines.',
       children: [
         calc('Sources: cash buffer (HQLA)', buffer),
         calc('Sources: 50% of undrawn treasury facility', 0.5 * undrawn),
-        calc('Outflow: 30% of free credits withdrawn', outCredits),
-        calc('Outflow: 15% of short proceeds lost as shorts cover', outShorts),
-        calc('Outflow: 25% of overnight repo not rolled', outRepo),
-        calc('Outflow: 10% of undrawn client margin lines drawn', outLines),
+        calc('Sources: 25% of unused repo capacity (haircuts rise in stress)', 0.25 * unusedRepo),
+        calc('Outflow: 20% of free credits withdrawn', outCredits),
+        calc('Outflow: 10% of short proceeds lost as shorts cover', outShorts),
+        calc('Outflow: 20% of overnight repo not rolled', outRepo),
+        calc('Outflow: 5% of undrawn client margin lines drawn', outLines),
       ],
     }),
   };
@@ -510,13 +523,7 @@ export function projectClientAnnual(s: GameState, c: Client): ClientProjection {
     p.collateralCredit += v * repoUsed * Math.max(0, s.market.ftpSpreadBps - REPO_SPREAD[sec.repoClass] - s.market.repoStressBps) / 1e4;
   }
   p.clearing = ((av.gmv + av.futGross * 0.05) * c.profile.turnover * 252 * 0.4) / 1e4;
-  let actTotal = 0;
-  for (const o of activeClients(s)) {
-    const v = accountValue(s, o);
-    actTotal += v.gmv + v.futGross * 0.2;
-  }
-  const act = av.gmv + av.futGross * 0.2;
-  p.servicing = actTotal > 0 ? -s.desk.opexPerYear * SERVICING_SHARE * (act / actTotal) : 0;
+  p.servicing = -(servicingAllocation(s).perClient[c.id] ?? 0);
   p.total = clientPnlTotal(p);
   p.netUse = netUse;
   p.extCollateral = extColl;

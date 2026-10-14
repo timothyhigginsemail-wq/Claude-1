@@ -19,7 +19,7 @@ export const ACC = {
   pnl: (k: string) => `pnl:${k}`,
 } as const;
 
-export const MAX_JOURNAL = 1500;
+export const MAX_JOURNAL = 900; // keep saves small (Android AsyncStorage rows are size-limited)
 const EPS = 1e-6;
 
 export function newLedger(): Ledger {

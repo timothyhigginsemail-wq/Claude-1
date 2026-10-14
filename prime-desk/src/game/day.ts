@@ -324,10 +324,15 @@ export function endDay(s: GameState): DayReport {
   // management confidence: risk-adjusted performance, losses, liquidity
   const conf = s.desk.confidence;
   let dc = 0;
-  dc += Math.max(-3, Math.min(1.2, (ep / Math.max(1e5, s.desk.allocatedCapital * 0.0004)) * 0.6));
+  // risk-adjusted performance vs a modest daily EP target; drift back toward neutral
+  const epTarget = s.desk.allocatedCapital * 0.0003 * days;
+  dc += Math.max(-2.5, Math.min(1.5, (ep / Math.max(1e4, epTarget)) * 0.5));
+  dc += (55 - conf) * 0.02;
   if (pnl.creditLoss < -1e6) dc -= Math.min(25, (-pnl.creditLoss / s.desk.allocatedCapital) * 80);
-  if (lm.lcr < 1) dc -= 1;
-  if (d.clients >= 3) dc += 0.2;
+  if (lm.lcr < 0.7) dc -= 1;
+  else if (lm.lcr < 1) dc -= 0.3;
+  if (lm.lcr < 1 && s.day % 4 === 0) note(`Treasury: liquidity coverage is ${lm.lcr.toFixed(2)}× — below the 1.0× policy floor. Raise the cash buffer or term out funding (Funding tab).`, 'bad');
+  if (d.clients >= 3) dc += 0.1;
   s.desk.confidence = Math.max(0, Math.min(100, conf + dc));
   const equity = d.equity;
   if (equity < s.desk.allocatedCapital * 0.45) {

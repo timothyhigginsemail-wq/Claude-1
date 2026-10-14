@@ -67,7 +67,7 @@ const DEFS: FundDef[] = [
       alpha: 0.06,
       stressDeleverage: 0.3,
       maxBorrowFeeBps: 800,
-      book: { ORBT: 0.12, VNTG: 0.08, NMBS: 0.07, MDLH: 0.07, TTNA: 0.06, PTVN: 0.05, AURA: 0.05, GRNB: 0.04, KYRL: 0.04, HLXS: 0.04, BRWY: 0.03, CRVA: 0.02, USLC: -0.1, QRTL: -0.03, SLCE: -0.04, HBRV: -0.04, STRM: -0.03, LKSH: -0.03, FRGE: -0.04, RDGL: -0.04 },
+      book: { ORBT: 0.11, VNTG: 0.07, NMBS: 0.06, MDLH: 0.06, TTNA: 0.05, PTVN: 0.05, AURA: 0.05, HLXS: 0.06, VOLT: 0.03, CRVA: 0.03, GRNB: 0.04, KYRL: 0.04, BRWY: 0.03, PXLT: 0.02, USLC: -0.1, QRTL: -0.03, SLCE: -0.04, HBRV: -0.04, LKSH: -0.03, FRGE: -0.03, RDGL: -0.03 },
     },
     ask: { financingSpreadBps: 65, imMultiplier: 0.9, rehypCapPct: 1.0, lockupDays: 30, gcFeeBps: 20 },
   },
@@ -312,11 +312,11 @@ function shuffle<T>(h: RngHolder, arr: T[]): T[] {
 const EQUITIES = ['ORBT', 'NMBS', 'HLXS', 'VNTG', 'PXLT', 'CRVA', 'MDLH', 'GRNB', 'LKSH', 'QRTL', 'BRWY', 'SLCE', 'PTVN', 'RDGL', 'TTNA', 'KYRL', 'CLDR', 'EVRW', 'STRM', 'NLPW', 'VOLT', 'HBRV', 'FRGE', 'AURA'];
 
 export function generateFund(h: RngHolder, day: number, usedNames: Set<string>, opts: { displacedFrom?: string } = {}): Client {
-  let name = '';
-  for (let i = 0; i < 20; i++) {
-    name = `${pick(h, PREFIX)} ${pick(h, SUFFIX)}`;
-    if (!usedNames.has(name)) break;
-  }
+  // short names (first word) must be unique too — they label the client everywhere in the UI
+  const usedPrefixes = new Set([...usedNames].map((n) => n.split(' ')[0]));
+  const free = PREFIX.filter((p) => !usedPrefixes.has(p));
+  const prefix = free.length ? pick(h, free) : `${pick(h, PREFIX)} ${String.fromCharCode(65 + Math.floor(rand(h) * 26))}.`;
+  const name = `${prefix} ${pick(h, SUFFIX)}`;
   const tpl = pick(h, TEMPLATES);
   const ratingRoll = rand(h);
   const rating: FundProfile['rating'] = ratingRoll < 0.25 ? 'A' : ratingRoll < 0.6 ? 'BBB' : ratingRoll < 0.85 ? 'BB' : 'B';
@@ -337,7 +337,7 @@ export function generateFund(h: RngHolder, day: number, usedNames: Set<string>, 
   const c: Client = {
     id,
     name,
-    short: name.split(' ')[0],
+    short: prefix,
     color: pick(h, COLORS),
     status: 'prospect',
     arrivalDay: day,

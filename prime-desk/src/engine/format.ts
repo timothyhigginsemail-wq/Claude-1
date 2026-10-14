@@ -24,6 +24,6 @@ export function fbps(x: number): string {
 }
 
 export function fx(x: number, digits = 1): string {
-  if (!Number.isFinite(x)) return '∞';
+  if (!Number.isFinite(x) || x >= 99) return '∞';
   return `${x.toFixed(digits)}x`;
 }

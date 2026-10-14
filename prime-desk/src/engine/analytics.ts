@@ -13,7 +13,7 @@ import {
   repoRate,
   reserveCalc,
   RESERVE_SPREAD_BPS,
-  SERVICING_SHARE,
+  servicingAllocation,
   termRepoTotal,
 } from './funding';
 import { ACC, bal, balanceSheet } from './ledger';
@@ -157,7 +157,7 @@ export function deskSummary(s: GameState): DeskSummary {
   const fund = projectFundingAnnual(s);
   // lender rebates are attributed to clients; the central residual is funding actual − allocated
   const centralRun = fund.total - allocatedFunding;
-  const overheadRun = -s.desk.opexPerYear * (clients.length ? 1 - SERVICING_SHARE : 1);
+  const overheadRun = -(s.desk.opexPerYear - servicingAllocation(s).total);
   const revenueRunRate = clientRun + centralRun + overheadRun;
   const risk = deskRisk(s);
   const lm = liquidityMetrics(s);
