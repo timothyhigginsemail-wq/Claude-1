@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fxSpotHalfSpread, halfSpreadUnit, unitNotional } from '../../engine/book';
 import { fm, fmSigned, fpct, fq } from '../../engine/format';
 import { pairCcys, PAIRS, usdPer } from '../../engine/market';
-import { autocallPayoffPV, isFuture } from '../../engine/pricing';
+import { annuity, autocallPayoffPV, futMult, isFuture, quotePrice, rpv01 } from '../../engine/pricing';
 import type { DeskId, Rfq } from '../../engine/types';
 import { topicsFor } from '../../game/education';
 import { displaySpread, hedgeIdeas, hitRatio, priceForHit, quoteScale, rfqEconomics, rfqSummary, autocallWinCoupon, type HedgeIdea, type QuoteResult } from '../../game/rfq';
@@ -13,7 +13,7 @@ import { LearnLink } from '../components/Learn';
 import { Screen } from '../components/Screen';
 import { Bar, Btn, Card, KV, Pill, Row, Section, Segmented, Sheet, Stepper, T } from '../components/ui';
 import { useGame } from '../GameContext';
-import { CLIENT_TYPE, instName, kindLabel, priceLabel } from '../labels';
+import { CLIENT_TYPE, instName, kindLabel, priceLabel, spotLabel } from '../labels';
 import { C, S, signColor } from '../theme';
 import { DESKS } from '../useRisk';
 
@@ -32,6 +32,7 @@ export function TradingScreen() {
       <View style={{ marginTop: S.md }}>
         <Segmented value={filter} options={[{ id: 'open', label: `Open RFQs (${open.length})` }, { id: 'done', label: `Done (${done.length})` }]} onChange={setFilter} />
       </View>
+      {filter === 'open' ? <HowItWorks /> : null}
       {list.length === 0 ? (
         <Card style={{ marginTop: S.md }}>
           <T v="small">{filter === 'open' ? 'No open client requests. Hedge your book below or close the day on the Desk tab.' : 'Nothing priced yet today.'}</T>
@@ -44,6 +45,35 @@ export function TradingScreen() {
       <StreetTicket />
       <RfqSheet id={sel} onClose={() => setSel(null)} />
     </Screen>
+  );
+}
+
+function HowItWorks() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card style={{ marginTop: S.md }} onPress={() => setOpen(!open)}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <T v="h3" style={{ fontSize: 14 }}>How client trading works</T>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={C.textDim} />
+      </Row>
+      {open ? (
+        <View style={{ marginTop: 8, gap: 6 }}>
+          {[
+            ['1. A client asks for a price', 'They want to buy or sell something now and ask several banks at once (a "request for quote").'],
+            ['2. You quote — or decline', 'You only choose how far from the market mid price you are willing to deal. Wider = more profit per trade, less chance of winning.'],
+            ['3. Best price wins', 'The client trades with whoever shows the best price. You never "buy" or "sell" on your own here — you take the other side of the client.'],
+            ['4. You now own the risk', 'If the client bought, you sold: you are short. You keep the spread only if the market does not move against you before you hedge.'],
+            ['5. Hedge (optional)', 'Offset the risk in the market — futures, the inter-dealer market, swaps. That costs a bit of spread too. Unhedged risk is marked to market at the close.'],
+          ].map(([h, p]) => (
+            <View key={h}>
+              <T v="small" color={C.text}>{h}</T>
+              <T v="caption">{p}</T>
+            </View>
+          ))}
+          <T v="caption" style={{ marginTop: 4 }}>The street ticket at the bottom is different: there YOU initiate a trade in the market and pay the spread instead of earning it.</T>
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
@@ -66,6 +96,7 @@ function RfqCard({ r, onPress }: { r: Rfq; onPress: () => void }) {
       <T v="h3" style={{ marginTop: 6, fontSize: 14.5 }}>{rfqSummary(s, r)}</T>
       <Row gap={12} style={{ marginTop: 4 }}>
         <T v="caption">{CLIENT_TYPE[c.type].label}</T>
+        {r.status === 'open' ? <T v="caption" color={C.accent}>you'd {sideWords(s, r).you.toLowerCase()}</T> : null}
         <T v="caption">{r.nDealers} dealers</T>
         <T v="caption">{r.urgency === 'high' ? 'urgent' : r.urgency === 'low' ? 'no rush' : ''}</T>
       </Row>
@@ -120,11 +151,32 @@ function RfqBody({ r, onClose }: { r: Rfq; onClose: () => void }) {
       <T v="h2" style={{ marginTop: 8 }}>{rfqSummary(s, r)}</T>
       {r.note ? <T v="small" color={C.text} style={{ marginTop: 6 }}>{r.note}</T> : null}
 
-      <Card style={{ marginTop: S.md }}>
+      {!isAuto ? (
+        <Card style={{ marginTop: S.md }} accent={C.accent}>
+          <T v="label">The deal on offer</T>
+          <T v="body" style={{ marginTop: 6 }}>
+            The client <T v="body" color={C.accent}>{sideWords(s, r).client}</T>. If your price is the best of the {r.nDealers} dealers asked, you <T v="body" color={C.accent}>{sideWords(s, r).you}</T> at:
+          </T>
+          <Row style={{ justifyContent: 'space-between', marginTop: 8 }}>
+            <View>
+              <T v="caption">Your price to the client</T>
+              <T v="numLg" color={C.accent}>{clientPrice(s, r, q)}</T>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <T v="caption">Market mid</T>
+              <T v="numLg">{priceLabel(s, r.instId).split(' · ')[0]}</T>
+            </View>
+          </Row>
+          <T v="caption" style={{ marginTop: 8 }}>
+            The gap between your price and mid ({displaySpread(s, r, q)}) is your spread: it is booked as profit the moment you trade. In exchange you now own the position ({fq(-r.clientQty)} {r.instId.startsWith('SPOT:') ? r.instId.slice(5, 8) : 'units'}, {fm(r.notional)}) and its market risk until you hedge or exit it.
+          </T>
+        </Card>
+      ) : null}
+
+      <Card style={{ marginTop: 8 }}>
         <KV k="Instrument" v={instName(s, r.instId)} />
         <KV k="Mid" v={priceLabel(s, r.instId)} />
         <KV k="Notional" v={fm(r.notional)} />
-        <KV k={`Atlas would ${-r.clientQty > 0 ? 'buy / go long' : 'sell / go short'}`} v={fq(-r.clientQty)} sub={r.instId.startsWith('SPOT:') ? r.instId.slice(5, 8) : 'units'} />
         {econ.invQty ? <KV k="Existing inventory" v={fq(econ.invQty)} tone={Math.sign(econ.invQty) !== Math.sign(-r.clientQty) ? C.up : C.warn} /> : null}
         <KV k="Dealers in competition" v={String(r.nDealers)} />
       </Card>
@@ -197,9 +249,9 @@ function RfqBody({ r, onClose }: { r: Rfq; onClose: () => void }) {
           </Section>
           {restricted ? <T v="small" color={C.down} style={{ marginTop: S.md }}>Risk management has restricted {DESK_META[r.desk].name} from taking new client risk until day {s.desks[r.desk].restrictedUntil}.</T> : null}
           <Row gap={8} style={{ marginTop: S.lg }}>
-            <Btn title="Pass" tone="ghost" style={{ flex: 1 }} onPress={() => { g.pass(r.id); onClose(); }} />
+            <Btn title="Decline" tone="ghost" style={{ flex: 1 }} onPress={() => { g.pass(r.id); onClose(); }} />
             <Btn
-              title={isAuto ? 'Offer the coupon' : 'Send quote'}
+              title={isAuto ? 'Offer the coupon' : `Quote ${clientPrice(s, r, q)}`}
               tone="primary"
               style={{ flex: 2 }}
               disabled={restricted}
@@ -218,6 +270,48 @@ function RfqBody({ r, onClose }: { r: Rfq; onClose: () => void }) {
       )}
     </View>
   );
+}
+
+/** The all-in price the client would deal at if they accept half-spread q (USD per unit), in natural units. */
+function clientPrice(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq, q: number): string {
+  const m = s.market;
+  const sg = Math.sign(r.clientQty); // client buys → pays above mid
+  if (r.instId.startsWith('SPOT:')) {
+    const pair = r.instId.slice(5);
+    return spotLabel(pair, m.fx.spot[pair] + (sg * q) / usdPer(m, pairCcys(pair)[1]));
+  }
+  const inst = s.instruments[r.instId];
+  const p = quotePrice(inst, m);
+  if (isFuture(inst)) return (p + (sg * q) / futMult(inst)).toFixed(3);
+  switch (inst.kind) {
+    case 'stock':
+    case 'etf':
+    case 'eqOpt':
+    case 'cmdtyOpt':
+      return `$${(p + sg * q).toFixed(2)}`;
+    case 'ust':
+    case 'corp':
+      return (p + sg * q * 100).toFixed(3);
+    case 'irs': // client receiving fixed gets a lower rate; paying fixed pays a higher one
+      return `${(p - (sg * q * 100) / annuity(m, inst.maturity - m.t)).toFixed(3)}% fixed`;
+    case 'cds':
+      return `${(m.credit.spread[inst.issuer] + (sg * q * 1e4) / rpv01(m, m.credit.spread[inst.issuer], 0.4, inst.maturity - m.t)).toFixed(1)}bp`;
+    case 'fxFwd':
+      return spotLabel(inst.pair, p + (sg * q) / usdPer(m, pairCcys(inst.pair)[1]));
+    case 'varSwap':
+      return `${(inst.strikeVol * 100 + (sg * q * 100) / (2 * inst.strikeVol)).toFixed(2)} vol`;
+    default:
+      return displaySpread(s, r, q);
+  }
+}
+
+function sideWords(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq): { client: string; you: string } {
+  const buy = r.clientQty > 0;
+  const k = r.instId.startsWith('SPOT:') ? 'spot' : s.instruments[r.instId]?.kind;
+  if (k === 'irs') return buy ? { client: 'RECEIVES fixed', you: 'PAY fixed' } : { client: 'PAYS fixed', you: 'RECEIVE fixed' };
+  if (k === 'cds') return buy ? { client: 'BUYS protection', you: 'SELL protection' } : { client: 'SELLS protection', you: 'BUY protection' };
+  if (k === 'autocall') return { client: 'BUYS the note', you: 'ISSUE (sell) it' };
+  return buy ? { client: 'BUYS', you: 'SELL to them' } : { client: 'SELLS', you: 'BUY from them' };
 }
 
 export function HedgeRow({ h, desk, done, onDone }: { h: HedgeIdea; desk: DeskId; done?: number; onDone: (cost: number) => void }) {
