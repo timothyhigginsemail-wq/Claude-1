@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fxSpotHalfSpread, halfSpreadUnit, unitNotional } from '../../engine/book';
@@ -16,14 +16,16 @@ import { useGame } from '../GameContext';
 import { CLIENT_TYPE, instName, kindLabel, priceLabel, spotLabel } from '../labels';
 import { C, S, signColor } from '../theme';
 import { DESKS } from '../useRisk';
+import { minutesLeft } from '../../game/live';
 
 export function TradingScreen() {
   const g = useGame();
   const s = g.s!;
   const [filter, setFilter] = useState<'open' | 'done'>('open');
   const [sel, setSel] = useState<string | null>(null);
-  const open = s.rfqs.filter((r) => r.status === 'open');
-  const done = s.rfqs.filter((r) => r.status !== 'open');
+  const open = s.rfqs.filter((r) => r.status === 'open' && r.arrived);
+  const upcoming = s.rfqs.filter((r) => r.status === 'open' && !r.arrived);
+  const done = s.rfqs.filter((r) => r.status !== 'open' && (r.arrived || r.status !== 'expired'));
   const list = filter === 'open' ? open : done;
   const won = done.filter((r) => r.status === 'won');
   const captured = won.reduce((a, r) => a + (r.spreadCapture ?? 0), 0);
@@ -35,7 +37,16 @@ export function TradingScreen() {
       {filter === 'open' ? <HowItWorks /> : null}
       {list.length === 0 ? (
         <Card style={{ marginTop: S.md }}>
-          <T v="small">{filter === 'open' ? 'No open client requests. Hedge your book below or close the day on the Desk tab.' : 'Nothing priced yet today.'}</T>
+          <T v="small">
+            {filter === 'open'
+              ? upcoming.length
+                ? g.speed
+                  ? 'No client is waiting right now. Requests come in through the day — watch the clock bar.'
+                  : 'The clock is paused. Press 1× (or faster) on the clock bar: prices start moving and clients call in.'
+                : 'No more client requests today. Hedge below, or book the day on the Desk tab.'
+              : 'Nothing priced yet today.'}
+          </T>
+          {filter === 'open' && upcoming.length ? <T v="caption" style={{ marginTop: 4 }}>{upcoming.length} more expected today.</T> : null}
         </Card>
       ) : null}
       {list.map((r) => (
@@ -91,7 +102,11 @@ function RfqCard({ r, onPress }: { r: Rfq; onPress: () => void }) {
           <Pill text={meta.short} color={meta.color} />
           <T v="small" color={C.text} numberOfLines={1} style={{ flex: 1 }}>{c.name}</T>
         </Row>
-        <Pill text={r.status} color={statusColor} filled={r.status !== 'open'} />
+        {r.status === 'open' ? (
+          <Pill text={`${minutesLeft(s, r)} min`} color={minutesLeft(s, r) < 10 ? C.down : C.accent} />
+        ) : (
+          <Pill text={r.status} color={statusColor} filled />
+        )}
       </Row>
       <T v="h3" style={{ marginTop: 6, fontSize: 14.5 }}>{rfqSummary(s, r)}</T>
       <Row gap={12} style={{ marginTop: 4 }}>
@@ -109,6 +124,11 @@ function RfqCard({ r, onPress }: { r: Rfq; onPress: () => void }) {
 function RfqSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const g = useGame();
   const s = g.s!;
+  // the client waits while you are pricing them
+  useEffect(() => {
+    g.holdRfq(id);
+    return () => g.holdRfq(null);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const r = id ? s.rfqs.find((x) => x.id === id) : undefined;
   return (
     <Sheet visible={!!r} onClose={onClose} title={r ? `${r.time} · ${s.clients[r.clientId].name}` : ''}>
@@ -168,7 +188,7 @@ function RfqBody({ r, onClose }: { r: Rfq; onClose: () => void }) {
             </View>
           </Row>
           <T v="caption" style={{ marginTop: 8 }}>
-            The gap between your price and mid ({displaySpread(s, r, q)}) is your spread: it is booked as profit the moment you trade. In exchange you now own the position ({fq(-r.clientQty)} {r.instId.startsWith('SPOT:') ? r.instId.slice(5, 8) : 'units'}, {fm(r.notional)}) and its market risk until you hedge or exit it.
+            Prices are live: the mid moves while you decide, and your quote moves with it. The gap between your price and mid ({displaySpread(s, r, q)}) is your spread: it is booked as profit the moment you trade. In exchange you now own the position ({fq(-r.clientQty)} {r.instId.startsWith('SPOT:') ? r.instId.slice(5, 8) : 'units'}, {fm(r.notional)}) and its market risk until you hedge or exit it.
           </T>
         </Card>
       ) : null}

@@ -5,15 +5,22 @@ import { autoHedge } from '../src/game/flow';
 import { unwindFraction } from '../src/game/day';
 import { closeDay } from '../src/game/day';
 import { resolveDecision } from '../src/game/manage';
+import { advanceTo, syncMarket } from '../src/game/live';
+import { minuteOf } from '../src/engine/intraday';
 import { autocallWinCoupon, executeHedge, hedgeIdeas, priceForHit, sendQuote } from '../src/game/rfq';
 
 export type Policy = 'fair' | 'tight' | 'wide' | 'nohedge' | 'street';
 
 /** Autoplayer: quote every RFQ at fair × k, hedge winners with the first idea, launch desks, close. */
-export function playDay(s: GameState, policy: Policy = 'fair') {
+export function playDay(s: GameState, policy: Policy = 'fair', opts: { intraday?: boolean } = {}) {
   for (const d of s.decisions.filter((x) => x.status === 'open')) resolveDecision(s, d.id, d.options[0].id);
   const k = policy === 'tight' ? 0.7 : policy === 'wide' ? 1.6 : 1;
-  for (const r of s.rfqs) {
+  for (const r of [...s.rfqs]) {
+    if (opts.intraday) {
+      // as in the app: the clock runs to the request's arrival and moves are marked before any trade
+      advanceTo(s, minuteOf(r.time) + 3);
+      syncMarket(s);
+    }
     if (r.status !== 'open') continue;
     // 'street' mirrors the UI default: quote where the win probability is ~50%; issue notes at the bank's minimum coupon
     const q = policy === 'street' ? priceForHit(s, r, 0.5) : r.refHalfSpread * k;
@@ -24,6 +31,10 @@ export function playDay(s: GameState, policy: Policy = 'fair') {
       const pick = ideas.find((i) => !i.working) ?? ideas[0];
       if (pick) executeHedge(s, r.desk, pick);
     }
+  }
+  if (opts.intraday) {
+    advanceTo(s, 480);
+    syncMarket(s);
   }
   if (policy !== 'nohedge') manageRisk(s);
   return closeDay(s);

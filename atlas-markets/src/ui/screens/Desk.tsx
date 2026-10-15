@@ -7,6 +7,8 @@ import { REGIMES } from '../../engine/market';
 import type { DayReport, DeskId, GameState } from '../../engine/types';
 import { pnlSum } from '../../engine/book';
 import { CAMPAIGN_DAYS, totalPnlToday } from '../../game/day';
+import { CLOSE_MIN, clockLabel } from '../../game/live';
+import { minuteOf } from '../../engine/intraday';
 import { explainEP, explainParts, PART_LABEL } from '../../game/explainers';
 import { allocated } from '../../game/manage';
 import { DESK_META } from '../../game/setup';
@@ -44,7 +46,8 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
   const unlocked = DESKS.filter((d) => s.desks[d].unlocked);
   const today = totalPnlToday(s);
   const varLimit = unlocked.reduce((a, d) => a + s.desks[d].limits.var, 0);
-  const openRfqs = s.rfqs.filter((r) => r.status === 'open');
+  const openRfqs = s.rfqs.filter((r) => r.status === 'open' && r.arrived);
+  const pending = s.rfqs.filter((r) => r.status === 'open').length;
   const decisions = s.decisions.filter((d) => d.status === 'open');
   const events = s.events.filter((e) => e.day === s.day);
   const upcoming = s.events.filter((e) => e.day > s.day && e.day <= s.day + 3);
@@ -54,7 +57,7 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
   return (
     <Screen
       title="Global Markets"
-      subtitle={`${campaign} · ${s.date}`}
+      subtitle={`${campaign} · ${s.date} · ${clockLabel(s.clock)}`}
       right={
         <Row gap={14}>
           <Pressable onPress={() => nav.push({ name: 'manage' })} hitSlop={10}>
@@ -66,6 +69,23 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
         </Row>
       }
     >
+      {s.clock === 0 && !g.speed ? (
+        <Card style={{ marginTop: S.md }} accent={C.accent}>
+          <T v="h3">The market opens at 07:00</T>
+          <T v="small" style={{ marginTop: 4 }}>Read the briefing, then press 1× on the clock bar at the bottom. Prices start moving, data is released at its scheduled time, and clients call in through the day. Each request lapses after 30 market minutes. Pause whenever you like.</T>
+        </Card>
+      ) : null}
+      {s.news.length ? (
+        <Card style={{ marginTop: S.md }} accent={C.warn}>
+          <T v="label" style={{ marginBottom: 4 }}>Newswire</T>
+          {[...s.news].reverse().slice(0, 5).map((n, i) => (
+            <Row key={i} gap={8} style={{ alignItems: 'flex-start', paddingVertical: 3 }}>
+              <T v="caption" style={{ width: 38 }}>{clockLabel(n.minute)}</T>
+              <T v="small" color={n.tone === 'bad' ? C.warn : C.text} style={{ flex: 1 }}>{n.text}</T>
+            </Row>
+          ))}
+        </Card>
+      ) : null}
       <Card style={{ marginTop: S.md }} accent={regimeColor(m.regime)}>
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="label">Market regime</T>
@@ -84,14 +104,16 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
           label="P&L today"
           value={fmSigned(today)}
           tone={signColor(today)}
-          sub="spread, hedging, flow so far"
-          calc={() =>
-            calc('P&L today (so far)', today, {
+          sub={s.clock >= CLOSE_MIN ? 'at 16:00, before the close' : 'live, marked to market'}
+          calc={() => {
+            const booked = unlocked.map((d) => explainParts(DESK_META[d].name, s.desks[d].pnlToday));
+            const sum = booked.reduce((a, c) => a + c.value, 0);
+            return calc('P&L today (live)', today, {
               formula: 'Σ desks (value now − value at the open)',
-              note: 'Intraday this is mostly spread captured on client trades minus execution costs. Market moves, carry, funding and electronic flow land at the close.',
-              children: unlocked.map((d) => explainParts(DESK_META[d].name, s.desks[d].pnlToday)),
-            })
-          }
+              note: 'Spread captured and execution costs book when you trade; market moves are marked continuously. Electronic flow, carry, funding and the overnight move land at the close.',
+              children: [...booked, calc('Market move since your last trade (not yet split by factor)', today - sum)],
+            });
+          }}
         />
         <Metric label="Cumulative P&L" value={fmSigned(s.stats.cumPnl)} tone={signColor(s.stats.cumPnl)} sub={`EP ${fmSigned(s.cumEP)}`} calc={() => explainEP(s)} />
       </Row>
@@ -176,7 +198,7 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
               <Row key={e.id} gap={8} style={{ paddingVertical: 4 }}>
                 <T v="caption" style={{ width: 40 }}>{e.time}</T>
                 <T v="small" color={C.text} style={{ flex: 1 }}>{e.title}</T>
-                <T v="caption">{e.consensus}</T>
+                <T v="caption" color={s.clock >= minuteOf(e.time) && e.outcome ? C.warn : undefined}>{s.clock >= minuteOf(e.time) && e.outcome ? e.outcome : e.consensus}</T>
               </Row>
             ))
           ) : (
@@ -201,7 +223,7 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
           <Row style={{ justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
               <T v="numLg">{openRfqs.length} open RFQs</T>
-              <T v="caption">{fm(openRfqs.reduce((a, r) => a + r.notional, 0))} notional · {s.rfqs.filter((r) => r.status === 'won').length} won today</T>
+              <T v="caption">{fm(openRfqs.reduce((a, r) => a + r.notional, 0))} notional · {s.rfqs.filter((r) => r.status === 'won').length} won today · {pending - openRfqs.length} still to come</T>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.textFaint} />
           </Row>
@@ -261,7 +283,7 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
       <View style={{ marginTop: S.xl }}>
         {openRfqs.length ? <T v="caption" center style={{ marginBottom: 8 }}>{openRfqs.length} RFQs still open will lapse (clients notice).</T> : null}
         <Btn
-          title={`Close day ${s.day}`}
+          title={s.clock >= CLOSE_MIN ? `Book day ${s.day}` : `Skip to 16:00 and book day ${s.day}`}
           tone="primary"
           icon="moon-outline"
           onPress={() => {
@@ -269,7 +291,7 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
             if (r) setReport(r);
           }}
         />
-        <T v="caption" center style={{ marginTop: 8 }}>Electronic flow, working orders, market moves, carry and funding are booked at the close.</T>
+        <T v="caption" center style={{ marginTop: 8 }}>Electronic flow, working orders, the overnight move, carry and funding are booked at the close. Skipping ahead moves prices to 16:00 without you; clients who haven't called yet won't.</T>
       </View>
 
       <DayReportSheet report={report} onClose={() => setReport(null)} />

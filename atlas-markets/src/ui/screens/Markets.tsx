@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { fpct } from '../../engine/format';
 import { CMDTYS, PAIRS, PIP, parSwapRate, parYield, STOCKS } from '../../engine/market';
@@ -10,6 +10,8 @@ import { Screen, useContentWidth } from '../components/Screen';
 import { Card, Pill, Row, Section, Segmented, T } from '../components/ui';
 import { useGame } from '../GameContext';
 import { spotLabel } from '../labels';
+import { clockLabel } from '../../game/live';
+import { marketAt } from '../../engine/intraday';
 import { C, S, signColor } from '../theme';
 import { regimeColor } from './Desk';
 
@@ -40,11 +42,11 @@ export function MarketsScreen() {
   const g = useGame();
   const s = g.s!;
   const m = s.market;
-  const p = s.prevMarket;
+  const p = s.openMarket ?? s.prevMarket;
   const w = useContentWidth() - 32;
   const [seg, setSeg] = useState<Seg>('rates');
   return (
-    <Screen title="Markets" subtitle={`${s.date} · close of day ${s.day - 1}`} right={<Pill text={m.regime} color={regimeColor(m.regime)} filled />}>
+    <Screen title="Markets" subtitle={`${s.date} · ${clockLabel(s.clock)} · changes since the open`} right={<Pill text={m.regime} color={regimeColor(m.regime)} filled />}>
       <View style={{ marginTop: S.md }}>
         <Segmented
           value={seg}
@@ -58,12 +60,56 @@ export function MarketsScreen() {
           onChange={setSeg}
         />
       </View>
+      <Intraday w={w + 32} />
       {seg === 'rates' ? <Rates m={m} p={p} w={w} /> : null}
       {seg === 'eq' ? <Equity m={m} p={p} w={w} /> : null}
       {seg === 'fx' ? <Fx m={m} p={p} /> : null}
       {seg === 'credit' ? <Credit m={m} p={p} /> : null}
       {seg === 'cmdty' ? <Cmdty m={m} p={p} w={w} /> : null}
     </Screen>
+  );
+}
+
+/** Today's intraday path of four bellwethers, sampled every 10 market minutes. */
+function Intraday({ w }: { w: number }) {
+  const g = useGame();
+  const s = g.s!;
+  const bucket = Math.floor(s.clock / 5);
+  const series = useMemo(() => {
+    const pts: { idx: number; y10: number; eur: number; wti: number }[] = [];
+    for (let t = 0; t <= s.clock; t += 10) {
+      const mk = t === s.clock ? s.market : marketAt(s, t);
+      pts.push({ idx: mk.eq.spot.US500, y10: parYield(mk, 10) * 100, eur: mk.fx.spot.EURUSD, wti: mk.cmdty.spot.WTI });
+    }
+    pts.push({ idx: s.market.eq.spot.US500, y10: parYield(s.market, 10) * 100, eur: s.market.fx.spot.EURUSD, wti: s.market.cmdty.spot.WTI });
+    return pts;
+  }, [s.day, bucket]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cw = (w - 8) / 2 - 24;
+  const tiles: [string, number[], (x: number) => string, boolean][] = [
+    ['US500', series.map((x) => x.idx), (x) => x.toFixed(1), false],
+    ['UST 10Y %', series.map((x) => x.y10), (x) => x.toFixed(3), true],
+    ['EURUSD', series.map((x) => x.eur), (x) => x.toFixed(4), false],
+    ['WTI', series.map((x) => x.wti), (x) => x.toFixed(2), false],
+  ];
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: S.md }}>
+      {tiles.map(([label, d, f, inv]) => {
+        const chgv = d[d.length - 1] - d[0];
+        const col = Math.abs(chgv) < 1e-12 ? C.textDim : (inv ? -chgv : chgv) > 0 ? C.up : C.down;
+        return (
+          <Card key={label} style={{ width: (w - 8) / 2 - 16, padding: 12 }}>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <T v="caption">{label}</T>
+              <T v="caption" color={col}>{label.includes('%') ? `${chgv >= 0 ? '+' : ''}${(chgv * 100).toFixed(1)}bp` : `${chgv >= 0 ? '+' : ''}${((chgv / d[0]) * 100).toFixed(2)}%`}</T>
+            </Row>
+            <T v="num" style={{ marginTop: 2 }}>{f(d[d.length - 1])}</T>
+            <View style={{ marginTop: 4 }}>
+              <Sparkline data={d.length > 1 ? d : [d[0], d[0]]} width={cw} height={30} color={col} baseline={d[0]} />
+            </View>
+          </Card>
+        );
+      })}
+    </View>
   );
 }
 
@@ -74,7 +120,7 @@ function Rates({ m, p, w }: { m: MarketState; p?: MarketState; w: number }) {
     { label: 'UST par yield', color: C.accent, pts: CURVE_T.map((t) => ({ x: t, y: parYield(m, t) * 100 })) },
     { label: 'SOFR swap', color: C.info, pts: CURVE_T.map((t) => ({ x: t, y: parSwapRate(m, t) * 100 })) },
   ];
-  if (p) series.push({ label: 'UST yesterday', color: C.textFaint, pts: CURVE_T.map((t) => ({ x: t, y: parYield(p, t) * 100 })), dashed: true } as any);
+  if (p) series.push({ label: 'UST at open', color: C.textFaint, pts: CURVE_T.map((t) => ({ x: t, y: parYield(p, t) * 100 })), dashed: true } as any);
   const sr3 = Object.values(s.instruments).filter((i) => i.kind === 'sofrFut' && i.start > m.t).sort((a: any, b: any) => a.start - b.start).slice(0, 6);
   const hist = s.history.map((h) => h.ust10 * 100);
   return (
@@ -286,7 +332,7 @@ function Cmdty({ m, p, w }: { m: MarketState; p?: MarketState; w: number }) {
   const [sel, setSel] = useState('WTI');
   const ts = [0, 1, 2, 3, 4, 5, 6, 9, 12].map((x) => x / 12);
   const curve = [{ label: CMDTYS[sel].name, color: C.accent, pts: ts.map((t) => ({ x: t * 12, y: cmdtyFwd(m, sel, t) })) }];
-  if (p) curve.push({ label: 'Yesterday', color: C.textFaint, pts: ts.map((t) => ({ x: t * 12, y: cmdtyFwd(p, sel, t) })), dashed: true } as any);
+  if (p) curve.push({ label: 'At open', color: C.textFaint, pts: ts.map((t) => ({ x: t * 12, y: cmdtyFwd(p, sel, t) })), dashed: true } as any);
   return (
     <View>
       <Section title="Spot">

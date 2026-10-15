@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { deskValue, pnlSum } from '../src/engine/book';
-import { startGame } from '../src/game/day';
+import { closeDay, startGame } from '../src/game/day';
+import { advanceTo } from '../src/game/live';
+import { CLOSE_MIN } from '../src/engine/intraday';
 import type { DeskId } from '../src/engine/types';
 import { playDay } from './helpers';
 
@@ -21,6 +23,34 @@ describe('full simulation', () => {
       expect(Math.abs(pnlSum(r.parts) - r.total)).toBeLessThan(1);
     }
     expect(maxOtherShare).toBeLessThan(0.05);
+  });
+
+  it('reconciles when trading through a moving intraday market', () => {
+    const s = startGame(11);
+    let maxOtherShare = 0;
+    for (let i = 0; i < 25 && s.status === 'playing'; i++) {
+      const r = playDay(s, 'street', { intraday: true });
+      expect(Math.abs(pnlSum(r.parts) - r.total)).toBeLessThan(1);
+      const gross = Object.values(r.parts).reduce((a, x) => a + Math.abs(x), 0);
+      if (gross > 1e5) maxOtherShare = Math.max(maxOtherShare, Math.abs(r.parts.other) / gross);
+    }
+    expect(maxOtherShare).toBeLessThan(0.05);
+  });
+
+  it('moves prices during the day and lands on the close', () => {
+    const s = startGame(7);
+    const open = s.market.eq.spot.US500;
+    const path: number[] = [];
+    for (let m = 0; m <= CLOSE_MIN; m += 30) {
+      advanceTo(s, m);
+      path.push(s.market.eq.spot.US500);
+    }
+    expect(new Set(path.map((x) => x.toFixed(2))).size).toBeGreaterThan(10);
+    const live = s.market.eq.spot.US500;
+    closeDay(s);
+    // no after-hours release on day 1, so the close equals the 16:00 live price
+    expect(Math.abs(s.market.eq.spot.US500 / live - 1)).toBeLessThan(1e-9);
+    expect(open).toBeGreaterThan(0);
   });
 
   it('desk values equal cash plus position PVs after the close', () => {

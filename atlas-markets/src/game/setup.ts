@@ -5,7 +5,7 @@ import { initialMarket } from '../engine/market';
 import type { Client, Competitor, Desk, DeskId, GameState, MacroEvent, Trader } from '../engine/types';
 import { STOCKS } from '../engine/market';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export const DESK_META: Record<DeskId, { name: string; short: string; color: string; unlockDay: number }> = {
   eq: { name: 'Equities', short: 'EQ', color: '#7FA7D9', unlockDay: 1 },
@@ -160,6 +160,9 @@ export function newGame(seed: number, difficulty: GameState['difficulty'] = 'nor
     cleanDays: 0,
     stats: { rfqWon: 0, rfqLost: 0, rfqPassed: 0, crisisWins: 0, maxDrawdown: 0, peakPnl: 0, cumPnl: 0 },
     rank: { eq: 9, rates: 9, fx: 9, credit: 9, cmdty: 9, exotics: 9 },
+    clock: 0,
+    markClock: 0,
+    news: [],
   };
   refreshListings(s);
   return s;

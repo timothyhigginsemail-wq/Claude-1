@@ -20,6 +20,8 @@ Progress saves automatically on the device (browser local storage / AsyncStorage
 
 **Desks.** Equities, Rates and FX are live on day 1, with $800m of capital. Credit (day 6), Commodities (day 13) and Cross-Asset & Exotics (day 17) launch through board decisions. You choose how much capital to commit, or defer.
 
+**Live trading day.** A market clock runs from 07:00 to 16:00 (pause, 1×, 3×, 10× on the clock bar). Prices move continuously along a Brownian bridge from the open to the day's close. Scheduled data (CPI, payrolls, FOMC, ECB, OPEC, auctions) hits prices at its release time. Clients call in at their own times, and a request lapses after 30 market minutes. The clock drops back to 1× when a client calls or news breaks, and the request you have open waits for you while the market keeps moving. Market moves are marked to P&L before every trade, so intraday P&L is attributed exactly.
+
 **Daily loop.**
 1. **Desk:** morning briefing. Covers the regime, yesterday's moves, today's data calendar and management decisions.
 2. **Trading:** client RFQs. Each one shows the client's type and history, the hedge cost at that size, a residual-risk charge, any axe against existing inventory, and an estimated win probability against the other dealers. Win, then hedge with suggested trades. The street ticket lets you put on or hedge any listed instrument directly.
@@ -52,6 +54,7 @@ Difficulty: Normal / Advanced / Expert.
 
 | Area | Model |
 |---|---|
+| Intraday | The close is the pre-drawn daily shock; the live market at minute t is the open shocked by (t/T)·diffuse shock + bridge noise (pinned to zero at both ends) + every release already out. After-hours releases (earnings) land at the close. |
 | Market | Five macro factors (growth, inflation, risk-off, USD, oil) plus idiosyncratic shocks. Regimes (calm → crisis) scale volatility, spreads, liquidity and dealer appetite. UST zero curve plus swap spreads give the SOFR curve; flat short rates for other currencies. |
 | Pricing | Black / Black-Scholes / Garman-Kohlhagen / Black-76 options with a sticky-moneyness skew. Fixed-coupon bonds (clean = dirty − accrued); single-curve OIS swaps; SOFR and bond futures; CDS with a flat hazard rate (spread / (1−R)); commodity forwards F = S·e^{carry·T}·seasonality; variance swaps (realised + implied); Monte-Carlo autocallables (fixed seeds, 1,500 paths). |
 | Accounting | Multi-currency desk cash plus positions. Futures settle variation margin daily. Desk value = cash + Σ PV. P&L components: spread capture, flow, execution, time, rates, FX, equity, vol, credit, commodities, funding, accruals, fees, defaults. They reconcile to the change in desk value (tested). |

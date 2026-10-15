@@ -232,6 +232,8 @@ export interface Rfq {
   /** For dynamically created OTC instruments (swaps, forwards, notes): the template. */
   template?: Instrument;
   spreadCapture?: number;
+  /** Set when the request reaches the desk on the intraday clock (mid and pricing refreshed then). */
+  arrived?: boolean;
 }
 
 export interface WorkingOrder {
@@ -388,6 +390,24 @@ export interface GameState {
   stats: { rfqWon: number; rfqLost: number; rfqPassed: number; crisisWins: number; maxDrawdown: number; peakPnl: number; cumPnl: number };
   /** Best rank achieved in the league table per desk. */
   rank: Record<DeskId, number>;
+  /** Intraday clock: market minutes since 07:00 (the close is CLOSE_MIN). */
+  clock: number;
+  /** Clock time up to which intraday market moves have been attributed to P&L. */
+  markClock: number;
+  /** Market at today's open; the live market is rebuilt from it and the day plan. */
+  openMarket?: MarketState;
+  plan?: DayPlan;
+  /** News released so far today. */
+  news: { minute: number; text: string; tone?: 'good' | 'bad' | 'neutral' }[];
+}
+
+export interface DayPlan {
+  daySeed: number;
+  /** Diffuse part of today's move (macro factors, idiosyncratic moves, scripted narrative). */
+  base: import('./market').Shock;
+  /** Scheduled releases: a jump at their minute (after-hours ones land at the close). */
+  events: { id: string; minute: number; z: import('./market').Shock; notes: LogItem[] }[];
+  headlines: string[];
 }
 
 export interface Decision {

@@ -7,6 +7,7 @@ import { GameProvider, haptic, useGame } from './src/ui/GameContext';
 import { NavProvider, useNav, type Tab } from './src/ui/nav';
 import { ExplainProvider, Btn, Card, KV, Sheet, T } from './src/ui/components/ui';
 import { LearnSheet } from './src/ui/components/Learn';
+import { ClockBar } from './src/ui/components/ClockBar';
 import { StartScreen } from './src/ui/screens/Start';
 import { DeskScreen } from './src/ui/screens/Desk';
 import { ManageScreen } from './src/ui/screens/Manage';
@@ -38,10 +39,10 @@ function TabBar() {
   const s = g.s;
   const badges: Partial<Record<Tab, number>> = {
     desk: s?.decisions.filter((d) => d.status === 'open').length ?? 0,
-    trading: s?.rfqs.filter((r) => r.status === 'open').length ?? 0,
+    trading: s?.rfqs.filter((r) => r.status === 'open' && r.arrived).length ?? 0,
   };
   return (
-    <View style={[styles.tabbar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.tabbar, { paddingTop: 4, paddingBottom: Math.max(insets.bottom, 8) }]}>
       {TABS.map((t) => {
         const on = nav.tab === t.id;
         const b = badges[t.id] ?? 0;
@@ -161,6 +162,7 @@ function Main() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={{ flex: 1 }}>{body}</View>
+      <ClockBar />
       <TabBar />
       <Settings visible={settings} onClose={() => setSettings(false)} />
       <LearnSheet />
@@ -184,7 +186,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  tabbar: { flexDirection: 'row', backgroundColor: '#0D1117', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, paddingTop: 8 },
+  tabbar: { flexDirection: 'row', backgroundColor: '#0D1117', paddingTop: 8 },
   tab: { flex: 1, alignItems: 'center' },
   badge: { position: 'absolute', right: -10, top: -4, backgroundColor: C.down, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },

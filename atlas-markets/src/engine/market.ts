@@ -214,13 +214,15 @@ export function drawShock(h: RngHolder, m: MarketState, idioKeys: string[], pend
 }
 
 /** Apply one day's factor shock to a market. Returns a new market (input unchanged). */
-export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; advanceTime?: boolean } = {}): MarketState {
+export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; advanceTime?: boolean; frac?: number } = {}): MarketState {
   const m: MarketState = structuredCloneMarket(m0);
   const rp = REGIMES[m.regime];
+  // fraction of the day elapsed: scales drift and mean reversion so partial-day (intraday) markets are smooth
+  const f = opts.frac ?? 1;
   const k = rp.k;
   const j = z.jumps ?? {};
   // --- equities
-  const rm = rp.drift + 0.0095 * k * (0.55 * z.g - 0.7 * z.ro - 0.25 * z.inf + 0.1 * z.oil * -0.5);
+  const rm = rp.drift * f + 0.0095 * k * (0.55 * z.g - 0.7 * z.ro - 0.25 * z.inf + 0.1 * z.oil * -0.5);
   const oldIdx = m.eq.spot.US500;
   m.eq.spot.US500 = oldIdx * Math.exp(rm + (j['eq:US500'] ?? 0));
   const idxRet = Math.log(m.eq.spot.US500 / oldIdx);
@@ -232,14 +234,14 @@ export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; adv
   }
   // implied vol: rises when the market falls (leverage effect), mean-reverts to the regime level
   const target = rp.vix / 100;
-  const dv = -2.2 * idxRet + 0.004 * Math.sqrt(k) * (z.idio['vol:US500'] ?? 0) + 0.12 * (target - m.eq.atmVol.US500);
+  const dv = -2.2 * idxRet + 0.004 * Math.sqrt(k) * (z.idio['vol:US500'] ?? 0) + 0.12 * f * (target - m.eq.atmVol.US500);
   m.eq.atmVol.US500 = Math.max(0.08, m.eq.atmVol.US500 + dv);
   for (const s of STOCKS) {
     const base = Math.sqrt(m.eq.atmVol.US500 ** 2 * s.beta * s.beta + s.idioVol * s.idioVol);
     m.eq.atmVol[s.id] = base;
   }
-  m.eq.skew = Math.min(-0.2, Math.max(-1.2, m.eq.skew - 0.05 * z.ro * k * 0.3 + 0.05 * (-0.45 - m.eq.skew)));
-  m.eq.etfPrem = m.eq.etfPrem * 0.4 + 0.0004 * k * (z.idio['etf'] ?? 0);
+  m.eq.skew = Math.min(-0.2, Math.max(-1.2, m.eq.skew - 0.05 * z.ro * k * 0.3 + 0.05 * f * (-0.45 - m.eq.skew)));
+  m.eq.etfPrem = m.eq.etfPrem * (1 - 0.6 * f) + 0.0004 * k * (z.idio['etf'] ?? 0);
   // --- rates (bp moves): front end driven by policy expectations, long end by growth/inflation/term premium
   const front = 5 * k * (0.75 * z.inf + 0.3 * z.g - 0.45 * z.ro) + (z.policyBp ?? 0) * 0.8;
   const long = 4.2 * k * (0.45 * z.inf + 0.4 * z.g - 0.55 * z.ro) + 1.2 * k * (z.idio['rates:term'] ?? 0) + (z.policyBp ?? 0) * 0.15;
@@ -253,9 +255,9 @@ export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; adv
   m.rates.sofr = Math.max(0, m.rates.sofr + (z.policyBp ?? 0) / 1e4);
   m.rates.ccy.USD = m.rates.sofr;
   // anchor the very front of the Treasury curve to policy
-  m.rates.ust.zeros[0] += (m.rates.sofr - 0.0003 - m.rates.ust.zeros[0]) * 0.3;
-  m.rates.swapSpread = m.rates.swapSpread.map((s, i) => s + (-0.5 * z.ro * k - 0.15 * (s - [0, -2, -5, -12, -15, -20, -25, -32, -45, -55][i])) * (i > 2 ? 1 : 0.3) + 0.3 * (z.idio['rates:ss'] ?? 0));
-  m.rates.normalVol = Math.max(50, m.rates.normalVol + 2 * k * Math.abs(z.inf) * 0.5 + 0.1 * (95 * Math.sqrt(k) - m.rates.normalVol));
+  m.rates.ust.zeros[0] += (m.rates.sofr - 0.0003 - m.rates.ust.zeros[0]) * 0.3 * f;
+  m.rates.swapSpread = m.rates.swapSpread.map((s, i) => s + (-0.5 * z.ro * k - 0.15 * f * (s - [0, -2, -5, -12, -15, -20, -25, -32, -45, -55][i])) * (i > 2 ? 1 : 0.3) + 0.3 * (z.idio['rates:ss'] ?? 0));
+  m.rates.normalVol = Math.max(50, m.rates.normalVol + 2 * k * Math.abs(z.inf) * 0.5 + 0.1 * f * (95 * Math.sqrt(k) - m.rates.normalVol));
   // foreign short rates drift with global inflation
   for (const c of ['EUR', 'GBP', 'AUD', 'CAD'] as Ccy[]) m.rates.ccy[c] = Math.max(0, m.rates.ccy[c] + (0.8 * k * z.inf * 0.4 + 0.5 * (z.idio[`rates:${c}`] ?? 0)) / 1e4);
   // --- credit (bp): risk-off and weak growth widen spreads; high yield moves ~4x investment grade
@@ -268,7 +270,7 @@ export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; adv
     const beta = lvl / 120; // wider names move more
     m.credit.spread[id] = Math.max(15, lvl + beta * ig * 1.2 + Math.sqrt(lvl) * 0.35 * Math.sqrt(k) * (z.idio[`cr:${id}`] ?? 0) + (j[`cr:${id}`] ?? 0));
   }
-  m.credit.basis = m.credit.basis + 0.3 * z.ro * k * 0.5 - 0.1 * (m.credit.basis - 5);
+  m.credit.basis = m.credit.basis + 0.3 * z.ro * k * 0.5 - 0.1 * f * (m.credit.basis - 5);
   // --- FX (% moves): dollar factor, risk-off (JPY up, commodity/EM currencies down), oil for CAD
   const d = 0.0042 * k * (0.65 * z.usd + 0.3 * z.ro + 0.25 * z.inf) + (z.policyBp ?? 0) * 0.0004;
   const fxMove: Record<string, number> = {
@@ -283,7 +285,7 @@ export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; adv
   for (const p of PAIRS) {
     m.fx.spot[p] *= Math.exp(fxMove[p] + (j[`fx:${p}`] ?? 0));
     const base = { EURUSD: 0.07, USDJPY: 0.09, GBPUSD: 0.08, AUDUSD: 0.1, USDCAD: 0.06, USDMXN: 0.12, USDBRL: 0.15 }[p]!;
-    m.fx.vol[p] = Math.max(0.03, m.fx.vol[p] + 0.15 * (base * Math.sqrt(k) - m.fx.vol[p]) + 1.5 * Math.abs(fxMove[p]));
+    m.fx.vol[p] = Math.max(0.03, m.fx.vol[p] + 0.15 * f * (base * Math.sqrt(k) - m.fx.vol[p]) + 1.5 * Math.abs(fxMove[p]));
   }
   // --- commodities: oil supply shocks move oil and flatten/invert its curve; gold is a haven
   const cm: Record<string, number> = {
@@ -298,14 +300,39 @@ export function applyShock(m0: MarketState, z: Shock, opts: { days?: number; adv
     const baseCarry = CMDTYS[c].carry;
     // supply disruptions push the curve into backwardation (scarcity of prompt barrels)
     const dCarry = c === 'WTI' ? -0.02 * z.oil * k : 0;
-    m.cmdty.carry[c] += dCarry + 0.08 * (baseCarry - m.cmdty.carry[c]);
-    m.cmdty.vol[c] = Math.max(0.08, m.cmdty.vol[c] + 0.12 * (CMDTYS[c].vol * Math.sqrt(k) - m.cmdty.vol[c]) + 1.2 * Math.abs(cm[c]));
+    m.cmdty.carry[c] += dCarry + 0.08 * f * (baseCarry - m.cmdty.carry[c]);
+    m.cmdty.vol[c] = Math.max(0.08, m.cmdty.vol[c] + 0.12 * f * (CMDTYS[c].vol * Math.sqrt(k) - m.cmdty.vol[c]) + 1.2 * Math.abs(cm[c]));
   }
   if (opts.advanceTime !== false) {
     const days = opts.days ?? 1;
     m.t += days / 365;
   }
   return m;
+}
+
+export function zeroShock(): Shock {
+  return { g: 0, inf: 0, ro: 0, usd: 0, oil: 0, idio: {} };
+}
+
+/** Σ weight × shock (all components are linear in the factor model). */
+export function combineShocks(parts: [Shock, number][]): Shock {
+  const out = zeroShock();
+  let policy = 0;
+  const jumps: Record<string, number> = {};
+  for (const [z, w] of parts) {
+    if (!w) continue;
+    out.g += z.g * w;
+    out.inf += z.inf * w;
+    out.ro += z.ro * w;
+    out.usd += z.usd * w;
+    out.oil += z.oil * w;
+    policy += (z.policyBp ?? 0) * w;
+    for (const k in z.idio) out.idio[k] = (out.idio[k] ?? 0) + z.idio[k] * w;
+    for (const k in z.jumps ?? {}) jumps[k] = (jumps[k] ?? 0) + z.jumps![k] * w;
+  }
+  if (policy) out.policyBp = policy;
+  if (Object.keys(jumps).length) out.jumps = jumps;
+  return out;
 }
 
 export function structuredCloneMarket(m: MarketState): MarketState {

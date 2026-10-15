@@ -3,11 +3,13 @@ import { accrue, deskValue, emptyPnl, executeStreet, firmValue, pnlSum, processD
 import { accrualDays, nextBusinessDay } from '../engine/calendar';
 import { fm, fpct } from '../engine/format';
 import { pruneInstruments, refreshListings } from '../engine/instruments';
-import { applyShock, drawShock, idioKeys, parYield, REGIMES, settleConditions, stepRegime, type Shock } from '../engine/market';
+import { applyShock, combineShocks, drawShock, idioKeys, parYield, REGIMES, settleConditions, stepRegime, structuredCloneMarket, zeroShock, type Shock } from '../engine/market';
+import { CLOSE_MIN, minuteOf } from '../engine/intraday';
 import { positionValue } from '../engine/pricing';
 import { chance, rand, randNormal } from '../engine/rng';
 import { computeVaR, counterpartyExposure, deskCapital, runStress, STRESSES, summarise } from '../engine/risk';
-import type { DayReport, DeskId, GameState, LogItem, MacroEvent, PnlParts } from '../engine/types';
+import type { DayPlan, DayReport, DeskId, GameState, LogItem, MacroEvent, PnlParts } from '../engine/types';
+import { advanceTo, syncMarket } from './live';
 import { checkAchievements } from './achievements';
 import { autoHedge, runFlow, runOrders } from './flow';
 import { dailyCosts, HURDLE, launchDecision, log, randomDecisions, reviewDecision } from './manage';
@@ -20,21 +22,43 @@ const DESKS: DeskId[] = ['eq', 'rates', 'fx', 'credit', 'cmdty', 'exotics'];
 // ---------------------------------------------------------------- morning
 
 export function startDay(s: GameState) {
+  s.costsToday = 0;
+  refreshListings(s);
+  planDay(s);
   for (const id of DESKS) {
     s.desks[id].pnlToday = emptyPnl();
     s.openValue[id] = deskValue(s, s.desks[id]);
   }
-  s.costsToday = 0;
-  refreshListings(s);
-  // tomorrow's factor shock is drawn now; informed clients see a noisy part of it
-  s.pendingShock = drawShock(s, s.market, idioKeys(s.market));
-  s.pendingIdio = { ...s.pendingShock.idio, 'rates:term': s.pendingShock.inf * 0.6 + s.pendingShock.g * 0.4 };
   const unlocked = DESKS.filter((d) => s.desks[d].unlocked).length;
   const n = Math.min(14, Math.round(3 + unlocked * 1.3 + rand(s) * 2));
   s.rfqs = generateRfqs(s, n);
   scriptedMorning(s);
   s.opportunities = findOpportunities(s);
   randomDecisions(s, () => rand(s));
+}
+
+/**
+ * Decide today's market path up front: the scripted narrative and regime (which apply from the
+ * open), the diffuse daily shock (informed clients see a noisy part of it), and each scheduled
+ * release's surprise, which hits prices at its release time.
+ */
+function planDay(s: GameState) {
+  const zScript = zeroShock();
+  const headlines = s.day <= CAMPAIGN_DAYS ? scriptedShock(s, zScript) : [];
+  s.pendingShock = drawShock(s, s.market, idioKeys(s.market));
+  s.pendingIdio = { ...s.pendingShock.idio, 'rates:term': s.pendingShock.inf * 0.6 + s.pendingShock.g * 0.4 };
+  const events: DayPlan['events'] = [];
+  for (const ev of s.events.filter((e) => e.day === s.day)) {
+    const z = zeroShock();
+    const notes: LogItem[] = [];
+    eventShock(s, ev, z, notes);
+    events.push({ id: ev.id, minute: minuteOf(ev.time), z, notes });
+  }
+  s.plan = { daySeed: (Math.imul(s.seed, 31) + s.day * 7919) >>> 0, base: combineShocks([[s.pendingShock, 1], [zScript, 1]]), events, headlines };
+  s.openMarket = structuredCloneMarket(s.market);
+  s.clock = 0;
+  s.markClock = 0;
+  s.news = headlines.map((h) => ({ minute: 0, text: h, tone: 'bad' as const }));
 }
 
 function scriptedMorning(s: GameState) {
@@ -131,7 +155,7 @@ function eventShock(s: GameState, ev: MacroEvent, z: Shock, notes: LogItem[]) {
     }
     case 'ecb': {
       const bp = u > 1 ? 25 : u < -1 ? -25 : 0;
-      s.market.rates.ccy.EUR = Math.max(0, s.market.rates.ccy.EUR + bp / 1e4);
+      z.idio['rates:EUR'] = (z.idio['rates:EUR'] ?? 0) + bp * 2;
       z.jumps = { ...(z.jumps ?? {}), 'fx:EURUSD': bp * 0.0002 + u * 0.002 };
       ev.outcome = bp ? `${bp > 0 ? 'Hike' : 'Cut'} ${Math.abs(bp)}bp` : `Hold; ${u > 0 ? 'hawkish' : 'dovish'} tone`;
       note(`ECB: ${ev.outcome}.`);
@@ -214,35 +238,40 @@ export function closeDay(s: GameState): DayReport {
     notes.push({ day: s.day, text, tone });
     log(s, text, tone);
   };
-  // 1. unanswered RFQs lapse
+  // 1. unanswered RFQs lapse (requests that never reached the desk simply don't happen)
   for (const r of s.rfqs) {
-    if (r.status === 'open') {
-      r.status = 'expired';
-      const c = s.clients[r.clientId];
-      c.noQuotes++;
-      c.relationship = Math.max(0, c.relationship - 0.5);
-      s.stats.rfqPassed++;
-    }
+    if (r.status !== 'open') continue;
+    r.status = 'expired';
+    if (minuteOf(r.time) > s.clock) continue;
+    const c = s.clients[r.clientId];
+    c.noQuotes++;
+    c.relationship = Math.max(0, c.relationship - 0.5);
+    s.stats.rfqPassed++;
   }
-  // 2. intraday electronic flow and working orders (at today's prices)
+  // 2. run the clock to the close, then intraday electronic flow and working orders at closing prices
+  advanceTo(s, CLOSE_MIN);
+  syncMarket(s);
   const flows = runFlow(s);
   for (const n of runOrders(s)) notes.push(n);
-  // 3. market move: pre-drawn factor shock + event surprises + scripted beats
+  // 3. overnight: today's full shock (diffuse move + every release, including after-hours ones) from the open
   const m0 = s.market;
-  const z: Shock = JSON.parse(JSON.stringify(s.pendingShock ?? drawShock(s, m0, idioKeys(m0))));
+  const mo = s.openMarket ?? m0;
+  const plan = s.plan!;
+  const z: Shock = combineShocks([[plan.base, 1], ...plan.events.map((e) => [e.z, 1] as [Shock, number])]);
   const todays = s.events.filter((e) => e.day === s.day);
-  for (const ev of todays) eventShock(s, ev, z, notes);
-  const headlines = s.day <= CAMPAIGN_DAYS ? scriptedShock(s, z) : [];
-  if (s.day > CAMPAIGN_DAYS && stepRegime(s, m0)) note(`Market regime shifts to ${REGIMES[m0.regime].label.toLowerCase()}.`, m0.regime === 'crisis' || m0.regime === 'stressed' ? 'bad' : 'neutral');
+  for (const e of plan.events) for (const n of e.notes) notes.push(n);
+  const headlines = plan.headlines;
+  if (s.day > CAMPAIGN_DAYS && stepRegime(s, mo)) note(`Market regime shifts to ${REGIMES[mo.regime].label.toLowerCase()}.`, mo.regime === 'crisis' || mo.regime === 'stressed' ? 'bad' : 'neutral');
   const days = accrualDays(s.date);
-  const m1 = applyShock(m0, z, { days });
+  const m1 = applyShock(mo, z, { days });
   m1.day = s.day + 1;
   settleConditions(m1);
   // 4. attribution of the market move with today's positions
   const attr = attributeMove(s, m0, m1);
   for (const id of DESKS) for (const k in attr[id]) (s.desks[id].pnlToday as any)[k] += (attr[id] as any)[k];
-  s.prevMarket = m0;
+  s.prevMarket = mo;
   s.market = m1;
+  s.markClock = s.clock;
   // 5. defaults
   if (s.day === 23 && !m1.credit.defaulted.MDRT) {
     const r = processDefault(s, 'MDRT', 0.25);
@@ -376,7 +405,7 @@ export function closeDay(s: GameState): DayReport {
     parts,
     notes,
     events: todays,
-    moves: marketMoves(m0, m1),
+    moves: marketMoves(mo, m1),
     confidenceDelta: s.confidence - conf0,
     ep,
     breaches,

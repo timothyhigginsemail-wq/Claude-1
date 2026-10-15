@@ -10,12 +10,22 @@ import { autoHedge } from '../game/flow';
 import { fire, hire, launchDecision, resolveDecision, setCapital, upgradeTech } from '../game/manage';
 import { executeHedge, passRfq, sendQuote, type HedgeIdea, type QuoteResult } from '../game/rfq';
 import { SAVE_VERSION } from '../game/setup';
+import { advanceTo, CLOSE_MIN, syncMarket } from '../game/live';
 
 const KEY = 'atlas-markets-save-v' + SAVE_VERSION;
+
+export type Speed = 0 | 1 | 3 | 10;
 
 interface Ctx {
   s: GameState | null;
   v: number;
+  /** Bumped on every change except clock ticks (for expensive derived data such as VaR). */
+  rv: number;
+  /** Market minutes per real second; 0 = paused. */
+  speed: Speed;
+  setSpeed: (x: Speed) => void;
+  /** RFQ currently open on screen: it doesn't lapse while the client is waiting on you. */
+  holdRfq: (id: string | null) => void;
   loaded: boolean;
   start: (seed: number, d: GameState['difficulty']) => void;
   quote: (rfqId: string, q: number, coupon?: number) => QuoteResult | null;
@@ -52,6 +62,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const ref = useRef<GameState | null>(null);
   const [v, setV] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [rv, setRv] = useState(0);
+  const [speed, setSpeed] = useState<Speed>(0);
+  const hold = useRef<string | null>(null);
+  const ticks = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -70,8 +84,44 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  const save = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      try {
+        if (ref.current) AsyncStorage.setItem(KEY, JSON.stringify(ref.current)).catch(() => undefined);
+      } catch {
+        /* storage unavailable */
+      }
+    }, 300);
+  }, []);
+
+  // the market clock: prices tick, news lands and clients call in while it runs
+  useEffect(() => {
+    if (!speed) return;
+    const id = setInterval(() => {
+      const g = ref.current;
+      if (!g || g.status !== 'playing') return;
+      if (g.clock >= CLOSE_MIN) {
+        setSpeed(0);
+        return;
+      }
+      const before = g.rfqs.filter((r) => r.status === 'open' && r.arrived).length;
+      const news = g.news.length;
+      advanceTo(g, g.clock + speed / 2, hold.current);
+      // the phone rings or news breaks: drop back to real time so nothing passes you by
+      const called = g.rfqs.filter((r) => r.status === 'open' && r.arrived).length > before;
+      if (g.news.length > news) haptic('warning');
+      else if (called) haptic('light');
+      if ((called || g.news.length > news) && speed > 1) setSpeed(1);
+      setV((x) => x + 1);
+      if (++ticks.current % 20 === 0) save();
+    }, 500);
+    return () => clearInterval(id);
+  }, [speed, save]);
+
   const bump = useCallback(() => {
     setV((x) => x + 1);
+    setRv((x) => x + 1);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       try {
@@ -87,14 +137,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return {
       s: ref.current,
       v,
+      rv,
+      speed,
+      setSpeed,
+      holdRfq: (id) => {
+        hold.current = id;
+      },
       loaded,
       start: (seed, d) => {
         ref.current = startGame(seed, d);
+        setSpeed(0);
         bump();
       },
       quote: (id, q, coupon) => {
         const r = S().rfqs.find((x) => x.id === id);
         if (!r || r.status !== 'open') return null;
+        syncMarket(S());
         const res = sendQuote(S(), r, q, { coupon });
         haptic(res.won ? 'success' : 'light');
         bump();
@@ -106,6 +164,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         bump();
       },
       hedge: (desk, idea) => {
+        syncMarket(S());
         const c = executeHedge(S(), desk, idea);
         haptic('medium');
         bump();
@@ -115,6 +174,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const inst = S().instruments[instId];
         const q = inst && (isFuture(inst) || inst.kind === 'eqOpt') ? Math.round(qty) : qty;
         if (!q) return 0;
+        syncMarket(S());
         const c = executeStreet(S(), desk, instId, q, 'hedge');
         haptic('medium');
         bump();
@@ -127,12 +187,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const inst = s.instruments[instId];
         let q = -p.qty * frac;
         if (isFuture(inst) || inst.kind === 'eqOpt') q = Math.round(q);
+        syncMarket(s);
         const c = q ? executeStreet(s, desk, instId, q, 'unwind') : 0;
         bump();
         void unitNotional;
         return c;
       },
       neutralise: (desk) => {
+        syncMarket(S());
         const c = autoHedge(S(), desk, 1);
         haptic('medium');
         bump();
@@ -141,6 +203,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       close: () => {
         const s = S();
         if (s.status !== 'playing') return null;
+        setSpeed(0);
         const r = closeDay(s);
         haptic(r.total >= 0 ? 'success' : 'warning');
         bump();
@@ -186,7 +249,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setV((x) => x + 1);
       },
     };
-  }, [v, loaded, bump]);
+  }, [v, rv, speed, loaded, bump]);
   if (Platform.OS === 'web' && typeof window !== 'undefined') (window as any).__atlas = api;
   return <GameCtx.Provider value={api}>{children}</GameCtx.Provider>;
 }

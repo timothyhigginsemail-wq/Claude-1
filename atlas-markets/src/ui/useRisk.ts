@@ -41,5 +41,6 @@ export function riskSnapshot(s: GameState, key: string): RiskSnap {
 export function useRisk(): RiskSnap | null {
   const g = useGame();
   if (!g.s) return null;
-  return riskSnapshot(g.s, `${g.s.seed}:${g.v}`);
+  // recomputed when positions/limits change and every 30 market minutes as prices move
+  return riskSnapshot(g.s, `${g.s.seed}:${g.s.day}:${g.rv}:${Math.floor(g.s.clock / 30)}`);
 }
