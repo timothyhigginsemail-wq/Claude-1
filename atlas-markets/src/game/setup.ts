@@ -25,7 +25,7 @@ function desk(id: DeskId, capital: number, varLimit: number, primary: number, un
     limits: { var: varLimit, primary },
     tech: 1,
     flowSpread: 1,
-    autoHedge: 0.5,
+    autoHedge: 0.75,
     cash: { USD: 0 },
     positions: {},
     breachDays: 0,

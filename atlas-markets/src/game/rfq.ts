@@ -43,8 +43,12 @@ function informedSide(s: GameState, c: Client, key: string | null): number {
   return rand(s) < 0.5 ? 1 : -1;
 }
 
+/** RFQs being generated this morning (s.rfqs still holds yesterday's until generation finishes). */
+let batch: Rfq[] = [];
+
 export function generateRfqs(s: GameState, n: number): Rfq[] {
   const out: Rfq[] = [];
+  batch = out;
   const pool = clientPool(s);
   if (!pool.length) return out;
   const idx = TIMES.map((_, i) => i);
@@ -192,7 +196,7 @@ export function makeRfq(s: GameState, c: Client, desk: DeskId, time: string, for
       break;
     }
     case 'exotics': {
-      const recentIssue = s.blotter.some((b) => b.desk === 'exotics' && b.kind === 'client' && s.instruments[b.instId]?.kind === 'autocall' && s.day - b.day < 4) || s.rfqs.some((r) => r.clientId === 'privatebank');
+      const recentIssue = s.blotter.some((b) => b.desk === 'exotics' && b.kind === 'client' && s.instruments[b.instId]?.kind === 'autocall' && s.day - b.day < 4) || (s.rfqs !== batch && s.rfqs.some((r) => r.clientId === 'privatebank' && r.status === 'open')) || batch.some((r) => r.clientId === 'privatebank');
       if (c.type === 'privateBank' && recentIssue) return null;
       if (c.type === 'privateBank') {
         inst = newAutocall(s, 2, 0.02);
@@ -332,7 +336,7 @@ export function rfqEconomics(s: GameState, rfq: Rfq): RfqEconomics {
     { label: 'Residual-risk charge', value: displaySpread(s, rfq, risk) },
   ];
   if (axe > 0) lines.push({ label: `Axe: offsets ${(offset * 100).toFixed(0)}% of existing inventory`, value: `−${displaySpread(s, rfq, axe)}` });
-  lines.push({ label: 'Fair half-spread', value: displaySpread(s, rfq, fair) });
+  lines.push({ label: 'Full-cost half-spread (hedge + risk − axe)', value: displaySpread(s, rfq, fair) });
   return { unitNotional: unitNot, hedgeCost, riskCharge: risk, axe, fair, invQty, atlasQty, lines };
 }
 
@@ -416,6 +420,18 @@ export function hitRatio(s: GameState, rfq: Rfq, q: number): number {
   return wins / N;
 }
 
+/** Half-spread (USD/unit) at which the estimated win probability is about `target`. */
+export function priceForHit(s: GameState, rfq: Rfq, target: number): number {
+  let lo = 0;
+  let hi = Math.max(1e-12, rfq.refHalfSpread * 3);
+  for (let i = 0; i < 14; i++) {
+    const mid = (lo + hi) / 2;
+    if (hitRatio(s, rfq, mid) > target) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
 function relBonus(c: Client) {
   return 1 + 0.18 * ((c.relationship - 50) / 50);
 }
@@ -441,11 +457,12 @@ export function sendQuote(s: GameState, rfq: Rfq, q: number, opts: { coupon?: nu
     // private bank compares the coupon with competing issuers' indicative coupons
     const ac = s.instruments[rfq.instId] as any;
     const coupon = opts.coupon ?? ac.coupon;
-    const fairCoupon = solveAutocallCoupon(s, ac, 0.01);
-    won = coupon >= fairCoupon * 0.85 * (1 - (c.relationship - 50) / 400);
-    cover = fairCoupon * 0.9;
+    const need = autocallWinCoupon(s, rfq);
+    won = coupon >= need * 0.999;
+    cover = need;
     if (won) {
       const inst = newAutocall(s, 2, coupon);
+      inst.seed = ac.seed;
       const N = rfq.clientQty;
       // investors pay par; Atlas owes the note payoff
       addCash(s.desks.exotics, 'USD', N);
@@ -551,10 +568,21 @@ export function passRfq(s: GameState, rfq: Rfq) {
   c.relationship = Math.max(0, c.relationship - (s.market.regime === 'crisis' || s.market.regime === 'stressed' ? 3 : 1));
 }
 
+/** Issuance margin competing issuers work on; a strong relationship lets Atlas keep a little more. */
+export function autocallWinMargin(s: GameState, rfq: Rfq): number {
+  const c = s.clients[rfq.clientId];
+  return 0.01 + 0.008 * Math.max(0, (c.relationship - 40) / 60);
+}
+
+/** Lowest coupon (per quarter) the private bank accepts. */
+export function autocallWinCoupon(s: GameState, rfq: Rfq): number {
+  return solveAutocallCoupon(s, s.instruments[rfq.instId], autocallWinMargin(s, rfq));
+}
+
 /** Coupon (per quarter) that makes the autocall's fair value = 1 − margin. */
 export function solveAutocallCoupon(s: GameState, ac: any, margin: number): number {
   let lo = 0.002;
-  let hi = 0.06;
+  let hi = 0.15;
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
     const pv = autocallPayoffPV(s.market, { ...ac, coupon: mid });
@@ -717,3 +745,68 @@ export function executeHedge(s: GameState, desk: DeskId, idea: HedgeIdea): numbe
 }
 
 export { eqForward, varSwapValue, CMDTYS };
+
+// ---------------------------------------------------------------- quoting units for the UI
+
+/** How a half-spread is entered in the UI: label, USD-per-unit per 1 display unit, step and decimals. */
+export function quoteScale(s: GameState, rfq: Rfq): { unit: string; perDisplay: number; step: number; dp: number } {
+  const m = s.market;
+  if (rfq.instId.startsWith('SPOT:')) {
+    const pair = rfq.instId.slice(5);
+    return { unit: 'pips', perDisplay: PIP[pair] * usdPer(m, pairCcys(pair)[1]), step: pair === 'USDMXN' || pair === 'USDBRL' ? 1 : 0.1, dp: 1 };
+  }
+  const inst = s.instruments[rfq.instId];
+  switch (inst.kind) {
+    case 'stock':
+    case 'etf':
+      return { unit: 'bp', perDisplay: unitValue(inst, m) / 1e4, step: 0.5, dp: 1 };
+    case 'ust':
+      return { unit: '/32', perDisplay: 1 / 32 / 100, step: 0.125, dp: 3 };
+    case 'corp':
+      return { unit: 'bp spread', perDisplay: Math.max(0.2, (inst.maturity - m.t) * 0.8) / 1e4, step: 0.5, dp: 1 };
+    case 'irs':
+      return { unit: 'bp', perDisplay: annuity(m, inst.maturity - m.t) / 1e4, step: 0.05, dp: 2 };
+    case 'cds':
+      return { unit: 'bp running', perDisplay: rpv01(m, m.credit.spread[inst.issuer], 0.4, inst.maturity - m.t) / 1e4, step: 0.1, dp: 2 };
+    case 'fxFwd':
+      return { unit: 'pips', perDisplay: PIP[inst.pair] * usdPer(m, pairCcys(inst.pair)[1]), step: 0.5, dp: 1 };
+    case 'eqOpt':
+    case 'fxOpt':
+    case 'cmdtyOpt':
+      return { unit: 'vol', perDisplay: Math.max(1e-9, vegaPerUnit(s, inst, m)), step: 0.05, dp: 2 };
+    case 'varSwap':
+      return { unit: 'vol pts', perDisplay: (2 * inst.strikeVol) / 100, step: 0.05, dp: 2 };
+    case 'autocall':
+      return { unit: '% p.a. coupon', perDisplay: 1, step: 0.1, dp: 2 };
+    default:
+      if (isFuture(inst)) {
+        const tick = inst.kind === 'sofrFut' ? 0.0025 : inst.kind === 'bondFut' ? 1 / 64 : inst.kind === 'eqFut' ? 0.25 : 0.01;
+        return { unit: 'pts', perDisplay: futMult(inst), step: tick, dp: 4 };
+      }
+      return { unit: '$', perDisplay: 1, step: 0.01, dp: 2 };
+  }
+}
+
+/** Human description of what the client wants. */
+export function rfqSummary(s: GameState, rfq: Rfq): string {
+  const buy = rfq.clientQty > 0;
+  if (rfq.instId.startsWith('SPOT:')) {
+    const pair = rfq.instId.slice(5);
+    return `${buy ? 'Buys' : 'Sells'} ${fm(rfq.notional)} ${pair.slice(0, 3)} vs ${pair.slice(3)} spot`;
+  }
+  const inst = s.instruments[rfq.instId];
+  switch (inst.kind) {
+    case 'irs':
+      return `${buy ? 'Receives' : 'Pays'} fixed on ${fm(rfq.notional)} ${inst.tenorLabel} SOFR swap`;
+    case 'cds':
+      return `${buy ? 'Buys' : 'Sells'} ${fm(rfq.notional)} protection on ${inst.name}`;
+    case 'autocall':
+      return `Wants ${fm(rfq.notional)} of a 2Y autocallable note`;
+    case 'varSwap':
+      return `${buy ? 'Buys' : 'Sells'} US500 3M variance (vega ${fm(Math.abs(rfq.clientQty) * 2 * inst.strikeVol * 0.01)}/vol)`;
+    case 'fxFwd':
+      return `${buy ? 'Buys' : 'Sells'} ${fm(rfq.notional)} ${inst.pair.slice(0, 3)} ${Math.round((inst.maturity - s.market.t) * 12)}M forward`;
+    default:
+      return `${buy ? 'Buys' : 'Sells'} ${fm(rfq.notional)} ${inst.name}`;
+  }
+}

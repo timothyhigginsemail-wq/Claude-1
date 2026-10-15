@@ -28,7 +28,7 @@
     "web": "expo start --web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "balance": "BALANCE=1 vitest run tests/balance.test.ts",
+    "sim": "SIM=1 POLICY=street vitest run tests/sim.test.ts",
     "web:export": "expo export --platform web --output-dir dist"
   },
   "private": true

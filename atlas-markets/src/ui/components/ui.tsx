@@ -134,9 +134,9 @@ export function KV({ k, v, tone, onPress, sub }: { k: string; v: string; tone?: 
   const body = (
     <View style={st.kv}>
       <T v="small" style={{ flex: 1 }}>{k}</T>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Row gap={4}>
-          <T v="num" color={tone}>{v}</T>
+      <View style={{ alignItems: 'flex-end', flexShrink: 1, maxWidth: '62%' }}>
+        <Row gap={4} style={{ flexShrink: 1 }}>
+          <T v="num" color={tone} style={{ textAlign: 'right', flexShrink: 1 }}>{v}</T>
           {onPress ? <Ionicons name="chevron-forward" size={12} color={C.textFaint} /> : null}
         </Row>
         {sub ? <T v="caption">{sub}</T> : null}

@@ -135,7 +135,7 @@ export function Waterfall({ items, width, total, totalLabel }: { items: { label:
   const lo = Math.min(...ext, total, 0);
   const hi = Math.max(...ext, total, 0);
   const span = hi - lo || 1;
-  const labelW = 118;
+  const labelW = width > 320 ? 138 : 112;
   const chartW = width - labelW - 62;
   const x = (v: number) => ((v - lo) / span) * chartW;
   acc = 0;
@@ -282,6 +282,70 @@ export function FlowDiagram({ nodes, edges, width, height = 260 }: { nodes: Flow
           <T v="caption">Securities</T>
         </Row>
       </Row>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- line chart (curves, smiles, history)
+
+export interface LineSeries {
+  label: string;
+  color: string;
+  pts: { x: number; y: number }[];
+  dashed?: boolean;
+}
+
+export function LineChart({ series, width, height = 170, xFmt, yFmt, xTicks }: { series: LineSeries[]; width: number; height?: number; xFmt?: (x: number) => string; yFmt?: (y: number) => string; xTicks?: number[] }) {
+  const all = series.flatMap((s) => s.pts);
+  if (all.length < 2) return <View style={{ height }} />;
+  const padL = 44;
+  const padB = 18;
+  const padT = 6;
+  const w = width - padL - 4;
+  const h = height - padB - padT;
+  let lo = Math.min(...all.map((p) => p.y));
+  let hi = Math.max(...all.map((p) => p.y));
+  const pad = (hi - lo) * 0.1 || Math.abs(hi) * 0.02 || 1;
+  lo -= pad;
+  hi += pad;
+  const x0 = Math.min(...all.map((p) => p.x));
+  const x1 = Math.max(...all.map((p) => p.x));
+  const X = (x: number) => padL + ((x - x0) / (x1 - x0 || 1)) * w;
+  const Y = (y: number) => padT + h - ((y - lo) / (hi - lo)) * h;
+  const yt = [0, 0.5, 1].map((f) => lo + (hi - lo) * f);
+  const ticks = xTicks ?? [x0, (x0 + x1) / 2, x1];
+  return (
+    <View>
+      <Svg width={width} height={height}>
+        {yt.map((y, i) => (
+          <G key={i}>
+            <Line x1={padL} x2={width - 4} y1={Y(y)} y2={Y(y)} stroke={C.border} strokeWidth={1} />
+            <SvgText x={padL - 4} y={Y(y) + 3} fill={C.textFaint} fontSize={9} textAnchor="end" fontFamily={C_FONT}>{yFmt ? yFmt(y) : y.toFixed(2)}</SvgText>
+          </G>
+        ))}
+        {ticks.map((x, i) => (
+          <SvgText key={i} x={X(x)} y={height - 4} fill={C.textFaint} fontSize={9} textAnchor="middle" fontFamily={C_FONT}>{xFmt ? xFmt(x) : x.toFixed(1)}</SvgText>
+        ))}
+        {series.map((s, i) => {
+          const d = s.pts.map((p, j) => `${j ? 'L' : 'M'}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
+          return (
+            <G key={i}>
+              <Path d={d} stroke={s.color} strokeWidth={1.8} fill="none" strokeDasharray={s.dashed ? '4,3' : undefined} />
+              {s.pts.length <= 12 ? s.pts.map((p, j) => <Rect key={j} x={X(p.x) - 1.5} y={Y(p.y) - 1.5} width={3} height={3} fill={s.color} />) : null}
+            </G>
+          );
+        })}
+      </Svg>
+      {series.length > 1 ? (
+        <Row gap={12} style={{ marginTop: 4, flexWrap: 'wrap' }}>
+          {series.map((s) => (
+            <Row key={s.label} gap={4}>
+              <View style={{ width: 10, height: 3, backgroundColor: s.color, borderRadius: 2 }} />
+              <T v="caption">{s.label}</T>
+            </Row>
+          ))}
+        </Row>
+      ) : null}
     </View>
   );
 }

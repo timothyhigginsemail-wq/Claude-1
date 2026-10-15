@@ -62,6 +62,7 @@ export function parSwapRate(m: MarketState, T: number): number {
 
 /** Par yield of a semi-annual Treasury of tenor T. */
 export function parYield(m: MarketState, T: number): number {
+  if (T < 0.5) return (1 / ustDF(m, T) - 1) / T; // bills: simple money-market yield
   let ann = 0;
   for (let p = T; p > 1e-9; p -= 0.5) ann += 0.5 * ustDF(m, p);
   return (1 - ustDF(m, T)) / ann;

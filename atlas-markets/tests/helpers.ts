@@ -5,9 +5,9 @@ import { autoHedge } from '../src/game/flow';
 import { unwindFraction } from '../src/game/day';
 import { closeDay } from '../src/game/day';
 import { resolveDecision } from '../src/game/manage';
-import { executeHedge, hedgeIdeas, sendQuote } from '../src/game/rfq';
+import { autocallWinCoupon, executeHedge, hedgeIdeas, priceForHit, sendQuote } from '../src/game/rfq';
 
-export type Policy = 'fair' | 'tight' | 'wide' | 'nohedge';
+export type Policy = 'fair' | 'tight' | 'wide' | 'nohedge' | 'street';
 
 /** Autoplayer: quote every RFQ at fair × k, hedge winners with the first idea, launch desks, close. */
 export function playDay(s: GameState, policy: Policy = 'fair') {
@@ -15,7 +15,10 @@ export function playDay(s: GameState, policy: Policy = 'fair') {
   const k = policy === 'tight' ? 0.7 : policy === 'wide' ? 1.6 : 1;
   for (const r of s.rfqs) {
     if (r.status !== 'open') continue;
-    const res = sendQuote(s, r, r.refHalfSpread * k, { coupon: 0.02 });
+    // 'street' mirrors the UI default: quote where the win probability is ~50%; issue notes at the bank's minimum coupon
+    const q = policy === 'street' ? priceForHit(s, r, 0.5) : r.refHalfSpread * k;
+    const coupon = policy === 'street' && s.instruments[r.instId]?.kind === 'autocall' ? autocallWinCoupon(s, r) * 1.02 : 0.02;
+    const res = sendQuote(s, r, q, { coupon });
     if (res.won && policy !== 'nohedge') {
       const ideas = hedgeIdeas(s, r.desk, r.instId, -r.clientQty);
       const pick = ideas.find((i) => !i.working) ?? ideas[0];
