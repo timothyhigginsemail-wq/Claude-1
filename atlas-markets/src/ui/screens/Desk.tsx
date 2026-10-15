@@ -40,7 +40,6 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
   const s = g.s!;
   const risk = useRisk()!;
   const w = useContentWidth();
-  const [report, setReport] = useState<DayReport | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
   const m = s.market;
   const unlocked = DESKS.filter((d) => s.desks[d].unlocked);
@@ -286,15 +285,11 @@ export function DeskScreen({ onSettings }: { onSettings: () => void }) {
           title={s.clock >= CLOSE_MIN ? `Book day ${s.day}` : `Skip to 16:00 and book day ${s.day}`}
           tone="primary"
           icon="moon-outline"
-          onPress={() => {
-            const r = g.close();
-            if (r) setReport(r);
-          }}
+          onPress={() => g.close()}
         />
         <T v="caption" center style={{ marginTop: 8 }}>Electronic flow, working orders, the overnight move, carry and funding are booked at the close. Skipping ahead moves prices to 16:00 without you; clients who haven't called yet won't.</T>
       </View>
 
-      <DayReportSheet report={report} onClose={() => setReport(null)} />
     </Screen>
   );
 }
@@ -310,6 +305,13 @@ export function DayReportSheet({ report, onClose }: { report: DayReport | null; 
     <Sheet visible={!!report} onClose={onClose} title={`Day ${report.day} close · ${report.date}`} footer={<Btn title={s.status === 'fired' ? 'See the verdict' : `Start day ${s.day}`} tone="primary" onPress={onClose} />}>
       <T v="label">Trading P&L</T>
       <T v="numXl" color={signColor(report.total)} style={{ marginTop: 4 }}>{fmSigned(report.total)}</T>
+      <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+        <Pill
+          text={report.ep >= report.total - report.ep ? 'Strong day — well above break-even' : report.ep >= 0 ? 'Beat break-even: value created' : report.total > 0 ? 'Profitable, but below the cost of running the desk' : 'Losing day'}
+          color={report.ep >= 0 ? C.up : report.total > 0 ? C.warn : C.down}
+          filled
+        />
+      </View>
       <Row gap={14} style={{ marginTop: 6 }}>
         <T v="small">Economic profit <T v="small" color={signColor(report.ep)}>{fmSigned(report.ep)}</T></T>
         <T v="small">Confidence <T v="small" color={signColor(report.confidenceDelta)}>{report.confidenceDelta >= 0 ? '+' : ''}{report.confidenceDelta.toFixed(1)}</T></T>

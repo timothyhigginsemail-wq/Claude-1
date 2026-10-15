@@ -8,8 +8,10 @@ import { NavProvider, useNav, type Tab } from './src/ui/nav';
 import { ExplainProvider, Btn, Card, KV, Sheet, T } from './src/ui/components/ui';
 import { LearnSheet } from './src/ui/components/Learn';
 import { ClockBar } from './src/ui/components/ClockBar';
+import { TicketOverlay } from './src/ui/components/Ticket';
+import { MorningSheet } from './src/ui/components/Morning';
 import { StartScreen } from './src/ui/screens/Start';
-import { DeskScreen } from './src/ui/screens/Desk';
+import { DayReportSheet, DeskScreen } from './src/ui/screens/Desk';
 import { ManageScreen } from './src/ui/screens/Manage';
 import { MarketsScreen } from './src/ui/screens/Markets';
 import { ClientDetail, ClientsScreen } from './src/ui/screens/Clients';
@@ -161,11 +163,32 @@ function Main() {
   else body = <PnlScreen />;
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={{ flex: 1 }}>{body}</View>
+      <View style={{ flex: 1 }}>
+        {body}
+        <TicketOverlay />
+        <Toast />
+      </View>
       <ClockBar />
       <TabBar />
       <Settings visible={settings} onClose={() => setSettings(false)} />
       <LearnSheet />
+      <MorningSheet />
+      <DayReportSheet report={g.report} onClose={g.dismissReport} />
+    </View>
+  );
+}
+
+function Toast() {
+  const g = useGame();
+  const insets = useSafeAreaInsets();
+  if (!g.toast) return null;
+  const col = g.toast.tone === 'good' ? C.up : g.toast.tone === 'bad' ? C.warn : C.accent;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: insets.top + 8, left: 12, right: 12, alignItems: 'center' }}>
+      <View style={{ maxWidth: 520, backgroundColor: '#171C25F2', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderLeftWidth: 3, borderLeftColor: col, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <Ionicons name={g.toast.tone === 'bad' ? 'flash' : g.toast.tone === 'good' ? 'trending-up' : 'notifications'} size={14} color={col} />
+        <Text style={{ color: C.text, fontSize: 13, flexShrink: 1 }}>{g.toast.text}</Text>
+      </View>
     </View>
   );
 }

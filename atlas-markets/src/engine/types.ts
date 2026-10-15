@@ -433,6 +433,8 @@ export interface BlotterEntry {
   cpty: string; // client id or 'street' or 'flow'
   kind: 'client' | 'hedge' | 'flow' | 'unwind' | 'expiry' | 'default';
   pnl: number; // spread capture (+) or execution cost (−) vs mid
+  /** Intraday clock when booked. */
+  clock?: number;
 }
 
 export interface DayReport {

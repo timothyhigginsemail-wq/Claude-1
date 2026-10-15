@@ -220,7 +220,7 @@ function cleanup(d: Desk, instId: string) {
 
 let blotterSeq = 1;
 export function blot(s: GameState, e: Omit<BlotterEntry, 'id'>) {
-  s.blotter.push({ id: s.nextId++ || blotterSeq++, ...e });
+  s.blotter.push({ id: s.nextId++ || blotterSeq++, clock: s.clock, ...e });
   if (s.blotter.length > 400) s.blotter.splice(0, s.blotter.length - 400);
 }
 

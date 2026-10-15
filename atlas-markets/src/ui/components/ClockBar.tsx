@@ -35,7 +35,7 @@ export function ClockBar() {
         <View style={{ flex: 1 }} />
         <Text style={[{ color: signColor(pnl), fontSize: 13, fontWeight: '700', marginRight: 10 }, F.num]}>{fmSigned(pnl)}</Text>
         {closed ? (
-          <Pressable onPress={() => nav.setTab('desk')} style={[st.chip, { backgroundColor: C.accent }]}>
+          <Pressable onPress={() => g.close()} style={[st.chip, { backgroundColor: C.accent }]}>
             <Text style={{ color: '#14110A', fontWeight: '700', fontSize: 12 }}>Book the day</Text>
           </Pressable>
         ) : (

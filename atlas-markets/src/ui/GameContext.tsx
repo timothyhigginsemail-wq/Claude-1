@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { executeStreet, unitNotional } from '../engine/book';
 import { isFuture } from '../engine/pricing';
 import type { DayReport, DeskId, GameState, Trader } from '../engine/types';
-import { closeDay, startGame, unwindFraction } from '../game/day';
+import { closeDay, startGame, totalPnlToday, unwindFraction } from '../game/day';
 import { autoHedge } from '../game/flow';
 import { fire, hire, launchDecision, resolveDecision, setCapital, upgradeTech } from '../game/manage';
 import { executeHedge, passRfq, sendQuote, type HedgeIdea, type QuoteResult } from '../game/rfq';
@@ -26,6 +26,13 @@ interface Ctx {
   setSpeed: (x: Speed) => void;
   /** RFQ currently open on screen: it doesn't lapse while the client is waiting on you. */
   holdRfq: (id: string | null) => void;
+  /** Day report on screen (shown wherever you are when you book the day). */
+  report: DayReport | null;
+  dismissReport: () => void;
+  toast: { id: number; text: string; tone: 'good' | 'bad' | 'neutral' } | null;
+  notify: (text: string, tone?: 'good' | 'bad' | 'neutral') => void;
+  /** Today's P&L sampled through the day, for the live chart. */
+  pnlPath: number[];
   loaded: boolean;
   start: (seed: number, d: GameState['difficulty']) => void;
   quote: (rfqId: string, q: number, coupon?: number) => QuoteResult | null;
@@ -64,6 +71,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [loaded, setLoaded] = useState(false);
   const [rv, setRv] = useState(0);
   const [speed, setSpeed] = useState<Speed>(0);
+  const [report, setReport] = useState<DayReport | null>(null);
+  const [toast, setToast] = useState<Ctx['toast']>(null);
+  const path = useRef<{ day: number; pts: number[] }>({ day: 0, pts: [] });
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notify = useCallback((text: string, tone: 'good' | 'bad' | 'neutral' = 'neutral') => {
+    setToast({ id: Date.now(), text, tone });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3200);
+  }, []);
   const hold = useRef<string | null>(null);
   const ticks = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,6 +124,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const before = g.rfqs.filter((r) => r.status === 'open' && r.arrived).length;
       const news = g.news.length;
       advanceTo(g, g.clock + speed / 2, hold.current);
+      if (path.current.day !== g.day) path.current = { day: g.day, pts: [0] };
+      path.current.pts.push(totalPnlToday(g));
+      if (g.news.length > news) notify(g.news[g.news.length - 1].text, 'bad');
+      if (g.clock >= CLOSE_MIN) notify('16:00 — the market is closed. Book the day.', 'neutral');
       // the phone rings or news breaks: drop back to real time so nothing passes you by
       const called = g.rfqs.filter((r) => r.status === 'open' && r.arrived).length > before;
       if (g.news.length > news) haptic('warning');
@@ -117,7 +137,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (++ticks.current % 20 === 0) save();
     }, 500);
     return () => clearInterval(id);
-  }, [speed, save]);
+  }, [speed, save, notify]);
 
   const bump = useCallback(() => {
     setV((x) => x + 1);
@@ -143,6 +163,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       holdRfq: (id) => {
         hold.current = id;
       },
+      report,
+      dismissReport: () => setReport(null),
+      toast,
+      notify,
+      pnlPath: ref.current && path.current.day === ref.current.day ? path.current.pts : [0],
       loaded,
       start: (seed, d) => {
         ref.current = startGame(seed, d);
@@ -204,7 +229,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const s = S();
         if (s.status !== 'playing') return null;
         setSpeed(0);
+        syncMarket(s);
         const r = closeDay(s);
+        setReport(r);
+        path.current = { day: s.day, pts: [0] };
         haptic(r.total >= 0 ? 'success' : 'warning');
         bump();
         return r;
@@ -249,7 +277,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setV((x) => x + 1);
       },
     };
-  }, [v, rv, speed, loaded, bump]);
+  }, [v, rv, speed, loaded, bump, report, toast, notify]);
   if (Platform.OS === 'web' && typeof window !== 'undefined') (window as any).__atlas = api;
   return <GameCtx.Provider value={api}>{children}</GameCtx.Provider>;
 }

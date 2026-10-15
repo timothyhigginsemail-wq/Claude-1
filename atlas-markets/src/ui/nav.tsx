@@ -17,7 +17,7 @@ interface Nav {
 const NavCtx = createContext<Nav | null>(null);
 
 export function NavProvider({ children }: { children: React.ReactNode }) {
-  const [tab, setTabState] = useState<Tab>('desk');
+  const [tab, setTabState] = useState<Tab>('trading');
   const [stack, setStack] = useState<Route[]>([]);
   const [topic, setTopic] = useState<string | null>(null);
   const api = useMemo<Nav>(

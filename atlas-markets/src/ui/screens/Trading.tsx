@@ -1,7 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fxSpotHalfSpread, halfSpreadUnit, unitNotional } from '../../engine/book';
+import { fxSpotHalfSpread, halfSpreadUnit, positionValue, unitNotional } from '../../engine/book';
+import { parYield } from '../../engine/market';
+import { marketAt } from '../../engine/intraday';
+import type { MarketState } from '../../engine/types';
+import { totalPnlToday } from '../../game/day';
+import { dailyTarget } from '../../game/goals';
+import { Sparkline } from '../components/charts';
+import { useNav } from '../nav';
 import { fm, fmSigned, fpct, fq } from '../../engine/format';
 import { pairCcys, PAIRS, usdPer } from '../../engine/market';
 import { annuity, autocallPayoffPV, futMult, isFuture, quotePrice, rpv01 } from '../../engine/pricing';
@@ -10,7 +17,7 @@ import { topicsFor } from '../../game/education';
 import { displaySpread, hedgeIdeas, hitRatio, priceForHit, quoteScale, rfqEconomics, rfqSummary, autocallWinCoupon, type HedgeIdea, type QuoteResult } from '../../game/rfq';
 import { DESK_META } from '../../game/setup';
 import { LearnLink } from '../components/Learn';
-import { Screen } from '../components/Screen';
+import { Screen, useContentWidth } from '../components/Screen';
 import { Bar, Btn, Card, KV, Pill, Row, Section, Segmented, Sheet, Stepper, T } from '../components/ui';
 import { useGame } from '../GameContext';
 import { CLIENT_TYPE, instName, kindLabel, priceLabel, spotLabel } from '../labels';
@@ -23,6 +30,7 @@ export function TradingScreen() {
   const s = g.s!;
   const [filter, setFilter] = useState<'open' | 'done'>('open');
   const [sel, setSel] = useState<string | null>(null);
+  const [ticket, setTicket] = useState(false);
   const open = s.rfqs.filter((r) => r.status === 'open' && r.arrived);
   const upcoming = s.rfqs.filter((r) => r.status === 'open' && !r.arrived);
   const done = s.rfqs.filter((r) => r.status !== 'open' && (r.arrived || r.status !== 'expired'));
@@ -30,32 +38,186 @@ export function TradingScreen() {
   const won = done.filter((r) => r.status === 'won');
   const captured = won.reduce((a, r) => a + (r.spreadCapture ?? 0), 0);
   return (
-    <Screen title="Trading" subtitle={`${open.length} open · ${won.length} won · ${fmSigned(captured)} captured`}>
-      <View style={{ marginTop: S.md }}>
-        <Segmented value={filter} options={[{ id: 'open', label: `Open RFQs (${open.length})` }, { id: 'done', label: `Done (${done.length})` }]} onChange={setFilter} />
-      </View>
-      {filter === 'open' ? <HowItWorks /> : null}
-      {list.length === 0 ? (
-        <Card style={{ marginTop: S.md }}>
-          <T v="small">
-            {filter === 'open'
-              ? upcoming.length
-                ? g.speed
-                  ? 'No client is waiting right now. Requests come in through the day — watch the clock bar.'
-                  : 'The clock is paused. Press 1× (or faster) on the clock bar: prices start moving and clients call in.'
-                : 'No more client requests today. Hedge below, or book the day on the Desk tab.'
-              : 'Nothing priced yet today.'}
-          </T>
-          {filter === 'open' && upcoming.length ? <T v="caption" style={{ marginTop: 4 }}>{upcoming.length} more expected today.</T> : null}
-        </Card>
-      ) : null}
-      {list.map((r) => (
-        <RfqCard key={r.id} r={r} onPress={() => setSel(r.id)} />
-      ))}
+    <Screen title="Trading floor" subtitle={`${won.length} won · ${fmSigned(captured)} spread captured today`}>
+      <Scoreboard />
+      <Tape />
+      <RiskNow />
+      <Section title={`Client calls · ${open.length} waiting`} right={upcoming.length ? <T v="caption">{upcoming.length} more today</T> : undefined}>
+        <Segmented value={filter} options={[{ id: 'open', label: `Waiting (${open.length})` }, { id: 'done', label: `Done (${done.length})` }]} onChange={setFilter} />
+        {list.length === 0 ? (
+          <Card style={{ marginTop: 8 }}>
+            <T v="small">
+              {filter === 'open'
+                ? upcoming.length
+                  ? g.speed
+                    ? 'Nobody on the line. Calls pop up on screen as they come in.'
+                    : 'The clock is paused — press 1× below to open the market.'
+                  : 'No more client calls today. Tidy up your risk, then book the day.'
+                : 'Nothing priced yet today.'}
+            </T>
+          </Card>
+        ) : null}
+        {list.map((r) => (
+          <RfqCard key={r.id} r={r} onPress={() => setSel(r.id)} />
+        ))}
+      </Section>
       <WorkingOrders />
-      <StreetTicket />
+      <HowItWorks />
+      <Card style={{ marginTop: 8 }} onPress={() => setTicket(!ticket)}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <T v="h3" style={{ fontSize: 14 }}>Trade in the market yourself</T>
+            <T v="caption">Futures, bonds, FX spot, swaps — to hedge or to take a view. You pay the spread here.</T>
+          </View>
+          <Ionicons name={ticket ? 'chevron-up' : 'chevron-down'} size={16} color={C.textDim} />
+        </Row>
+      </Card>
+      {ticket ? <StreetTicket /> : null}
       <RfqSheet id={sel} onClose={() => setSel(null)} />
     </Screen>
+  );
+}
+
+/** Live P&L against the day's break-even, with the intraday P&L path. */
+function Scoreboard() {
+  const g = useGame();
+  const s = g.s!;
+  const w = useContentWidth();
+  const pnl = totalPnlToday(s);
+  const t = dailyTarget(s);
+  const pct = pnl / Math.max(1, t.breakEven);
+  const col = signColor(pnl);
+  return (
+    <Card style={{ marginTop: S.md }}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <View>
+          <T v="label">P&L today · live</T>
+          <T v="numXl" color={col} style={{ marginTop: 2 }}>{fmSigned(pnl)}</T>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <T v="caption">break-even {fm(t.breakEven)}</T>
+          <T v="small" color={pct >= 1 ? C.up : C.textDim}>{pct >= 2 ? 'Strong day' : pct >= 1 ? 'Creating value' : pnl > 0 ? `${fpct(pct, 0)} of the way` : 'Below water'}</T>
+        </View>
+      </Row>
+      <View style={{ marginTop: 8 }}>
+        <Bar value={Math.max(0, pnl)} max={t.strong} marker={t.breakEven} color={pct >= 1 ? C.up : C.accent} />
+      </View>
+      {g.pnlPath.length > 2 ? (
+        <View style={{ marginTop: 10 }}>
+          <Sparkline data={g.pnlPath} width={w - 32} height={44} color={col} baseline={0} />
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+const TAPE: { label: string; get: (m: MarketState) => number; fmt: (x: number) => string; bp?: boolean }[] = [
+  { label: 'US500', get: (m) => m.eq.spot.US500, fmt: (x) => x.toFixed(1) },
+  { label: 'UST 10Y', get: (m) => parYield(m, 10) * 100, fmt: (x) => `${x.toFixed(3)}%`, bp: true },
+  { label: 'EURUSD', get: (m) => m.fx.spot.EURUSD, fmt: (x) => x.toFixed(4) },
+  { label: 'USDJPY', get: (m) => m.fx.spot.USDJPY, fmt: (x) => x.toFixed(2) },
+  { label: 'WTI', get: (m) => m.cmdty.spot.WTI, fmt: (x) => x.toFixed(2) },
+  { label: 'VIX', get: (m) => m.eq.atmVol.US500 * 100, fmt: (x) => x.toFixed(1), bp: true },
+];
+
+/** Price tape: flashes on every tick. */
+function Tape() {
+  const g = useGame();
+  const s = g.s!;
+  const prev = useRef<Record<string, number>>({});
+  const o = s.openMarket ?? s.market;
+  const cells = TAPE.map((x) => {
+    const v = x.get(s.market);
+    const before = prev.current[x.label];
+    const tick = before === undefined ? 0 : Math.sign(v - before);
+    const chg = x.bp ? v - x.get(o) : v / x.get(o) - 1;
+    return { ...x, v, tick, chg };
+  });
+  useEffect(() => {
+    for (const c of cells) prev.current[c.label] = c.v;
+  });
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, marginHorizontal: -3 }}>
+      {cells.map((c) => (
+        <View key={c.label} style={{ width: '33.33%', padding: 3 }}>
+          <View style={{ backgroundColor: c.tick > 0 ? C.up + '22' : c.tick < 0 ? C.down + '22' : C.surface, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border }}>
+            <T v="caption">{c.label}</T>
+            <T v="num" style={{ fontSize: 14.5 }}>{c.fmt(c.v)}</T>
+            <T v="caption" color={signColor(c.label === 'UST 10Y' || c.label === 'VIX' ? -c.chg : c.chg)}>{c.bp ? `${c.chg >= 0 ? '+' : ''}${(c.label === 'VIX' ? c.chg : c.chg * 100).toFixed(1)}${c.label === 'VIX' ? '' : 'bp'}` : `${c.chg >= 0 ? '+' : ''}${(c.chg * 100).toFixed(2)}%`}</T>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** What you're holding right now and what it's doing to you, with one-tap hedges. */
+function RiskNow() {
+  const g = useGame();
+  const nav = useNav();
+  const s = g.s!;
+  const m = s.market;
+  const o = s.openMarket ?? m;
+  const rows = DESKS.flatMap((d) =>
+    Object.values(s.desks[d].positions).map((p) => {
+      const inst = s.instruments[p.instId];
+      // today's mark: from the open, or from when you first traded it today
+      const first = s.blotter.find((b) => b.day === s.day && b.instId === p.instId);
+      const from = p.openedDay === s.day && first ? marketAt(s, first.clock ?? 0) : o;
+      return { d, p, inst, notional: Math.abs(p.qty) * unitNotional(s, inst, m), move: positionValue(inst, p, m) - positionValue(inst, p, from) };
+    }),
+  )
+    .filter((x) => x.inst.kind !== 'eqFut' && x.inst.kind !== 'bondFut' && x.inst.kind !== 'sofrFut' && x.inst.kind !== 'cmdtyFut')
+    .sort((a, b) => b.notional - a.notional)
+    .slice(0, 4);
+  const fxOpen = Object.entries(s.desks.fx.cash).filter(([c, v]) => c !== 'USD' && Math.abs((v ?? 0) * usdPer(m, c as any)) > 5e6);
+  if (!rows.length && !fxOpen.length) return null;
+  return (
+    <Section title="Risk you're holding" right={<Pressable onPress={() => nav.setTab('book')} hitSlop={8}><T v="caption" color={C.accent}>Full book →</T></Pressable>}>
+      <Card style={{ gap: 2 }}>
+        {rows.map(({ d, p, inst, notional, move }) => (
+          <Row key={p.instId} style={{ paddingVertical: 6 }}>
+            <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: DESK_META[d].color }} />
+            <Pressable style={{ flex: 1 }} onPress={() => nav.push({ name: 'position', desk: d, id: p.instId })}>
+              <T v="small" color={C.text} numberOfLines={1}>{inst.name}</T>
+              <T v="caption">{p.qty > 0 ? 'long' : 'short'} {fm(notional)}</T>
+            </Pressable>
+            <T v="num" color={signColor(move)} style={{ width: 74, textAlign: 'right', fontSize: 13 }}>{fmSigned(move)}</T>
+            <QuickHedge desk={d} instId={p.instId} qty={p.qty} />
+          </Row>
+        ))}
+        {fxOpen.map(([c, v]) => (
+          <Row key={c} style={{ paddingVertical: 6 }}>
+            <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: DESK_META.fx.color }} />
+            <View style={{ flex: 1 }}>
+              <T v="small" color={C.text}>{c} cash</T>
+              <T v="caption">{(v ?? 0) > 0 ? 'long' : 'short'} {fm(Math.abs((v ?? 0) * usdPer(m, c as any)))}</T>
+            </View>
+          </Row>
+        ))}
+        <T v="caption" style={{ marginTop: 4 }}>Middle column: how the market has moved each position today (since the open, or since you traded it). Hedge removes the main risk at a small cost.</T>
+      </Card>
+    </Section>
+  );
+}
+
+function QuickHedge({ desk, instId, qty }: { desk: DeskId; instId: string; qty: number }) {
+  const g = useGame();
+  const s = g.s!;
+  return (
+    <Pressable
+      hitSlop={6}
+      onPress={() => {
+        const ideas = hedgeIdeas(s, desk, instId, qty);
+        const idea = ideas.find((i) => !i.working && !i.label.startsWith('Work')) ?? ideas[0];
+        if (!idea) return;
+        const c = g.hedge(desk, idea);
+        g.notify(`${idea.label} · cost ${fm(-c)}`, 'neutral');
+      }}
+      style={{ marginLeft: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: C.surface3 }}
+    >
+      <T v="caption" color={C.text} style={{ fontWeight: '700' }}>Hedge</T>
+    </Pressable>
   );
 }
 
@@ -293,7 +455,7 @@ function RfqBody({ r, onClose }: { r: Rfq; onClose: () => void }) {
 }
 
 /** The all-in price the client would deal at if they accept half-spread q (USD per unit), in natural units. */
-function clientPrice(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq, q: number): string {
+export function clientPrice(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq, q: number): string {
   const m = s.market;
   const sg = Math.sign(r.clientQty); // client buys → pays above mid
   if (r.instId.startsWith('SPOT:')) {
@@ -325,7 +487,7 @@ function clientPrice(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq, q:
   }
 }
 
-function sideWords(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq): { client: string; you: string } {
+export function sideWords(s: NonNullable<ReturnType<typeof useGame>['s']>, r: Rfq): { client: string; you: string } {
   const buy = r.clientQty > 0;
   const k = r.instId.startsWith('SPOT:') ? 'spot' : s.instruments[r.instId]?.kind;
   if (k === 'irs') return buy ? { client: 'RECEIVES fixed', you: 'PAY fixed' } : { client: 'PAYS fixed', you: 'RECEIVE fixed' };
