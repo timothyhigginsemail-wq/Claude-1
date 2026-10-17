@@ -18,7 +18,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           <pre className="num text-[11px] mt-3 p-2 bg-panel2 rounded-md overflow-x-auto whitespace-pre-wrap">{this.state.error.message}</pre>
           <div className="flex gap-2 mt-4">
             <button className="btn btn-primary" onClick={() => location.reload()}>Reload</button>
-            <button className="btn" onClick={() => { if (confirm('Discard the saved campaign and start over?')) { clearSave(); location.reload(); } }}>Discard save &amp; reload</button>
+            <button className="btn" onClick={() => { clearSave(); location.reload(); }}>Discard save &amp; reload</button>
           </div>
         </div>
       </div>

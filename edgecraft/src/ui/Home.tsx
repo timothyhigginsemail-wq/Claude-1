@@ -234,7 +234,7 @@ export function Home(props: {
         {saved && (
           <div className="mt-6 text-[11.5px] text-muted flex items-center gap-2">
             Saved campaign: Level {saved.config.level}, seed <span className="num">{saved.config.seed}</span>.
-            <button className="underline hover:text-neg" onClick={() => confirm('Discard the saved campaign?') && props.onDiscard()}>Discard</button>
+            <button className="underline hover:text-neg" onClick={props.onDiscard}>Discard</button>
           </div>
         )}
       </main>
