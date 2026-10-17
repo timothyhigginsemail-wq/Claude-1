@@ -3,14 +3,11 @@ import type { GameConfig, GameState } from './engine/game';
 import { newGame } from './engine/game';
 import { Home } from './ui/Home';
 import { GameScreen } from './ui/game/GameScreen';
-import { Lab } from './lab/Lab';
 import { clearSave, loadGame, loadPrefs, saveGame, savePrefs, type Prefs } from './ui/storage';
-
-type Screen = { kind: 'home' } | { kind: 'game' } | { kind: 'lab'; exp?: number };
 
 export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(() => loadPrefs());
-  const [screen, setScreen] = useState<Screen>({ kind: 'home' });
+  const [screen, setScreen] = useState<'home' | 'game'>('home');
   const [game, setGame] = useState<GameState | null>(() => loadGame().state);
   const [loadError] = useState<string | undefined>(() => loadGame().error);
 
@@ -25,29 +22,14 @@ export default function App() {
   }, []);
 
   const start = (cfg: GameConfig) => {
-    const s = newGame(cfg);
-    updateGame(s);
-    setScreen({ kind: 'game' });
+    updateGame(newGame(cfg));
+    setScreen('game');
   };
 
   const toggleTheme = () => setPrefs((p) => ({ ...p, theme: p.theme === 'dark' ? 'light' : 'dark' }));
 
-  if (screen.kind === 'game' && game) {
-    return (
-      <GameScreen
-        state={game}
-        setState={updateGame}
-        prefs={prefs}
-        setPrefs={setPrefs}
-        onExit={() => setScreen({ kind: 'home' })}
-        onToggleTheme={toggleTheme}
-        onOpenLab={(exp) => setScreen({ kind: 'lab', exp })}
-        onReplay={(cfg) => start(cfg)}
-      />
-    );
-  }
-  if (screen.kind === 'lab') {
-    return <Lab initial={screen.exp} onExit={() => setScreen(game ? { kind: game.status === 'playing' ? 'game' : 'home' } : { kind: 'home' })} onToggleTheme={toggleTheme} theme={prefs.theme} backLabel={game && game.status === 'playing' ? 'Back to campaign' : 'Home'} />;
+  if (screen === 'game' && game) {
+    return <GameScreen state={game} setState={updateGame} prefs={prefs} onExit={() => setScreen('home')} onToggleTheme={toggleTheme} onReplay={start} />;
   }
   return (
     <Home
@@ -55,18 +37,16 @@ export default function App() {
       loadError={loadError}
       prefs={prefs}
       onToggleTheme={toggleTheme}
-      onContinue={() => setScreen({ kind: 'game' })}
+      onContinue={() => setScreen('game')}
       onStart={start}
       onLoad={(s) => {
         updateGame(s);
-        setScreen({ kind: 'game' });
+        setScreen('game');
       }}
       onDiscard={() => {
         clearSave();
         setGame(null);
       }}
-      onLab={(exp) => setScreen({ kind: 'lab', exp })}
-      onOnboarded={() => setPrefs((p) => ({ ...p, onboarded: true }))}
     />
   );
 }

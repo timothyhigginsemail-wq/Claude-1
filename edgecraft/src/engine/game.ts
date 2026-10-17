@@ -334,7 +334,7 @@ function openingNews(level: Level): NewsItem[] {
   const base: NewsItem[] = [{ turn: 1, tone: 'neu', text: 'Markets open the period in an orderly state: volatility near average, funding ample.' }];
   if (level === 1) base.push({ turn: 1, tone: 'neu', text: 'Risk committee: one position at a time. Focus on getting the size right.' });
   if (level === 2) base.push({ turn: 1, tone: 'neu', text: 'You run a $1M multi-strategy book. Gross leverage up to 6×; a 20% drawdown triggers a forced de-gross, 40% closes the fund.' });
-  if (level === 3) base.push({ turn: 1, tone: 'neu', text: 'Seven pods are pitching for capital. Their track records are real — but are they skill?' });
+  if (level === 3) base.push({ turn: 1, tone: 'neu', text: 'Seven strategy pods are on offer alongside a fresh set of trades every week. Run as many positions as you like, within 5× gross leverage.' });
   return base;
 }
 
@@ -1076,6 +1076,11 @@ function makeNews(s: GameState, r: TurnRecord): NewsItem[] {
   if (r.indicators.FUND > 50) out.push({ turn: t, tone: 'neg', text: `Funding spreads at ${r.indicators.FUND.toFixed(0)}bp: leverage is getting expensive and margins may rise.` });
   for (const e of r.events) if (e.kind === 'terminal') out.push({ turn: t, tone: 'neu', text: e.text });
   return out.slice(0, 6);
+}
+
+/** Stop an open-ended session and go to the review (positions stay marked at their last value). */
+export function endSession(prev: GameState): GameState {
+  return { ...prev, status: 'ended' };
 }
 
 // ---------------------------------------------------------------------------

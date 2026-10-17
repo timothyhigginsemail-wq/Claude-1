@@ -12,7 +12,7 @@ export function Briefing({ state }: { state: GameState }) {
   const showRegimes = state.config.level > 1 || state.config.regimes === 'full';
   return (
     <Panel
-      title={`Market briefing · turn ${state.turn}`}
+      title={`Market briefing · week ${state.turn}`}
       right={<button className="btn btn-ghost text-[11px] px-2 py-0.5" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Show'}</button>}
     >
       {open && (

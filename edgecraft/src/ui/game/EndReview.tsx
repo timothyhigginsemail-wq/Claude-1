@@ -25,7 +25,6 @@ export function EndReview(props: {
   onWhy: (t: WhyTopic) => void;
   why: WhyTopic | null;
   closeWhy: () => void;
-  onOpenLab: (exp?: number) => void;
 }) {
   const { state } = props;
   const sc = useMemo(() => scorecard(state), [state]);
@@ -62,10 +61,10 @@ export function EndReview(props: {
           <div className="font-semibold">Investment Committee Review</div>
           <span className="chip">L{state.config.level} · seed {state.config.seed}{transparentNote}</span>
           <div className="flex-1" />
-          <button className="btn btn-ghost" onClick={() => props.onOpenLab()}>Lab</button>
           <button className="btn btn-ghost" onClick={props.onToggleTheme}>◐</button>
           <button className="btn" onClick={props.onHome}>Home</button>
-          <button className="btn btn-primary" onClick={() => props.onReplay(replayCfg)}>Replay same seed</button>
+          <button className="btn" onClick={() => props.onReplay(replayCfg)}>Replay same seed</button>
+          <button className="btn btn-primary" onClick={() => props.onReplay({ ...replayCfg, seed: `${replayCfg.seed}-${Math.floor(Math.random() * 900 + 100)}` })}>New session</button>
         </div>
       </header>
 
@@ -173,7 +172,7 @@ export function EndReview(props: {
       </main>
 
       {props.reviewRecord && <ResolutionModal record={props.reviewRecord} state={state} onClose={props.closeReview} onWhy={props.onWhy} instant />}
-      {props.why && <WhyModal topic={props.why} onClose={props.closeWhy} onOpenLab={props.onOpenLab} />}
+      {props.why && <WhyModal topic={props.why} onClose={props.closeWhy} />}
     </div>
   );
 }

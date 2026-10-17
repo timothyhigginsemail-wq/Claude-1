@@ -15,49 +15,18 @@ npm run preview    # serve the production build
 
 Requires Node 18+ (tested on Node 22). Campaigns autosave to `localStorage` after every turn. **Save** downloads a JSON save file and **Load save file…** on the home screen restores it.
 
-## What's in it
+## How it plays
 
-**Campaign levels.** You can play any level straight away. New players are guided through Level 1 first.
+Edgecraft is a single free-play mode: you run a multi-strategy book with as many positions as you like.
 
-| Level | You are | Mechanics |
-|---|---|---|
-| 1 | Single-trade risk manager | One one-week bet at a time (starts with the 55/45 coin), estimated vs. true probabilities, Kelly sizing, compounding |
-| 2 | Quantitative PM | Concurrent multi-turn trades across 9 archetypes plus index futures, shared latent factors, leverage up to 6×, margin calls, forced de-risking at a 20% drawdown, fund closure at 40%, regime shifts, and the "ten strategies, one factor" set on turn 9 |
-| 3 | Multistrategy CIO | Seven pods with 78-week track records (some survivorship-selected, some short-vol with hidden tails), capacity, overlay hedges, financing crises |
+- **Every week** a fresh set of trades arrives (stat arb, factor, trend, carry, vol, merger arb, relative value, macro, tail hedges). Seven strategy pods with track records and two index futures are always available.
+- **The trade blotter** lists everything on one screen. Each row shows win probability (with its estimation band), expected value per week and worst case. Click a size chip (5/10/25/50% of NAV), step with − / +, type a number, or Close. **Details** opens the full sizing analysis: growth vs. size, marginal edge vs. drag, wealth paths and drawdown risk.
+- **Advance week** (or press Enter) executes all orders at once and resolves the market. A one-line result appears above the blotter; "Full review" opens the decision breakdown.
+- **Risk panel**: book size vs. the growth optimum, risk contributions, factor exposures, correlation heatmaps (normal vs. stress), stress tests and a portfolio Kelly optimizer.
+- **Rules**: gross leverage cap (default 5×, adjustable), regime-dependent margin with forced liquidation, a risk-committee de-gross at a 15% drawdown, and fund closure at 30%.
+- **Finish & review** at any time (or pick a fixed length) for the investment-committee review: decision grades vs. outcomes, benchmarks that traded the same information, and the hidden true probabilities and regimes revealed. The same seed always produces the same market, so you can replay it with a different strategy.
 
-Campaigns run 20, 25, 30, 40 or 50 turns, or endlessly. A **sandbox** lets you set the mechanics, the regimes and the leverage cap yourself. It also has an optional transparent mode that reveals the true probabilities; scoring is disabled when that is on.
-
-**Each turn**
-- A market briefing: the tape, observable indicators, the desk's Bayesian regime read and news.
-- An opportunity list showing each trade's estimated win probability with a 95% band, EV band, payoff shape and factor loadings.
-- A sizing workspace:
-  - You can size in $ notional, % NAV, capital at risk or volatility.
-  - Charts are linked to the size: arithmetic return vs. log growth vs. volatility drag, marginal benefit vs. marginal drag, wealth-path fans and drawdown-breach probability. Each can be shown standalone or "with current book".
-  - An optional sizing guide shows full, ½ and ¼ Kelly, uncertainty-adjusted Kelly, book-aware Kelly, vol target, fixed fraction and fixed dollar.
-  - You can buy research to tighten an estimate or reveal hidden loadings.
-- Risk analytics:
-  - Before/after stats: E[R], volatility, expected log growth, VaR/ES and diversification ratio.
-  - A gauge comparing your book's size to its growth-optimal size, and risk contributions.
-  - Factor exposures in $ per 1σ, against limits.
-  - Correlation heatmaps under the expected regime mix and under stress regimes.
-  - Six deterministic stress tests.
-  - A portfolio log-optimal optimizer, compared with summing standalone Kelly sizes.
-- An animated resolution showing factor shocks, position outcomes and a NAV bridge, followed by a decision review:
-  - Good/bad decision × good/bad outcome.
-  - Attribution to expected edge, each factor, the residual and costs.
-  - Ex-ante growth-vs-scale curve next to the hindsight counterfactual, clearly labelled as hindsight.
-  - Joint vs. independent losers distribution.
-  - Benchmarks and lesson cards, with **Why?** buttons that open interactive explanations.
-
-**Benchmarks.** Each turn they are re-optimised using only the desk information you had: half-Kelly growth, risk-parity at 10% vol, fixed-fraction (1% at risk per trade) and cash.
-
-**End-of-campaign investment-committee review**
-- Separate scores for decisions, sizing, selection, risk control, diversification, calibration and growth.
-- A memo listing strengths, weaknesses and recurring errors.
-- Hidden information revealed: P&L split into quoted EV, estimation error and luck; true vs. quoted EV per strategy or pod; true regime path vs. the desk's read.
-- Replays of the same seed overlaid on each other.
-
-**Experiment Lab.** Twelve interactive lessons with sliders, charts, exact or seeded Monte Carlo numbers, and expandable maths: the Kelly coin, fixed $ vs. fixed %, equal ± returns, arithmetic vs. geometric, mean vs. median wealth, marginal edge vs. drag, unequal payoffs, estimation uncertainty and the winner's curse, correlated bets and hidden factors, leverage and ruin, repeated bets, and Sharpe ≠ allocation.
+Settings on the start screen: seed, length (open-ended or 20/40/60 weeks), leverage cap, and a practice mode that shows the true probabilities.
 
 ## The simulation model (`src/engine`)
 

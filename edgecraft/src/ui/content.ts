@@ -2,21 +2,6 @@
 
 export type WhyTopic = 'kelly' | 'volDrag' | 'correlation' | 'leverage' | 'estimation' | 'tail' | 'luck' | 'diversification' | 'logVsMean' | 'sharpeAlloc' | 'fixedVsPct' | 'repeated';
 
-export const WHY_TO_LAB: Record<WhyTopic, number> = {
-  kelly: 1,
-  fixedVsPct: 2,
-  volDrag: 6,
-  logVsMean: 5,
-  estimation: 8,
-  correlation: 9,
-  leverage: 10,
-  repeated: 11,
-  luck: 11,
-  sharpeAlloc: 12,
-  diversification: 9,
-  tail: 7,
-};
-
 export const WHY_TEXT: Record<WhyTopic, { title: string; lead: string }> = {
   kelly: { title: 'Why is there an optimal size?', lead: 'Growth rises with exposure at first (edge accumulates linearly) and then falls (volatility drag grows with the square of exposure). The peak is the Kelly size; twice Kelly gives roughly zero growth.' },
   volDrag: { title: 'Why does volatility cost money?', lead: 'Compounded wealth grows at roughly μ − σ²/2. Double your exposure and the edge doubles, but the drag quadruples. That curvature is the entire reason size matters.' },
@@ -56,32 +41,4 @@ export const LESSONS: Record<string, Lesson> = {
   leverage: { title: 'Leverage amplified the loss', body: 'Gross leverage above 4× turns ordinary weekly moves into meaningful NAV losses. Net-zero market exposure does not make a levered book safe: spreads, basis and crowding all move.', why: 'leverage' },
   volDrag: { title: 'Mind the drag', body: 'Every unit of variance you carry costs about half of itself in compound growth. A position earns its place only if its marginal edge exceeds its marginal drag.', why: 'volDrag' },
   cashOption: { title: 'Cash is a position', body: 'With nothing compelling on offer, holding cash keeps your capital — and your option to act later — intact.', why: 'kelly' },
-};
-
-export interface CoachStep {
-  title: string;
-  body: string;
-}
-
-export const COACH_L1: Record<number, CoachStep> = {
-  1: {
-    title: 'Your first decision: how much?',
-    body: 'One trade: an even-money bet that wins 55% of the time — you gain or lose 20% of whatever notional you put on. The edge is real and precisely known. The only question is size. Drag the slider and watch the growth curve in the sizing workspace: expected profit keeps rising with size, but expected log growth (what compounds) peaks and then falls. Commit a size, then press Advance Market.',
-  },
-  2: {
-    title: 'Now the probabilities are estimates',
-    body: 'From here on the desk quotes an estimated win probability with an uncertainty range. The true probability is hidden — some quotes are optimistic. Compare the payoff distributions, not just the expected return, and decide whether to bet at all.',
-  },
-  3: {
-    title: 'Expected value is not enough',
-    body: 'Look for trades with very different shapes: a lottery ticket with a huge payoff, a crowded trade that wins small but can lose big. The highest expected return is not always the best bet once you account for what a loss does to compounding.',
-  },
-  4: {
-    title: 'Use the tools — or your judgement',
-    body: 'The Sizing guide shows Kelly, fractional Kelly and other rules, and the "Your estimate" field lets you record your own probability. Your calibration is scored at the end. You can buy research to tighten an estimate.',
-  },
-  6: {
-    title: 'Judge decisions, not outcomes',
-    body: 'Each review separates the quality of your decision (judged on the information you had) from the outcome (which includes luck). A string of good decisions can lose money for a while — that is normal.',
-  },
 };

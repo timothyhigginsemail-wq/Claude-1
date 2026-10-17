@@ -109,7 +109,7 @@ function generateRaw(seed: string, level: Level, turn: number, regime: RegimeId)
   const mix = qualityMix(regime);
   if (level === 2 && turn === 9) return tenStrategies(rng, turn);
 
-  const n = level === 2 ? rng.int(4, 6) : rng.int(1, 3);
+  const n = level === 2 ? rng.int(4, 6) : rng.int(3, 5);
   const keys = rng.shuffle(TEMPLATE_KEYS.slice());
   for (let i = 0; i < n; i++) {
     const key = keys[i % keys.length];
