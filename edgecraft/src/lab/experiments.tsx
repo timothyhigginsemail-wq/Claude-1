@@ -547,7 +547,7 @@ function EstimationUncertainty({ compact }: P) {
       </>}
       chart={<><div style={{ height: H(compact) }}>
         <ResponsiveContainer>
-          <ComposedChart data={res.curve} margin={{ top: 8, right: 10, bottom: 0, left: 0 }}>
+          <ComposedChart data={res.curve} margin={{ top: 18, right: 10, bottom: 0, left: 0 }}>
             <CartesianGrid {...GRID} />
             <XAxis dataKey="c" type="number" domain={[0, 2]} tickFormatter={(v) => `${v}×`} {...AXIS} />
             <YAxis {...AXIS} width={56} tickFormatter={(v) => `${(v * 100).toFixed(2)}%`} />
@@ -588,21 +588,24 @@ function CorrelatedBets({ compact }: P) {
   const nEff = (k: number, r: number) => k / (1 + (k - 1) * r);
   const curve = Array.from({ length: 30 }, (_, i) => {
     const k = i + 1;
-    return { k, g: (0.5 * sr * sr * nEff(k, rho)) * 52, g0: 0.5 * sr * sr * k * 52 };
+    return { k, g: 0.5 * sr * sr * nEff(k, rho), g0: 0.5 * sr * sr * k };
   });
   const totalExp = (N * mu) / (sigma * sigma * (1 + (N - 1) * rho));
   // ten strategies, one hidden factor
-  const fv = stress ? 3 : 1;
-  const c = (beta * beta * fv * fv) / (beta * beta * fv * fv + (1 - beta * beta));
+  // calm: the crowding factor barely moves; unwind: it moves 4× as much, against you
+  const fvCalm = 0.35, fvStress = 1.4;
+  const fv = stress ? fvStress : fvCalm;
+  const corrAt = (v: number) => (beta * beta * v * v) / (beta * beta * v * v + (1 - beta * beta));
+  const c = corrAt(fv);
   const names = ['Stat arb', 'Value L/S', 'Momentum', 'ST reversal', 'Merger arb', 'Basis RV', 'FX carry', 'Short vol', 'HY credit', 'Quality'];
   const sim = useMemo(() => {
     const rng = new Rng('lab9', beta, stress ? 1 : 0);
     let w = 1, peak = 1, mdd = 0;
     const path: { t: number; w: number }[] = [{ t: 0, w: 1 }];
     for (let t = 1; t <= 52; t++) {
-      const F = rng.normal() * fv;
+      const F = (stress ? -0.5 : 0) + rng.normal() * fv;
       let r = 0;
-      for (let i = 0; i < 10; i++) r += 0.1 * 0.03 * (0.15 + beta * F + Math.sqrt(1 - beta * beta) * rng.normal());
+      for (let i = 0; i < 10; i++) r += 0.1 * 0.03 * (0.1 + beta * F + Math.sqrt(1 - beta * beta) * rng.normal());
       w *= 1 + r * 3;
       peak = Math.max(peak, w);
       mdd = Math.max(mdd, 1 - w / peak);
@@ -623,8 +626,8 @@ function CorrelatedBets({ compact }: P) {
             <ComposedChart data={curve} margin={{ top: 8, right: 10, bottom: 0, left: 0 }}>
               <CartesianGrid {...GRID} />
               <XAxis dataKey="k" {...AXIS} />
-              <YAxis {...AXIS} width={48} tickFormatter={(v) => pct(v, 0)} />
-              <Tooltip content={makeTooltip((l) => `${l} bets`, (v) => pct(v, 1))} />
+              <YAxis {...AXIS} width={48} tickFormatter={(v) => pct(v, 1)} />
+              <Tooltip content={makeTooltip((l) => `${l} bets`, (v) => `${pct(v, 2)} per period`)} />
               <Line dataKey="g0" name="Max growth if independent" stroke="var(--c3)" strokeWidth={1.8} dot={false} isAnimationActive={false} />
               <Line dataKey="g" name={`Max growth at ρ = ${rho.toFixed(2)}`} stroke="var(--c1)" strokeWidth={2.4} dot={false} isAnimationActive={false} />
               <ReferenceLine x={N} stroke="var(--accent)" />
@@ -647,7 +650,7 @@ function CorrelatedBets({ compact }: P) {
         <Layout compact={compact}
           controls={<>
             <Slider label="Hidden loading on the crowding factor β" value={beta} min={0} max={0.95} step={0.05} onChange={setBeta} fmt={(v) => v.toFixed(2)} />
-            <label className="flex items-center gap-2 text-[12.5px] text-ink2"><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> Crowded unwind (factor vol × 3)</label>
+            <label className="flex items-center gap-2 text-[12.5px] text-ink2"><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> Crowded unwind (factor moves 4× more, against the crowd)</label>
             <div className="text-[11.5px] text-muted">Each strategy: return = small edge + β·F + idiosyncratic noise, at 3× gross.</div>
           </>}
           chart={<div className="grid md:grid-cols-2 gap-3">
@@ -680,10 +683,10 @@ function CorrelatedBets({ compact }: P) {
             { label: 'Pairwise correlation', value: c.toFixed(2) },
             { label: 'Effective # strategies', value: nEff(10, c).toFixed(1) },
             { label: '1-year max drawdown', value: pct(sim.mdd, 1), tone: sim.mdd > 0.2 ? 'text-neg' : '' },
-            { label: 'Calm → stressed ρ', value: `${(beta * beta).toFixed(2)} → ${((9 * beta * beta) / (9 * beta * beta + 1 - beta * beta)).toFixed(2)}` },
+            { label: 'Calm → unwind ρ', value: `${corrAt(fvCalm).toFixed(2)} → ${corrAt(fvStress).toFixed(2)}` },
           ]} />}
           explain={<Explain>
-            <p>Ten strategies with ten different stories — but each earns part of its return by providing liquidity to the same crowded trade. In calm markets the shared factor barely moves, so measured correlations look low and the desk reports ten diversifiers. When the crowd unwinds, the factor's volatility triples and correlations converge toward one: you were running one bet, ten times. Level 2 presents exactly this set at turn 9.</p>
+            <p>Ten strategies with ten different stories — but each earns part of its return by providing liquidity to the same crowded trade. In calm markets the shared factor barely moves, so measured correlations look low and the desk reports ten diversifiers. When the crowd unwinds, the factor's volatility quadruples, it trends against the crowd, and correlations jump: you were running one bet, ten times. Level 2 presents exactly this set at turn 9.</p>
           </Explain>}
         />
       </div>

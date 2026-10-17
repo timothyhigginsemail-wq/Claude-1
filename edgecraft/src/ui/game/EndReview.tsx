@@ -128,13 +128,13 @@ export function EndReview(props: {
               {' '}Costs, financing and research: <span className="num">{signedMoney(-d.costs)}</span>.
             </div>
           </Panel>
-          <Panel title="By strategy type (capital-at-risk weighted)">
+          <Panel title={state.config.level === 3 ? 'By pod and strategy type (revealed)' : 'By strategy type (revealed)'}>
             <div className="overflow-x-auto scroll-thin">
               <table className="w-full text-[12px]">
                 <thead className="text-muted text-left"><tr><th className="py-1 font-medium">Archetype</th><th className="text-right font-medium">Turns</th><th className="text-right font-medium">P&L</th><th className="text-right font-medium">Quoted EV</th><th className="text-right font-medium">True EV</th></tr></thead>
                 <tbody>
                   {sc.byArchetype.map((a) => (
-                    <tr key={a.archetype} className="border-t border-line">
+                    <tr key={a.name} className="border-t border-line">
                       <td className="py-1.5">{a.name}</td>
                       <td className="num text-right">{a.turns}</td>
                       <td className={`num text-right ${toneClass(a.pnl)}`}>{signedMoney(a.pnl)}</td>

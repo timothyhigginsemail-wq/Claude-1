@@ -94,7 +94,7 @@ export function scorecard(s: GameState): Scorecard {
   for (const b of BENCH_IDS) bench[b] = { nav: s.bench[b].nav, ret: s.bench[b].nav / start - 1, maxDD: maxDrawdown(s.bench[b].path) };
 
   let quotedEv = 0, trueEv = 0, realised = 0, costs = 0;
-  const arch = new Map<Archetype, { turns: number; pnl: number; quotedEv: number; trueEv: number; car: number }>();
+  const arch = new Map<string, { archetype: Archetype; name: string; turns: number; pnl: number; quotedEv: number; trueEv: number; car: number }>();
   let trapRisk = 0, allRisk = 0;
   for (const r of h) {
     costs += r.costs.tc + r.costs.fin + r.costs.lev - r.costs.cash + r.costs.research + r.costs.liquidation;
@@ -102,7 +102,9 @@ export function scorecard(s: GameState): Scorecard {
       quotedEv += p.notional * p.quotedEv;
       trueEv += p.notional * p.trueEv;
       realised += p.pnl;
-      const a = arch.get(p.archetype) ?? { turns: 0, pnl: 0, quotedEv: 0, trueEv: 0, car: 0 };
+      // pods are reported one by one (each is a manager); trades by archetype
+      const key = p.archetype === 'pod' ? p.name : p.archetype;
+      const a = arch.get(key) ?? { archetype: p.archetype, name: p.archetype === 'pod' ? p.name : ARCHETYPE_INFO[p.archetype].name, turns: 0, pnl: 0, quotedEv: 0, trueEv: 0, car: 0 };
       a.turns++;
       a.pnl += p.pnl;
       a.quotedEv += p.notional * p.quotedEv;
@@ -110,13 +112,13 @@ export function scorecard(s: GameState): Scorecard {
       const inst = s.instruments[p.id];
       const worst = inst ? -Math.min(...inst.outcomes.map((o) => o.r)) : 0;
       a.car += Math.abs(p.notional) * worst;
-      arch.set(p.archetype, a);
+      arch.set(key, a);
       allRisk += Math.abs(p.notional) * worst;
       if (p.quality === 'trap') trapRisk += Math.abs(p.notional) * worst;
     }
   }
-  const byArchetype = [...arch.entries()]
-    .map(([archetype, a]) => ({ archetype, name: ARCHETYPE_INFO[archetype].name, turns: a.turns, pnl: a.pnl, quotedEv: a.quotedEv, trueEv: a.trueEv, capitalAtRisk: a.car }))
+  const byArchetype = [...arch.values()]
+    .map((a) => ({ archetype: a.archetype, name: a.name, turns: a.turns, pnl: a.pnl, quotedEv: a.quotedEv, trueEv: a.trueEv, capitalAtRisk: a.car }))
     .sort((x, y) => y.capitalAtRisk - x.capitalAtRisk);
   const trapShare = allRisk > 0 ? trapRisk / allRisk : 0;
 
@@ -167,8 +169,8 @@ export function scorecard(s: GameState): Scorecard {
   if (s.status === 'closed') verdict = `The fund was closed (${s.closedReason ?? 'risk limits'}). Whatever the edge, the book was not sized to survive the path it met.`;
   else if (avgDecision >= 65 && totalReturn < 0) verdict = 'A sound process that lost money: the committee would keep this manager. Realised P&L was dominated by luck, not judgement.';
   else if (avgDecision < 45 && totalReturn > 0.1) verdict = 'Profitable but undisciplined: the committee would not allocate more capital. The returns relied on luck that the process did not earn.';
-  else if (overall >= 70) verdict = 'Approved for a larger allocation: consistent, well-sized decisions with good risk control.';
-  else if (overall >= 50) verdict = 'Approved with conditions: the core process is reasonable, but the weaknesses below must be addressed before scaling capital.';
+  else if (overall >= 70 && avgDecision >= 65) verdict = 'Approved for a larger allocation: consistent, well-sized decisions with good risk control.';
+  else if (overall >= 50 && avgDecision >= 45) verdict = 'Approved with conditions: the core process is reasonable, but the weaknesses below must be addressed before scaling capital.';
   else verdict = 'Not approved: sizing and risk control need fundamental work before this process can manage outside capital.';
 
   return {

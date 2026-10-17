@@ -231,6 +231,12 @@ export function GameScreen(props: {
           {mobileTab === 'risk' && right}
           {mobileTab === 'history' && bottom}
         </div>
+        <div className="sticky bottom-0 -mx-2 px-2 py-2 border-t border-line flex items-center gap-2" style={{ background: 'var(--bg)' }}>
+          <div className="text-[11px] text-muted flex-1 num">Turn {state.turn} · gross {mult(pf.check.gross / state.nav)}</div>
+          <button className="btn btn-primary" disabled={busy || pf.check.errors.length > 0} onClick={doAdvance}>
+            {busy ? 'Simulating…' : `Advance Market ${pendingCount ? `(${pendingCount})` : '▸'}`}
+          </button>
+        </div>
       </div>}
 
       {/* Desktop: three columns + bottom */}
