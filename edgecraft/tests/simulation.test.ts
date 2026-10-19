@@ -4,7 +4,7 @@ import { bucketOf, buildFromTemplate, fvec, idioFor, neutralProbs, template, thr
 import { buildScenarios, quoteInstrument, scenarioCorr } from '../src/engine/risk';
 import { isPSD } from '../src/engine/math';
 import { Rng } from '../src/engine/rng';
-import { advance, buyResearch, deserialize, drawMarket, evaluateExAnte, newGame, serialize, tradableIds, type GameConfig, type GameState } from '../src/engine/game';
+import { advance, advanceMany, buyResearch, deserialize, drawMarket, evaluateExAnte, newGame, scenarioRegime, serialize, tradableIds, type GameConfig, type GameState } from '../src/engine/game';
 
 describe('regime model', () => {
   it('every regime correlation matrix is a valid correlation matrix', () => {
@@ -265,5 +265,51 @@ describe('campaign engine', () => {
       return out;
     };
     expect(path('a')).toEqual(path('a'));
+  });
+});
+
+describe('free-play mechanics', () => {
+  const fp = (extra: Partial<GameConfig> = {}): GameConfig => ({ level: 3, seed: 'fp', turns: null, mode: 'sandbox', transparent: false, startNav: 1_000_000, ...extra });
+
+  it('ghost books run your own trades at ½ and 2× on the same path', () => {
+    let s = newGame(fp());
+    const ids = tradableIds(s).filter((id) => s.instruments[id].archetype === 'pod').slice(0, 3);
+    const { state, record } = advance(s, ids.map((id) => ({ id, target: 0.2 * s.nav })));
+    s = state;
+    const pnl = record.pnlPositions / record.navBefore;
+    const half = record.ghosts!.half.navAfter / record.ghosts!.half.navBefore - 1;
+    const dbl = record.ghosts!.double.navAfter / record.ghosts!.double.navBefore - 1;
+    // ghost returns scale with size (up to costs and cash interest)
+    expect(Math.sign(half - 0.0008)).toBe(Math.sign(dbl - 0.0008) || Math.sign(half - 0.0008));
+    expect(Math.abs(dbl)).toBeGreaterThan(Math.abs(half));
+    expect(Math.abs(dbl - 2 * pnl)).toBeLessThan(0.01);
+    expect(s.ghosts.half.path.length).toBe(2);
+  });
+
+  it('advanceMany carries the book and rebalances to % of NAV in pct mode', () => {
+    const s = newGame(fp({ holdMode: 'pct' }));
+    const pods = tradableIds(s).filter((id) => s.instruments[id].archetype === 'pod').slice(0, 2);
+    const { state, records } = advanceMany(s, pods.map((id) => ({ id, target: 0.3 * s.nav })), 4);
+    expect(records.length).toBeGreaterThanOrEqual(1);
+    for (const id of pods) {
+      const p = state.positions[id];
+      if (!p) continue;
+      expect(p.notional / records[records.length - 1].navBefore).toBeCloseTo(0.3, 2);
+    }
+  });
+
+  it('usd mode keeps dollar notionals fixed', () => {
+    const s = newGame(fp({ holdMode: 'usd' }));
+    const pod = tradableIds(s).find((id) => s.instruments[id].archetype === 'pod')!;
+    const { state } = advanceMany(s, [{ id: pod, target: 300_000 }], 3);
+    if (state.positions[pod]) expect(state.positions[pod].notional).toBe(300_000);
+  });
+
+  it('practice scenarios script the true regime path', () => {
+    let s = newGame(fp({ scenario: 'carrycrash' }));
+    for (let i = 0; i < 12; i++) s = advance(s, []).state;
+    expect(s.history[9].trueRegime).toBe('volspike');
+    expect(s.history[10].trueRegime).toBe('liquidity');
+    expect(scenarioRegime('none', 5)).toBeNull();
   });
 });

@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Bar as RBar, Cell } from 'recharts';
-import { BENCH_IDS, BENCH_INFO, topRegime, type GameState, type TurnRecord } from '../../engine/game';
+import { BENCH_IDS, BENCH_INFO, GHOSTS, topRegime, type GameState, type TurnRecord } from '../../engine/game';
 import { REGIME_SPECS } from '../../engine/market';
 import { AXIS, GRID, Legend, SERIES, makeTooltip } from '../charts';
 import { GradeBadge, Panel, Tabs } from '../kit';
 import { money, num, pct, signedPct, toneClass } from '../format';
 
-type BTab = 'perf' | 'history' | 'calib';
+type BTab = 'luck' | 'ghosts' | 'perf' | 'history' | 'calib';
 const BENCH_COLORS: Record<string, string> = { growth: SERIES[1], diversified: SERIES[2], fixed: SERIES[3], cash: 'var(--muted)' };
 
 export function BottomPanel({ state, onOpenRecord }: { state: GameState; onOpenRecord: (r: TurnRecord) => void }) {
-  const [tab, setTab] = useState<BTab>('perf');
+  const [tab, setTab] = useState<BTab>('luck');
   return (
     <Panel>
-      <Tabs<BTab> tabs={[{ id: 'perf', label: 'Performance vs benchmarks' }, { id: 'history', label: 'Decision history' }, { id: 'calib', label: 'Probability calibration' }]} value={tab} onChange={setTab} />
+      <Tabs<BTab> tabs={[{ id: 'luck', label: 'Skill vs luck' }, { id: 'ghosts', label: 'Same trades, other sizes' }, { id: 'perf', label: 'Vs benchmarks' }, { id: 'history', label: 'Decision history' }, { id: 'calib', label: 'Probability calibration' }]} value={tab} onChange={setTab} />
       <div className="pt-3">
+        {tab === 'luck' && <SkillVsLuck state={state} />}
+        {tab === 'ghosts' && <Ghosts state={state} />}
         {tab === 'perf' && <Performance state={state} />}
         {tab === 'history' && <History state={state} onOpen={onOpenRecord} />}
         {tab === 'calib' && <Calibration state={state} />}
@@ -165,3 +167,91 @@ function Calibration({ state }: { state: GameState }) {
 }
 
 export { topRegime };
+
+/**
+ * Cumulative expected log growth (what your decisions were worth, desk model)
+ * vs. realised log growth, with a ±1σ band from the ex-ante volatility.
+ */
+export function SkillVsLuck({ state, height = 220 }: { state: GameState; height?: number }) {
+  const h = state.history;
+  if (!h.length) return <div className="text-muted text-[12px] py-6 text-center">After a few weeks this shows how much of your result was expected from your decisions, and how much was luck.</div>;
+  let e = 0, r = 0, v = 0;
+  const data = [{ t: 0, exp: 0, real: 0, band: [0, 0] as [number, number] }];
+  for (const x of h) {
+    e += x.exAnte.elog;
+    r += x.logRet;
+    v += x.exAnte.vol * x.exAnte.vol;
+    const sd = Math.sqrt(v);
+    data.push({ t: x.turn, exp: Math.exp(e) - 1, real: Math.exp(r) - 1, band: [Math.exp(e - sd) - 1, Math.exp(e + sd) - 1] });
+  }
+  const luck = Math.exp(r - e) - 1;
+  const z = v > 0 ? (r - e) / Math.sqrt(v) : 0;
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+      <div>
+        <div style={{ height }}>
+          <ResponsiveContainer>
+            <ComposedChart data={data} margin={{ top: 6, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid {...GRID} />
+              <XAxis dataKey="t" {...AXIS} />
+              <YAxis {...AXIS} width={50} domain={['auto', 'auto']} tickFormatter={(x) => pct(x, 0)} />
+              <Tooltip content={makeTooltip((l) => `Week ${l}`, (x) => signedPct(x, 1))} />
+              <ReferenceLine y={0} stroke="var(--axis)" />
+              <Area dataKey="band" name="Expected ±1σ" stroke="none" fill="var(--c3)" fillOpacity={0.15} isAnimationActive={false} />
+              <Line dataKey="exp" name="Expected (your decisions)" stroke="var(--c3)" strokeWidth={2} strokeDasharray="5 3" dot={false} isAnimationActive={false} />
+              <Line dataKey="real" name="Realised" stroke="var(--c1)" strokeWidth={2.6} dot={false} isAnimationActive={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        <Legend items={[{ label: 'Realised', color: 'var(--c1)' }, { label: 'Expected from your decisions', color: 'var(--c3)', dash: true }]} />
+      </div>
+      <div className="text-[12px] text-ink2 space-y-2 leading-relaxed">
+        <div>Expected compound return of the books you chose: <b className="num text-ink">{signedPct(Math.exp(e) - 1, 1)}</b></div>
+        <div>Realised: <b className={`num ${toneClass(r)}`}>{signedPct(Math.exp(r) - 1, 1)}</b></div>
+        <div>Luck (realised vs. expected): <b className={`num ${toneClass(luck)}`}>{signedPct(luck, 1)}</b> · <span className="num">{z >= 0 ? '+' : ''}{z.toFixed(1)}σ</span></div>
+        <div className="text-muted text-[11px]">The dashed line is what your sizing and selection were worth under the desk's estimates; the shaded band is the normal range of luck around it. Inside the band, the result says little about skill. Expectations use the desk's quotes, which can be optimistic — the end review reveals how optimistic.</div>
+      </div>
+    </div>
+  );
+}
+
+/** Your exact trades at ½× and 2× size, run on the same market path. */
+export function Ghosts({ state, height = 220 }: { state: GameState; height?: number }) {
+  const g = state.ghosts;
+  if (!g || state.navPath.length < 2) return <div className="text-muted text-[12px] py-6 text-center">After the first week this shows your exact trades run at half and double your size on the same market — the cleanest test of whether your sizing helped.</div>;
+  const s0 = state.config.startNav;
+  const data = state.navPath.map((v, t) => ({ t, you: v / s0 - 1, half: (g.half.path[t] ?? NaN) / s0 - 1, double: (g.double.path[t] ?? NaN) / s0 - 1 }));
+  const fin = (x: number) => x / s0 - 1;
+  const best = [['½ size', fin(g.half.nav)], ['your size', fin(state.nav)], ['2× size', fin(g.double.nav)]].reduce((a, b) => ((b[1] as number) > (a[1] as number) ? b : a));
+  const dd = (path: number[]) => { let pk = 0, m = 0; for (const x of path) { pk = Math.max(pk, x); m = Math.max(m, 1 - x / pk); } return m; };
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+      <div>
+        <div style={{ height }}>
+          <ResponsiveContainer>
+            <ComposedChart data={data} margin={{ top: 6, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid {...GRID} />
+              <XAxis dataKey="t" {...AXIS} />
+              <YAxis {...AXIS} width={50} domain={['auto', 'auto']} tickFormatter={(x) => pct(x, 0)} />
+              <Tooltip content={makeTooltip((l) => `Week ${l}`, (x) => signedPct(x, 1))} />
+              <ReferenceLine y={0} stroke="var(--axis)" />
+              <Line dataKey="half" name={GHOSTS[0].name} stroke="var(--c3)" strokeWidth={1.8} dot={false} isAnimationActive={false} />
+              <Line dataKey="double" name={GHOSTS[1].name} stroke="var(--c2)" strokeWidth={1.8} dot={false} isAnimationActive={false} />
+              <Line dataKey="you" name="You" stroke="var(--c1)" strokeWidth={2.6} dot={false} isAnimationActive={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        <Legend items={[{ label: 'You', color: 'var(--c1)' }, { label: GHOSTS[0].name, color: 'var(--c3)' }, { label: GHOSTS[1].name, color: 'var(--c2)' }]} />
+      </div>
+      <table className="text-[12px] self-start w-full">
+        <thead className="text-muted"><tr><th className="text-left font-medium py-1">Same trades at</th><th className="text-right font-medium">Return</th><th className="text-right font-medium">Max DD</th></tr></thead>
+        <tbody>
+          <tr className="border-t border-line"><td className="py-1.5">½ your size</td><td className={`num text-right ${toneClass(fin(g.half.nav))}`}>{signedPct(fin(g.half.nav), 1)}</td><td className="num text-right">{pct(dd(g.half.path), 1)}</td></tr>
+          <tr className="border-t border-line font-semibold"><td className="py-1.5">Your size</td><td className={`num text-right ${toneClass(fin(state.nav))}`}>{signedPct(fin(state.nav), 1)}</td><td className="num text-right">{pct(dd(state.navPath), 1)}</td></tr>
+          <tr className="border-t border-line"><td className="py-1.5">2× your size</td><td className={`num text-right ${toneClass(fin(g.double.nav))}`}>{signedPct(fin(g.double.nav), 1)}</td><td className="num text-right">{pct(dd(g.double.path), 1)}</td></tr>
+          <tr><td colSpan={3} className="pt-2 text-[11px] text-muted leading-snug">So far, <b className="text-ink2">{best[0]}</b> did best. Bigger is better only while you are below the growth optimum; past it, doubling adds risk and subtracts growth. Over a few weeks luck dominates — watch the gap over 20+ weeks.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}

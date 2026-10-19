@@ -8,7 +8,7 @@ import { Bar, GradeBadge, Panel } from '../kit';
 import { money, num, pct, signedMoney, signedPct, toneClass } from '../format';
 import { Logo } from '../Home';
 import { loadRuns, saveRun } from '../storage';
-import { Performance } from './Bottom';
+import { Ghosts, Performance, SkillVsLuck } from './Bottom';
 import { ResolutionModal } from './Resolution';
 import { WhyModal } from './Why';
 import type { WhyTopic } from '../content';
@@ -106,6 +106,11 @@ export function EndReview(props: {
               ))}
             </div>
           </Panel>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Panel title="Skill vs. luck"><SkillVsLuck state={state} height={200} /></Panel>
+          <Panel title="Your trades at other sizes"><Ghosts state={state} height={200} /></Panel>
         </div>
 
         <Panel title="Your path vs. benchmarks (same information, same opportunities)">

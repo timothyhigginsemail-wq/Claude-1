@@ -20,13 +20,20 @@ Requires Node 18+ (tested on Node 22). Campaigns autosave to `localStorage` afte
 Edgecraft is a single free-play mode: you run a multi-strategy book with as many positions as you like.
 
 - **Every week** a fresh set of trades arrives (stat arb, factor, trend, carry, vol, merger arb, relative value, macro, tail hedges). Seven strategy pods with track records and two index futures are always available.
-- **The trade blotter** lists everything on one screen. Each row shows win probability (with its estimation band), expected value per week and worst case. Click a size chip (5/10/25/50% of NAV), step with − / +, type a number, or Close. **Details** opens the full sizing analysis: growth vs. size, marginal edge vs. drag, wealth paths and drawdown risk.
-- **Advance week** (or press Enter) executes all orders at once and resolves the market. A one-line result appears above the blotter; "Full review" opens the decision breakdown.
-- **Risk panel**: book size vs. the growth optimum, risk contributions, factor exposures, correlation heatmaps (normal vs. stress), stress tests and a portfolio Kelly optimizer.
+- **Trade blotter**: one row per instrument with win probability (and its estimation band), EV per week, worst case and weeks left.
+  - Size with chips (5/10/25/50% of NAV), − / +, or by typing. **Scale book** ×0.5 … ×2 resizes everything at once.
+  - Every pending order shows its **impact on the whole book**: change in portfolio vol, change in expected growth, and the factor exposure it adds.
+  - **Kelly guide** (optional) shows each trade's growth-optimal size given the rest of your book, with a one-click ½-Kelly.
+  - **Details** opens the full sizing analysis.
+- **Keyboard**: ↑/↓ choose a row · 1–4 set 5/10/25/50% · +/− step · 0 close · D details · Enter advances one week · Shift+Enter four weeks.
+- **Multi-week advance**: 4w / 13w / 26w carry your book forward and stop early on a margin call, risk-committee de-gross or market shock. **Holding style**: fixed % of NAV (rebalanced weekly) or fixed dollars (left to drift).
+- **Feedback while you play**:
+  - *Skill vs luck*: cumulative expected growth of the books you chose vs. realised, with a ±1σ luck band.
+  - *Same trades, other sizes*: ghost books run your exact trades at ½× and 2× your size on the same market path.
+  - *Vs benchmarks*: half-Kelly, risk-parity, fixed-fraction and cash, all using the same information you had.
+- **Practice drills** (start screen): Crowded trade, Picking up nickels, Optimistic desk, Trend to chop. Each scripts the hidden regime path and the opportunity mix around one lesson; timing isn't shown.
 - **Rules**: gross leverage cap (default 5×, adjustable), regime-dependent margin with forced liquidation, a risk-committee de-gross at a 15% drawdown, and fund closure at 30%.
-- **Finish & review** at any time (or pick a fixed length) for the investment-committee review: decision grades vs. outcomes, benchmarks that traded the same information, and the hidden true probabilities and regimes revealed. The same seed always produces the same market, so you can replay it with a different strategy.
-
-Settings on the start screen: seed, length (open-ended or 20/40/60 weeks), leverage cap, and a practice mode that shows the true probabilities.
+- **Finish & review** at any time (or pick a fixed length) for the investment-committee review, with the hidden true probabilities and regimes revealed. The same seed always produces the same market.
 
 ## The simulation model (`src/engine`)
 

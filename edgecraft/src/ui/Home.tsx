@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { deserialize, type GameConfig, type GameState } from '../engine/game';
+import { SCENARIOS, deserialize, type GameConfig, type GameState, type ScenarioId } from '../engine/game';
 import { LEVELS } from '../engine/levels';
 import { deleteRun, loadRuns, type Prefs, type RunSummary } from './storage';
 import { money, pct } from './format';
@@ -27,6 +27,8 @@ export function Home(props: {
   const [turns, setTurns] = useState<string>('endless');
   const [gross, setGross] = useState(LEVELS[3].maxGross);
   const [transparent, setTransparent] = useState(false);
+  const [holdMode, setHoldMode] = useState<'pct' | 'usd'>('pct');
+  const [scenario, setScenario] = useState<ScenarioId>('none');
   const [fileErr, setFileErr] = useState<string | null>(null);
   const [runsVer, setRunsVer] = useState(0);
   const runs = useMemo(() => loadRuns(), [runsVer]);
@@ -42,6 +44,8 @@ export function Home(props: {
       startNav: 1_000_000,
       maxGross: gross,
       regimes: 'auto',
+      holdMode,
+      scenario,
     });
 
   return (
@@ -120,6 +124,18 @@ export function Home(props: {
             </label>
             <label className="flex flex-col gap-1 text-muted">Gross leverage cap: <span className="num text-ink">{gross}×</span>
               <input id="gross" type="range" min={1} max={12} step={0.5} value={gross} onChange={(e) => setGross(Number(e.target.value))} />
+            </label>
+            <label className="flex flex-col gap-1 text-muted">Holding style
+              <select id="holdmode" value={holdMode} onChange={(e) => setHoldMode(e.target.value as 'pct' | 'usd')}>
+                <option value="pct">Fixed % of NAV (rebalance weekly)</option>
+                <option value="usd">Fixed dollars (let it drift)</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-muted sm:col-span-2">Market
+              <select id="scenario" value={scenario} onChange={(e) => setScenario(e.target.value as ScenarioId)}>
+                {(Object.keys(SCENARIOS) as ScenarioId[]).map((k) => <option key={k} value={k}>{k === 'none' ? SCENARIOS[k].name : `Drill: ${SCENARIOS[k].name}`}</option>)}
+              </select>
+              <span className="text-[11px] text-ink2">{SCENARIOS[scenario].desc}</span>
             </label>
             <label className="flex items-center gap-2 text-ink2 sm:mt-4">
               <input id="transparent" type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { advance, buyResearch, endSession, topRegime, type GameConfig, type GameState, type Order, type TurnRecord } from '../../engine/game';
+import { SCENARIOS, advanceMany, buyResearch, carriedTargets, endSession, topRegime, type GameConfig, type GameState, type Order, type TurnRecord } from '../../engine/game';
 import { REGIME_SPECS } from '../../engine/market';
 import { LEVELS } from '../../engine/levels';
 import { Logo } from '../Home';
@@ -27,10 +27,10 @@ export function GameScreen(props: {
 }) {
   const { state, setState } = props;
   const desk = useDeskBase(state);
-  const initialTargets = useMemo(() => Object.fromEntries(Object.entries(state.positions).map(([id, p]) => [id, p.notional])), [state]);
+  const initialTargets = useMemo(() => carriedTargets(state), [state]);
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
   const [details, setDetails] = useState<string | null>(null);
-  const [lastRecord, setLastRecord] = useState<TurnRecord | null>(null);
+  const [lastRun, setLastRun] = useState<{ records: TurnRecord[]; stopped?: string } | null>(null);
   const [reviewRecord, setReviewRecord] = useState<TurnRecord | null>(null);
   const [why, setWhy] = useState<WhyTopic | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function GameScreen(props: {
     return out;
   }, [targets, state.positions]);
 
-  const doAdvance = () => {
+  const doAdvance = (weeks = 1) => {
     if (busy || state.status !== 'playing') return;
     if (pf.check.errors.length) {
       setError(pf.check.errors.join(' '));
@@ -74,9 +74,9 @@ export function GameScreen(props: {
     setBusy(true);
     setTimeout(() => {
       try {
-        const { state: next, record } = advance(state, orders);
+        const { state: next, records, stoppedEarly } = advanceMany(state, orders, weeks);
         setState(next);
-        setLastRecord(record);
+        setLastRun({ records, stopped: stoppedEarly });
         setError(null);
       } catch (e) {
         setError((e as Error).message);
@@ -92,10 +92,10 @@ export function GameScreen(props: {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (e.key !== 'Enter' || ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(t.tagName)) return;
+      if (e.key !== 'Enter' || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName)) return;
       if (document.querySelector('[role="dialog"]')) return;
       e.preventDefault();
-      advanceRef.current();
+      advanceRef.current(e.shiftKey ? 4 : 1);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -110,7 +110,7 @@ export function GameScreen(props: {
   const lvl = LEVELS[state.config.level];
   const dd = 1 - state.nav / state.peak;
   const top = topRegime(state.belief);
-  const pendingCount = orders.length;
+  const pendingCount = Object.keys({ ...targets, ...initialTargets }).filter((id) => Math.abs((targets[id] ?? 0) - (initialTargets[id] ?? 0)) >= 1).length;
 
   if (state.status !== 'playing') {
     return (
@@ -129,14 +129,24 @@ export function GameScreen(props: {
     );
   }
 
+  const blocked = busy || pf.check.errors.length > 0;
   const advanceBtn = (
-    <button className="btn btn-primary shrink-0" disabled={busy || pf.check.errors.length > 0} onClick={doAdvance} title={pf.check.errors.join(' ') || 'Shortcut: Enter'}>
-      {busy ? 'Simulating…' : `Advance week ${pendingCount ? `· ${pendingCount} order${pendingCount > 1 ? 's' : ''}` : '▸'}`}
-    </button>
+    <div className="flex items-center gap-1 shrink-0">
+      <button className="btn btn-primary" disabled={blocked} onClick={() => doAdvance(1)} title={pf.check.errors.join(' ') || 'Shortcut: Enter'}>
+        {busy ? 'Simulating…' : `Advance week ${pendingCount ? `· ${pendingCount} order${pendingCount > 1 ? 's' : ''}` : '▸'}`}
+      </button>
+      {[4, 13, 26].map((n) => (
+        <button key={n} className="btn num px-2" disabled={blocked} onClick={() => doAdvance(n)} title={`Advance ${n} weeks, carrying the book${n === 4 ? ' (Shift+Enter)' : ''}. Stops early on a margin call, de-risk or market shock.`}>
+          {n}w
+        </button>
+      ))}
+    </div>
   );
 
-  const blotter = <Blotter state={state} desk={desk} targets={targets} setTarget={setTarget} onDetails={setDetails} check={pf.check} reset={() => setTargets(initialTargets)} />;
-  const result = lastRecord && <ResultStrip r={lastRecord} onReview={() => setReviewRecord(lastRecord)} onClose={() => setLastRecord(null)} />;
+  const blotter = <Blotter state={state} desk={desk} targets={targets} baseline={initialTargets} setTarget={setTarget} setAll={setTargets} onDetails={setDetails} check={pf.check} reset={() => setTargets(initialTargets)} />;
+  const result = lastRun && lastRun.records.length > 0 && (
+    <ResultStrip run={lastRun} onReview={(r) => setReviewRecord(r)} onClose={() => setLastRun(null)} />
+  );
   const right = <RiskPanel state={state} desk={desk} pf={pf} targets={targets} onWhy={setWhy} />;
   const bottom = <BottomPanel state={state} onOpenRecord={setReviewRecord} />;
 
@@ -156,7 +166,7 @@ export function GameScreen(props: {
           <TopStat label="Drawdown" value={pct(dd)} tone={dd > lvl.ddDerisk * 0.6 ? 'text-neg' : ''} sub={`limit ${pct(lvl.ddDerisk, 0)} / ${pct(lvl.ddStop, 0)}`} />
           <TopStat label="Gross lev." value={mult(pf.check.gross / state.nav)} sub={`cap ${mult(pf.check.maxGross, 1)}${state.deriskActive ? ' (de-risk)' : ''}`} tone={pf.check.gross > pf.check.maxGross * state.nav ? 'text-neg' : ''} />
           <TopStat label="Regime read" value={REGIME_SPECS[top].name} sub={`${pct(state.belief[top], 0)} confidence`} />
-          <TopStat label="Week" value={`${state.turn}${state.config.turns ? ` / ${state.config.turns}` : ''}`} sub={`seed ${state.config.seed}`} />
+          <TopStat label="Week" value={`${state.turn}${state.config.turns ? ` / ${state.config.turns}` : ''}`} sub={state.config.scenario && state.config.scenario !== 'none' ? `drill: ${SCENARIOS[state.config.scenario].name}` : `seed ${state.config.seed}`} />
           <div className="flex-1" />
           <div className="hidden md:flex gap-1 shrink-0">
             <button className="btn btn-ghost" onClick={() => setConfirmEnd(true)}>Finish & review</button>
@@ -232,26 +242,46 @@ export function GameScreen(props: {
   );
 }
 
-function ResultStrip({ r, onReview, onClose }: { r: TurnRecord; onReview: () => void; onClose: () => void }) {
-  const d = r.navAfter - r.navBefore;
-  const best = r.positions.reduce<TurnRecord['positions'][number] | null>((a, p) => (!a || p.pnl > a.pnl ? p : a), null);
-  const worst = r.positions.reduce<TurnRecord['positions'][number] | null>((a, p) => (!a || p.pnl < a.pnl ? p : a), null);
-  const alerts = r.events.filter((e) => e.kind === 'forced-liquidation' || e.kind === 'derisk' || e.kind === 'jump');
+function ResultStrip({ run, onReview, onClose }: { run: { records: TurnRecord[]; stopped?: string }; onReview: (r: TurnRecord) => void; onClose: () => void }) {
+  const rs = run.records;
+  const first = rs[0];
+  const last = rs[rs.length - 1];
+  const d = last.navAfter - first.navBefore;
+  const ret = last.navAfter / first.navBefore - 1;
+  const avgGrade = rs.reduce((a, r) => a + r.grade.score, 0) / rs.length;
+  const letter = avgGrade >= 80 ? 'A' : avgGrade >= 65 ? 'B' : avgGrade >= 45 ? 'C' : avgGrade >= 25 ? 'D' : 'F';
+  const expected = rs.reduce((a, r) => a + r.exAnte.elog, 0);
+  const realised = rs.reduce((a, r) => a + r.logRet, 0);
+  const ghostRet = (g: 'half' | 'double') => (first.ghosts && last.ghosts ? last.ghosts[g].navAfter / first.ghosts[g].navBefore - 1 : NaN);
+  const alerts = rs.flatMap((r) => r.events.filter((e) => e.kind === 'forced-liquidation' || e.kind === 'derisk' || e.kind === 'jump').map((e) => `Week ${r.turn}: ${e.text}`));
+  const best = rs.length === 1 ? last.positions.reduce<TurnRecord['positions'][number] | null>((a, p) => (!a || p.pnl > a.pnl ? p : a), null) : null;
+  const worst = rs.length === 1 ? last.positions.reduce<TurnRecord['positions'][number] | null>((a, p) => (!a || p.pnl < a.pnl ? p : a), null) : null;
   return (
     <div className="panel px-3 py-2.5 fade-up flex flex-wrap items-center gap-x-5 gap-y-2" style={{ borderColor: d >= 0 ? 'var(--pos-fill)' : 'var(--neg-fill)' }}>
       <div>
-        <div className="label text-[9.5px]">Week {r.turn} result</div>
-        <div className={`num text-[16px] font-semibold ${toneClass(d)}`}>{signedMoney(d)} <span className="text-[12px]">({signedPct(r.ret, 2)})</span></div>
+        <div className="label text-[9.5px]">{rs.length === 1 ? `Week ${first.turn} result` : `Weeks ${first.turn}–${last.turn}`}</div>
+        <div className={`num text-[16px] font-semibold ${toneClass(d)}`}>{signedMoney(d)} <span className="text-[12px]">({signedPct(ret, 2)})</span></div>
       </div>
-      <div className="flex items-center gap-2" title={r.grade.verdict}>
-        <GradeBadge letter={r.grade.letter} size="sm" />
-        <span className="text-[12px] text-ink2 max-w-[280px]">{r.grade.verdict}</span>
+      <div className="flex items-center gap-2" title={rs.length === 1 ? last.grade.verdict : 'Average decision grade over these weeks'}>
+        <GradeBadge letter={rs.length === 1 ? last.grade.letter : letter} size="sm" />
+        <span className="text-[12px] text-ink2 max-w-[260px]">{rs.length === 1 ? last.grade.verdict : `Average decision score ${avgGrade.toFixed(0)}/100`}</span>
       </div>
+      <div className="text-[11.5px] num" title="Expected compound growth you were taking on (desk model) vs what happened">
+        <span className="text-muted font-sans">Expected </span>{signedPct(Math.exp(expected) - 1, 2)}
+        <span className="text-muted font-sans"> · luck </span><span className={toneClass(realised - expected)}>{signedPct(Math.exp(realised - expected) - 1, 2)}</span>
+      </div>
+      {isFinite(ghostRet('half')) && (
+        <div className="text-[11.5px] num" title="Your exact trades at half and double the size, same market">
+          <span className="text-muted font-sans">½ size </span><span className={toneClass(ghostRet('half'))}>{signedPct(ghostRet('half'), 2)}</span>
+          <span className="text-muted font-sans"> · 2× size </span><span className={toneClass(ghostRet('double'))}>{signedPct(ghostRet('double'), 2)}</span>
+        </div>
+      )}
       {best && best.pnl > 0 && <div className="text-[11.5px]"><span className="text-muted">Best </span>{best.name} <span className="num text-pos">{signedMoney(best.pnl)}</span></div>}
       {worst && worst.pnl < 0 && <div className="text-[11.5px]"><span className="text-muted">Worst </span>{worst.name} <span className="num text-neg">{signedMoney(worst.pnl)}</span></div>}
-      {alerts.map((e, i) => <div key={i} className="text-[11.5px] text-neg basis-full">⚠ {e.text}</div>)}
+      {run.stopped && <div className="text-[11.5px] text-warn basis-full">Stopped early so you can react: {run.stopped}</div>}
+      {alerts.slice(0, 3).map((e, i) => <div key={i} className="text-[11.5px] text-neg basis-full">⚠ {e}</div>)}
       <div className="flex-1" />
-      <button className="btn text-[12px]" onClick={onReview}>Full review</button>
+      <button className="btn text-[12px]" onClick={() => onReview(last)}>Review week {last.turn}</button>
       <button className="btn btn-ghost text-[12px]" onClick={onClose} aria-label="Dismiss">✕</button>
     </div>
   );

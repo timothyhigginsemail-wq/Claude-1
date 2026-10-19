@@ -24,6 +24,11 @@ import { Rng } from './rng';
 export const SAVE_VERSION = 3;
 
 export type BenchId = 'growth' | 'diversified' | 'fixed' | 'cash';
+export type GhostId = 'half' | 'double';
+export const GHOSTS: { id: GhostId; k: number; name: string }[] = [
+  { id: 'half', k: 0.5, name: 'Your trades at ½ size' },
+  { id: 'double', k: 2, name: 'Your trades at 2× size' },
+];
 export const BENCH_IDS: BenchId[] = ['growth', 'diversified', 'fixed', 'cash'];
 export const BENCH_INFO: Record<BenchId, { name: string; desc: string }> = {
   growth: { name: 'Half-Kelly growth', desc: 'Each turn: the log-optimal portfolio under the desk model (same information you had), scaled by ½ for estimation risk.' },
@@ -43,6 +48,31 @@ export interface GameConfig {
   maxGross?: number;
   regimes?: 'auto' | 'calm' | 'full';
   label?: string;
+  /** 'pct': positions are rebalanced each week to their % of NAV; 'usd': held at fixed dollar notional. */
+  holdMode?: 'pct' | 'usd';
+  /** Practice scenario that scripts the regime path and the opportunity mix. */
+  scenario?: ScenarioId;
+}
+
+export type ScenarioId = 'none' | 'unwind' | 'carrycrash' | 'overconfident' | 'regimeshift';
+
+export const SCENARIOS: Record<ScenarioId, { name: string; desc: string }> = {
+  none: { name: 'Random market', desc: 'Regimes and opportunities follow the normal random process.' },
+  unwind: { name: 'Crowded trade', desc: 'Quant strategies are popular and look great. Something is building underneath.' },
+  carrycrash: { name: 'Picking up nickels', desc: 'A calm market full of carry, short-vol and relative-value trades with high win rates.' },
+  overconfident: { name: 'Optimistic desk', desc: 'The desk is in a bullish mood: many quoted edges are overstated. Learn to be skeptical.' },
+  regimeshift: { name: 'Trend to chop', desc: 'A strong trending market. Trends do not last forever.' },
+};
+
+/** Scripted true regime for a scenario week (null = random). Decision-independent by construction. */
+export function scenarioRegime(sc: ScenarioId | undefined, t: number): RegimeId | null {
+  switch (sc) {
+    case 'unwind': return t <= 5 ? 'normal' : t <= 9 ? 'decay' : t <= 12 ? 'unwind' : t <= 14 ? 'liquidity' : null;
+    case 'carrycrash': return t <= 9 ? 'normal' : t === 10 ? 'volspike' : t <= 12 ? 'liquidity' : t <= 14 ? 'volspike' : null;
+    case 'regimeshift': return t <= 8 ? 'momentum' : t <= 16 ? 'meanrev' : null;
+    case 'overconfident': return t <= 12 ? 'normal' : null;
+    default: return null;
+  }
 }
 
 export interface Position {
@@ -51,6 +81,8 @@ export interface Position {
   entryTurn: number;
   pnl: number;
   userProb?: number;
+  /** Target size as a fraction of NAV (used when holdMode is 'pct'). */
+  pct?: number;
 }
 
 export interface Order {
@@ -165,6 +197,7 @@ export interface TurnRecord {
   indicators: Indicators;
   exAnte: ExAnte;
   bench: Record<BenchId, { navBefore: number; navAfter: number }>;
+  ghosts?: Record<GhostId, { navBefore: number; navAfter: number }>;
   events: GameEvent[];
   attribution: Record<string, number>;
   counterfactual: { k: number; ret: number }[];
@@ -205,6 +238,8 @@ export interface GameState {
   positions: Record<string, Position>;
   history: TurnRecord[];
   bench: Record<BenchId, BenchState>;
+  /** Your own trades run at 0.5× and 2× your sizes, on the same market path. */
+  ghosts: Record<GhostId, BenchState>;
   news: NewsItem[];
   calibration: CalibrationEntry[];
   pendingResearch: number;
@@ -313,6 +348,7 @@ export function newGame(cfg: GameConfig): GameState {
     positions: {},
     history: [],
     bench: Object.fromEntries(BENCH_IDS.map((b) => [b, { nav: cfg.startNav, peak: cfg.startNav, holdings: {}, path: [cfg.startNav] }])) as Record<BenchId, BenchState>,
+    ghosts: { half: { nav: cfg.startNav, peak: cfg.startNav, holdings: {}, path: [cfg.startNav] }, double: { nav: cfg.startNav, peak: cfg.startNav, holdings: {}, path: [cfg.startNav] } },
     news: [],
     calibration: [],
     pendingResearch: 0,
@@ -339,7 +375,7 @@ function openingNews(level: Level): NewsItem[] {
 }
 
 function addOffers(s: GameState) {
-  const built = generateOffers(s.config.seed, s.config.level, s.turn, s.regime);
+  const built = generateOffers(s.config.seed, s.config.level, s.turn, s.regime, s.config.scenario);
   s.offered = [];
   for (const b of built) {
     s.instruments[b.pub.id] = b.pub;
@@ -688,7 +724,8 @@ export function drawMarket(s: GameState): Draw {
   const seed = s.config.seed;
   const t = s.turn;
   const T = transitionFor(s, t);
-  const regime = drawRegime(new Rng(seed, 'regime', t), s.regime, T);
+  const drawn = drawRegime(new Rng(seed, 'regime', t), s.regime, T);
+  const regime = scenarioRegime(s.config.scenario, t) ?? drawn;
   const fd = drawFactors(new Rng(seed, 'factors', t), regime, s.regime);
   const indicators = stepIndicators(new Rng(seed, 'ind', t), s.indicators, regime);
   const outcomes: Record<string, number> = {};
@@ -830,6 +867,7 @@ export function advance(prev: GameState, orders: Order[]): { state: GameState; r
       entryTurn: old?.entryTurn ?? t,
       pnl: (old?.pnl ?? 0) + pr.pnl,
       userProb: orders.find((x) => x.id === id)?.userProb ?? old?.userProb,
+      pct: n / prev.nav,
     };
   }
 
@@ -894,32 +932,16 @@ export function advance(prev: GameState, orders: Order[]): { state: GameState; r
     events.push({ kind: 'derisk', text: 'Drawdown recovered: the risk committee lifts the de-risk order.' });
   }
 
-  // ---- benchmarks ----
+  // ---- benchmarks and ghost books (same market draw) ----
   const benchRec = {} as TurnRecord['bench'];
-  for (const b of BENCH_IDS) {
-    const bs = s.bench[b];
-    const navB0 = bs.nav;
-    const res = runBook(s, bs.holdings, benchTarget[b], draw, bs.nav);
-    let navB = bs.nav - res.tc - res.fin - res.lev + res.cash + res.pnl;
-    const hold: Record<string, number> = {};
-    for (const [id, n] of Object.entries(benchTarget[b])) {
-      const p = s.instruments[id];
-      if (p.alive) hold[id] = n;
-    }
-    const mreq = Object.entries(hold).reduce((a, [id, n]) => a + Math.abs(n) * s.instruments[id].margin * mmNew, 0);
-    if (navB > 0 && mreq > navB) {
-      const f = (0.75 * navB) / mreq;
-      for (const id of Object.keys(hold)) {
-        navB -= Math.abs(hold[id] * (1 - f)) * tcRate(s.instruments[id], REGIME_SPECS[draw.regime].costMult, hold[id]) * 3;
-        hold[id] *= f;
-      }
-    }
-    navB = Math.max(navB, 0);
-    bs.nav = navB;
-    bs.peak = Math.max(bs.peak, navB);
-    bs.holdings = navB > 0 ? hold : {};
-    bs.path.push(navB);
-    benchRec[b] = { navBefore: navB0, navAfter: navB };
+  for (const b of BENCH_IDS) benchRec[b] = runShadow(s, s.bench[b], benchTarget[b], draw, mmNew);
+  if (!s.ghosts) s.ghosts = initGhosts(prev.navPath, prev.config.startNav);
+  const ghostRec = {} as NonNullable<TurnRecord['ghosts']>;
+  for (const g of GHOSTS) {
+    const gs = s.ghosts[g.id];
+    const tgt: Record<string, number> = {};
+    for (const [id, n] of Object.entries(targets)) if (n) tgt[id] = (n / prev.nav) * g.k * gs.nav;
+    ghostRec[g.id] = runShadow(s, gs, tgt, draw, mmNew);
   }
 
   // ---- counterfactual sizing (hindsight) ----
@@ -958,6 +980,7 @@ export function advance(prev: GameState, orders: Order[]): { state: GameState; r
     indicators: draw.indicators,
     exAnte,
     bench: benchRec,
+    ghosts: ghostRec,
     events,
     attribution,
     counterfactual,
@@ -978,6 +1001,85 @@ export function advance(prev: GameState, orders: Order[]): { state: GameState; r
     else addOffers(s);
   }
   return { state: s, record };
+}
+
+function initGhosts(path: number[], start: number): Record<GhostId, BenchState> {
+  // older saves: ghosts start now, flat history before
+  const p = path.map(() => start);
+  return { half: { nav: start, peak: start, holdings: {}, path: p.slice() }, double: { nav: start, peak: start, holdings: {}, path: p.slice() } };
+}
+
+/** Run a shadow book (benchmark or ghost) through this week's draw, with margin calls. */
+function runShadow(s: GameState, bs: BenchState, target: Record<string, number>, draw: Draw, mmNew: number) {
+  const navB0 = bs.nav;
+  const res = runBook(s, bs.holdings, target, draw, bs.nav);
+  let navB = bs.nav - res.tc - res.fin - res.lev + res.cash + res.pnl;
+  const hold: Record<string, number> = {};
+  for (const [id, n] of Object.entries(target)) if (s.instruments[id].alive && n) hold[id] = n;
+  const mreq = Object.entries(hold).reduce((a, [id, n]) => a + Math.abs(n) * s.instruments[id].margin * mmNew, 0);
+  if (navB > 0 && mreq > navB) {
+    const f = (0.75 * navB) / mreq;
+    for (const id of Object.keys(hold)) {
+      navB -= Math.abs(hold[id] * (1 - f)) * tcRate(s.instruments[id], REGIME_SPECS[draw.regime].costMult, hold[id]) * 3;
+      hold[id] *= f;
+    }
+  }
+  navB = Math.max(navB, 0);
+  bs.nav = navB;
+  bs.peak = Math.max(bs.peak, navB);
+  bs.holdings = navB > 0 ? hold : {};
+  bs.path.push(navB);
+  return { navBefore: navB0, navAfter: navB };
+}
+
+/**
+ * The book you would carry into next week: held positions at their current
+ * dollar notional ('usd'), or rebalanced to their % of current NAV ('pct').
+ */
+export function carriedTargets(s: GameState): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, p] of Object.entries(s.positions)) {
+    out[id] = s.config.holdMode === 'pct' && p.pct !== undefined ? clampToLimit(s, id, p.pct * s.nav) : p.notional;
+  }
+  return out;
+}
+
+function clampToLimit(s: GameState, id: string, n: number): number {
+  const lim = s.instruments[id].maxPctNav * s.nav;
+  return Math.round(Math.max(-lim, Math.min(lim, n)));
+}
+
+export interface MultiResult {
+  state: GameState;
+  records: TurnRecord[];
+  stoppedEarly?: string;
+}
+
+/**
+ * Advance several weeks: the first week executes your orders, later weeks carry
+ * the book forward (rebalancing in 'pct' mode). Stops early on a margin call,
+ * a risk-committee de-risk, a market shock, or the end of the session, so you
+ * can react.
+ */
+export function advanceMany(prev: GameState, orders: Order[], weeks: number): MultiResult {
+  let s = prev;
+  const records: TurnRecord[] = [];
+  let ord = orders;
+  for (let i = 0; i < weeks && s.status === 'playing'; i++) {
+    if (i > 0) {
+      const tg = carriedTargets(s);
+      ord = Object.entries(tg).filter(([id, n]) => Math.abs(n - (s.positions[id]?.notional ?? 0)) >= 1).map(([id, target]) => ({ id, target }));
+      // drop orders the limits would reject (e.g. gross cap after a loss) by scaling the whole book back
+      const chk = checkOrders(s, { ...Object.fromEntries(Object.entries(s.positions).map(([id, p]) => [id, p.notional])), ...tg });
+      if (chk.errors.length) ord = [];
+    }
+    const r = advance(s, ord);
+    s = r.state;
+    records.push(r.record);
+    const alert = r.record.events.find((e) => e.kind === 'forced-liquidation' || e.kind === 'derisk' || e.kind === 'jump' || e.kind === 'closed' || e.kind === 'ruin');
+    if (alert && i < weeks - 1) return { state: s, records, stoppedEarly: alert.text };
+  }
+  return { state: s, records };
 }
 
 function updateTape(s: GameState, Z: number[]) {
@@ -1093,5 +1195,6 @@ export function serialize(s: GameState): string {
 export function deserialize(json: string): GameState {
   const s = JSON.parse(json) as GameState;
   if (!s || typeof s !== 'object' || s.version !== SAVE_VERSION || !s.config || !s.instruments) throw new Error('Save file is from an incompatible version.');
+  if (!s.ghosts) s.ghosts = initGhosts(s.navPath, s.config.startNav);
   return s;
 }

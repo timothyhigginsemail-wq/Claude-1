@@ -80,11 +80,17 @@ export function priceForRegime(b: Built, regime: RegimeId): Built {
   return b;
 }
 
-export function generateOffers(seed: string, level: Level, turn: number, regime: RegimeId): Built[] {
-  return generateRaw(seed, level, turn, regime).map((b) => (b.pub.archetype === 'future' ? b : priceForRegime(b, regime)));
+export function generateOffers(seed: string, level: Level, turn: number, regime: RegimeId, scenario?: string): Built[] {
+  return generateRaw(seed, level, turn, regime, scenario).map((b) => (b.pub.archetype === 'future' ? b : priceForRegime(b, regime)));
 }
 
-function generateRaw(seed: string, level: Level, turn: number, regime: RegimeId): Built[] {
+const SCENARIO_KEYS: Record<string, string[]> = {
+  unwind: ['statarb', 'factor_value', 'factor_mom', 'factor_rev', 'relval', 'factor_quality'],
+  carrycrash: ['carry', 'shortvol', 'relval', 'macro_credit', 'merger', 'carry'],
+  regimeshift: ['trend', 'factor_mom', 'trend', 'statarb', 'factor_rev', 'macro_cmd'],
+};
+
+function generateRaw(seed: string, level: Level, turn: number, regime: RegimeId, scenario?: string): Built[] {
   const rng = new Rng(seed, 'offers', turn);
   const out: Built[] = [];
   if (level === 1) {
@@ -106,14 +112,17 @@ function generateRaw(seed: string, level: Level, turn: number, regime: RegimeId)
     return out;
   }
 
-  const mix = qualityMix(regime);
+  let mix = qualityMix(regime);
+  if (scenario === 'overconfident') mix = [0.15, 0.25, 0.6];
+  if (scenario === 'unwind' && turn <= 10) mix = [0.45, 0.35, 0.2];
   if (level === 2 && turn === 9) return tenStrategies(rng, turn);
 
   const n = level === 2 ? rng.int(4, 6) : rng.int(3, 5);
-  const keys = rng.shuffle(TEMPLATE_KEYS.slice());
+  const pool = scenario && SCENARIO_KEYS[scenario] ? [...SCENARIO_KEYS[scenario], ...SCENARIO_KEYS[scenario], ...TEMPLATE_KEYS] : TEMPLATE_KEYS.slice();
+  const keys = rng.shuffle(pool);
   for (let i = 0; i < n; i++) {
     const key = keys[i % keys.length];
-    out.push(buildFromTemplate(rng, template(key), { turn, quality: pickQuality(rng, mix), offerFor: rng.bernoulli(0.3) ? 2 : 1, slot: i, ...PORTFOLIO_SCALE }));
+    out.push(buildFromTemplate(rng, template(key), { turn, quality: pickQuality(rng, mix), offerFor: rng.bernoulli(0.3) ? 2 : 1, slot: i, ...PORTFOLIO_SCALE, ...(scenario === 'unwind' ? { hidden: { LIQ: 0.4 } } : {}) }));
   }
   // a tail hedge is usually on the menu
   if (!out.some((b) => b.pub.archetype === 'tailhedge') && rng.bernoulli(0.5)) {
