@@ -4,7 +4,7 @@ import { REGIME_SPECS } from '../../engine/market';
 import { LEVELS } from '../../engine/levels';
 import { Logo } from '../Home';
 import { money, mult, pct, signedMoney, signedPct, toneClass } from '../format';
-import { GradeBadge, Modal, Tabs, useMediaQuery } from '../kit';
+import { Collapse, GradeBadge, Modal, Tabs, useMediaQuery } from '../kit';
 import type { Prefs } from '../storage';
 import { useDeskBase, usePortfolio } from './useDesk';
 import { Briefing } from './Briefing';
@@ -15,6 +15,8 @@ import { ResolutionModal } from './Resolution';
 import { EndReview } from './EndReview';
 import { WhyModal } from './Why';
 import { Blotter } from './Blotter';
+import { RiskSummary } from './RiskSummary';
+import { IND_INFO } from '../../engine/market';
 import type { WhyTopic } from '../content';
 
 export function GameScreen(props: {
@@ -37,6 +39,7 @@ export function GameScreen(props: {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'trade' | 'market' | 'risk' | 'history'>('trade');
   const pf = usePortfolio(state, desk, targets);
   const wide = useMediaQuery('(min-width: 1024px)');
@@ -147,7 +150,15 @@ export function GameScreen(props: {
   const result = lastRun && lastRun.records.length > 0 && (
     <ResultStrip run={lastRun} onReview={(r) => setReviewRecord(r)} onClose={() => setLastRun(null)} />
   );
-  const right = <RiskPanel state={state} desk={desk} pf={pf} targets={targets} onWhy={setWhy} />;
+  const right = (
+    <div className="flex flex-col gap-3">
+      <RiskSummary state={state} desk={desk} targets={targets} />
+      <Collapse title="Advanced risk analytics" right={<span className="text-[11px] text-muted">Kelly gauge · factors · correlation · optimizer</span>}>
+        <RiskPanel state={state} desk={desk} pf={pf} targets={targets} onWhy={setWhy} />
+      </Collapse>
+    </div>
+  );
+  const strip = <MarketStrip state={state} onMore={() => setMarketOpen(true)} />;
   const bottom = <BottomPanel state={state} onOpenRecord={setReviewRecord} />;
 
   return (
@@ -188,7 +199,7 @@ export function GameScreen(props: {
         <div className="px-2 pt-2">
           <Tabs tabs={[{ id: 'trade', label: 'Trade' }, { id: 'market', label: 'Market' }, { id: 'risk', label: 'Risk' }, { id: 'history', label: 'History' }]} value={mobileTab} onChange={setMobileTab} />
           <div className="pt-2 pb-6 flex flex-col gap-3">
-            {mobileTab === 'trade' && <>{result}{blotter}</>}
+            {mobileTab === 'trade' && <>{strip}{result}{blotter}</>}
             {mobileTab === 'market' && <Briefing state={state} />}
             {mobileTab === 'risk' && right}
             {mobileTab === 'history' && bottom}
@@ -203,9 +214,8 @@ export function GameScreen(props: {
 
       {wide && (
         <>
-          <div className="grid gap-3 p-3 grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(320px,370px)] items-start">
-            <div className="sticky top-[64px] max-h-[calc(100vh-76px)] overflow-y-auto scroll-thin pr-1"><Briefing state={state} /></div>
-            <div className="min-w-0 flex flex-col gap-3">{result}{blotter}</div>
+          <div className="grid gap-3 p-3 grid-cols-[minmax(0,1fr)_minmax(360px,420px)] items-start max-w-[1600px] mx-auto w-full">
+            <div className="min-w-0 flex flex-col gap-3">{strip}{result}{blotter}</div>
             <div className="sticky top-[64px] max-h-[calc(100vh-76px)] overflow-y-auto scroll-thin pr-1">{right}</div>
           </div>
           <div className="px-3 pb-6">{bottom}</div>
@@ -234,6 +244,11 @@ export function GameScreen(props: {
           <button className="btn btn-primary" onClick={() => { setConfirmEnd(false); setState(endSession(state)); }}>Finish & see review</button>
         </>}>
           <p className="text-[13px] text-ink2">You'll get the full review of your {state.history.length} week{state.history.length === 1 ? '' : 's'}: decision grades, benchmarks, and the hidden true probabilities revealed. The session can't be resumed afterwards.</p>
+        </Modal>
+      )}
+      {marketOpen && (
+        <Modal open onClose={() => setMarketOpen(false)} title="Market briefing" footer={<button className="btn btn-primary" onClick={() => setMarketOpen(false)}>Close</button>}>
+          <Briefing state={state} />
         </Modal>
       )}
       {reviewRecord && <ResolutionModal record={reviewRecord} state={state} onClose={() => setReviewRecord(null)} onWhy={setWhy} instant />}
@@ -283,6 +298,22 @@ function ResultStrip({ run, onReview, onClose }: { run: { records: TurnRecord[];
       <div className="flex-1" />
       <button className="btn text-[12px]" onClick={() => onReview(last)}>Review week {last.turn}</button>
       <button className="btn btn-ghost text-[12px]" onClick={onClose} aria-label="Dismiss">✕</button>
+    </div>
+  );
+}
+
+function MarketStrip({ state, onMore }: { state: GameState; onMore: () => void }) {
+  const top = topRegime(state.belief);
+  const news = state.news[0];
+  const ind = state.indicators;
+  return (
+    <div className="panel px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+      <span><span className="text-muted">Market: </span><b>{REGIME_SPECS[top].name}</b> <span className="text-muted num">({pct(state.belief[top], 0)} sure)</span></span>
+      <span className="num"><span className="text-muted font-sans">{IND_INFO.VLX.name} </span>{ind.VLX.toFixed(1)}</span>
+      <span className="num"><span className="text-muted font-sans">{IND_INFO.CDX.name} </span>{ind.CDX.toFixed(0)}bp</span>
+      <span className="num"><span className="text-muted font-sans">{IND_INFO.FUND.name} </span>{ind.FUND.toFixed(0)}bp</span>
+      {news && <span className="text-ink2 truncate min-w-0 flex-1 basis-[240px]">{news.tone === 'neg' ? '▾ ' : news.tone === 'pos' ? '▴ ' : '• '}{news.text}</span>}
+      <button className="btn btn-ghost text-[11.5px] px-2 py-0.5" onClick={onMore}>Market details</button>
     </div>
   );
 }

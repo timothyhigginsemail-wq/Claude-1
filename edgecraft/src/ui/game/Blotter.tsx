@@ -5,8 +5,9 @@ import { FACTORS } from '../../engine/market';
 import { goldenMax } from '../../engine/math';
 import { latentSlope, type Quote } from '../../engine/risk';
 import { Panel, useDebounced } from '../kit';
-import { bp, money, mult, pct, signedMoney, toneClass } from '../format';
+import { money, mult, pct, signedMoney, toneClass } from '../format';
 import type { Desk } from './useDesk';
+import { themeFor } from './themes';
 
 type Filter = 'all' | 'held' | 'new' | 'pods' | 'hedges';
 
@@ -54,7 +55,12 @@ function useBookAnalytics(state: GameState, desk: Desk, targets: Record<string, 
     const full = stats((s) => pr[s]);
     const impact: Record<string, Impact> = {};
     const kelly: Record<string, number> = {};
+    const q05: Record<string, number> = {};
     ids.forEach((id, i) => {
+      const col = new Float64Array(sc.S);
+      for (let s = 0; s < sc.S; s++) col[s] = sc.R[s * sc.N + i];
+      col.sort();
+      q05[id] = col[Math.floor(sc.S * 0.05)];
       const held = (baseline[id] ?? 0) / nav;
       const p = state.instruments[id];
       if (Math.abs(w[i] - held) * nav >= 1) {
@@ -81,7 +87,7 @@ function useBookAnalytics(state: GameState, desk: Desk, targets: Record<string, 
         kelly[id] = goldenMax(g, lo, hi, 1e-4);
       }
     });
-    return { impact, kelly, vol: full.vol, growth: full.g };
+    return { impact, kelly, q05, vol: full.vol, growth: full.g };
   }, [state, desk, t, baseline, withKelly]);
 }
 
@@ -124,7 +130,6 @@ export function Blotter({ state, desk, targets, baseline, setTarget, setAll, onD
     pods: desk.universe.filter((id) => kind(state.instruments[id]) === 'pods').length,
     hedges: desk.universe.filter((id) => kind(state.instruments[id]) === 'hedges').length,
   };
-  const expPnl = desk.universe.reduce((a, id) => a + (targets[id] ?? 0) * (desk.quotes[id]?.ev ?? 0), 0);
 
   const limitFor = (id: string) => {
     const p = state.instruments[id];
@@ -189,9 +194,6 @@ export function Blotter({ state, desk, targets, baseline, setTarget, setAll, onD
         <Kpi label="Gross" value={mult(check.gross / nav)} warn={check.gross > check.maxGross * nav} sub={`limit ${mult(check.maxGross, 0)}`} />
         <Kpi label="Net" value={mult(check.net / nav)} />
         <Kpi label="Margin" value={pct(check.margin / nav, 0)} warn={check.margin > 0.75 * nav} />
-        <Kpi label="Book vol (ann.)" value={pct(an.vol, 1)} />
-        <Kpi label="Exp. growth / yr" value={pct(Math.exp(an.growth * 52) - 1, 1)} tone={toneClass(an.growth)} />
-        <Kpi label="Exp. P&L / week" value={signedMoney(expPnl)} tone={toneClass(expPnl)} />
         <Kpi label="Trading cost" value={money(check.tradeCost)} />
       </div>
       <div className="flex flex-wrap items-center gap-1 mb-2">
@@ -226,6 +228,7 @@ export function Blotter({ state, desk, targets, baseline, setTarget, setAll, onD
             truth={desk.truth?.[id]}
             impact={an.impact[id]}
             kelly={showKelly ? an.kelly[id] : undefined}
+            q05={an.q05[id]}
           />
         ))}
         {!ids.length && <div className="py-4 text-muted text-[12px]">Nothing here.</div>}
@@ -238,7 +241,7 @@ export function Blotter({ state, desk, targets, baseline, setTarget, setAll, onD
   );
 }
 
-function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limits, onDetails, truth, impact, kelly }: {
+function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limits, onDetails, truth, impact, kelly, q05 }: {
   idx: number;
   focused: boolean;
   onFocus: () => void;
@@ -253,6 +256,7 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
   truth?: number[];
   impact?: Impact;
   kelly?: number;
+  q05?: number;
 }) {
   const nav = state.nav;
   const info = ARCHETYPE_INFO[p.archetype];
@@ -264,6 +268,15 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
   const changed = Math.abs(target - held) >= 1;
   const left = p.expiresTurn - state.turn + 1;
   const tp = truth ? truth.reduce((a, x, k) => a + (p.outcomes[k].r > 0 ? x : 0), 0) : undefined;
+  // dollar figures at the chosen size, or per 10% of NAV when not sized yet
+  const n = target !== 0 ? target : 0.1 * nav;
+  const sizeLabel = target !== 0 ? `at ${money(Math.abs(target))}` : 'per 10% NAV';
+  const evUsd = n * q.ev;
+  const badUsd = n >= 0 ? n * Math.min(0, q05 ?? q.worst) : n * q.best;
+  const worstUsd = n >= 0 ? n * q.worst : n * q.best;
+  let fi = 0;
+  p.betaEst.forEach((b, k) => { if (Math.abs(b) > Math.abs(p.betaEst[fi])) fi = k; });
+  const bet = Math.abs(p.betaEst[fi]) > 0.15 ? themeFor(FACTORS[fi], p.betaEst[fi] * (n >= 0 ? 1 : -1)).bet : p.archetype === 'event' ? 'a one-off event' : 'stock-specific moves';
   return (
     <div
       data-row={idx}
@@ -296,13 +309,18 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
         </div>
       </div>
       <div className={`flex flex-wrap items-center gap-x-2 mt-1 text-[11px] num text-ink2 ${focused && !changed ? 'pl-2' : ''}`}>
-        <span className="font-sans text-muted">P(win)</span>
-        <span className="w-[54px] inline-flex"><ProbBar lo={q.winLo} mid={q.win} hi={q.winHi} truth={tp} /></span>
+        <span className="font-sans text-muted">{sizeLabel}</span>
+        <span className="text-muted">·</span>
+        <span className="font-sans text-muted">wins</span>
+        <span className="w-[44px] inline-flex"><ProbBar lo={q.winLo} mid={q.win} hi={q.winHi} truth={tp} /></span>
         <span>{pct(q.win, 0)}</span>
         <span className="text-muted">·</span>
-        <span className={q.ev >= 0 ? 'text-pos' : 'text-neg'}>EV {q.ev >= 0 ? '+' : ''}{bp(q.ev, 0)}/wk</span>
+        <span className={toneClass(evUsd)}><span className="font-sans">expected</span> {signedMoney(evUsd)}/wk</span>
         <span className="text-muted">·</span>
-        <span className="text-neg">worst {pct(q.worst, 1)}</span>
+        <span className="text-neg"><span className="font-sans">bad week</span> {signedMoney(badUsd)}</span>
+        <span className="text-muted">·</span>
+        <span className="text-neg"><span className="font-sans">worst</span> {signedMoney(worstUsd)}</span>
+        {bet && <span className="font-sans text-muted">· bets on <span className="text-ink2">{bet}</span></span>}
         {p.expiresTurn < 1e8 && <span className="text-muted font-sans">· {left <= 1 ? 'last week' : `${left} weeks left`}</span>}
         {!canAdd && <span className="text-warn font-sans">· closed to new money</span>}
         {kelly !== undefined && (
