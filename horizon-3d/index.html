@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Kips Bay Time Machine</title>
+    <meta name="description" content="Interactive 3D historical reconstruction of East 35th–40th Streets, Second Avenue to the East River, around The Horizon (415 East 37th Street), 1750–2026." />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="viewport"></div>
+    <div id="pane-labels"></div>
+    <div id="swipe-handle" hidden><span>⇔</span></div>
+
+    <header id="hud">
+      <div class="title">
+        <h1>Kips Bay Time Machine</h1>
+        <p>E 35th–40th St · Second Ave → East River · around The Horizon, 415 E 37th St</p>
+      </div>
+      <div id="era">
+        <div id="era-title"></div>
+        <div id="era-text"></div>
+        <div id="shore-text"></div>
+      </div>
+    </header>
+
+    <nav id="toolbar">
+      <button id="tools-toggle" aria-expanded="false">☰ Views, compare &amp; layers</button>
+      <div class="group" aria-label="Camera">
+        <span class="glabel">View</span>
+        <button data-view="aerial" class="on">Aerial</button>
+        <button data-view="top">Top-down</button>
+        <button data-view="street">Street</button>
+        <button data-view="river">River</button>
+      </div>
+      <div class="group" aria-label="Compare">
+        <span class="glabel">Compare</span>
+        <select id="compare-mode">
+          <option value="single">Off</option>
+          <option value="split2">Side by side (2)</option>
+          <option value="split3">Side by side (3)</option>
+          <option value="swipe">Swipe</option>
+          <option value="ghost">Ghost overlay</option>
+        </select>
+      </div>
+      <div class="group" aria-label="Layers">
+        <span class="glabel">Layers</span>
+        <label><input type="checkbox" id="lyr-labels" checked /> Labels</label>
+        <label><input type="checkbox" id="lyr-inferred" checked /> Inferred tenements</label>
+        <label><input type="checkbox" id="lyr-grid" /> 1811 grid</label>
+        <label><input type="checkbox" id="lyr-scope" checked /> Study area</label>
+      </div>
+      <div class="group">
+        <button id="trace-horizon" class="accent">Trace The Horizon’s footprint</button>
+      </div>
+    </nav>
+
+    <aside id="panel" hidden>
+      <button id="panel-close" aria-label="Close">×</button>
+      <div id="panel-body"></div>
+    </aside>
+
+    <div id="compass" title="True north (the Manhattan grid is rotated 29°)"><div id="needle">N</div></div>
+    <div id="coords"></div>
+
+    <footer id="timeline">
+      <div class="row">
+        <button id="play" aria-label="Play">▶</button>
+        <div class="year-readout"><span id="year-a">1900</span><small id="year-b-readout"></small></div>
+        <div class="track-wrap">
+          <div id="ticks"></div>
+          <input id="slider-a" type="range" min="1750" max="2026" step="0.1" value="1900" aria-label="Year" />
+          <input id="slider-b" class="extra" type="range" min="1750" max="2026" step="0.1" value="2026" aria-label="Comparison year B" hidden />
+          <input id="slider-c" class="extra" type="range" min="1750" max="2026" step="0.1" value="2026" aria-label="Comparison year C" hidden />
+        </div>
+      </div>
+      <div class="presets">
+        <span class="glabel">Jump</span>
+        <button data-year="1776.7">1776</button>
+        <button data-year="1850">1850</button>
+        <button data-year="1905">1905</button>
+        <button data-year="1953">1953</button>
+        <button data-year="1990">1990</button>
+        <button data-year="2026">2026</button>
+        <span class="glabel">Compare</span>
+        <button data-cmp="split2:1905,2026">1905 | 2026</button>
+        <button data-cmp="split3:1900,1953,2026">1900 | 1953 | 2026</button>
+        <button data-cmp="ghost:1953,2026">1953 ghosted on 2026</button>
+        <button data-cmp="swipe:1776.7,2026">Swipe 1776 ↔ 2026</button>
+      </div>
+    </footer>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

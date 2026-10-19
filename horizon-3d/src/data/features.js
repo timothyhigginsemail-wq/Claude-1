@@ -1,0 +1,557 @@
+// Authored historical features, in grid metres (see ../geo.js).
+//
+// Every feature:
+//   built / demolished   decimal years (demolished: null = standing in 2026)
+//   parts                volumes: { poly, base, height, shape }
+//                        shape: 'prism' (default) | 'gable' | 'cylinder' | 'spire' | 'dome' | 'deck'
+//   confidence           documented | approximate | inferred | unverified  (see sources.js)
+//   clears               generated tenement lots under it are demolished at clearYear
+//                        (default built − 2) — this is how the model tracks site clearance
+//
+// Footprints are placed on the 1811 grid from the descriptions in the cited
+// sources; they are massing models, not survey-grade outlines. Import NYC
+// Building Footprints (npm run import-footprints) for exact present-day shapes.
+
+import { rect, blockV, streetV, AVE, WEST_BLOCK_U, EAST_OF_FIRST_U, AVENUE_WIDTH, STREET_WIDTH } from '../geo.js';
+
+const [B35s, B35n] = blockV(35); // block between 35th and 36th
+const [B36s, B36n] = blockV(36);
+const [B37s, B37n] = blockV(37);
+const [B38s, B38n] = blockV(38);
+const [B39s, B39n] = blockV(39);
+const [W0, W1] = WEST_BLOCK_U; // Second Ave east line … First Ave west line
+const E0 = EAST_OF_FIRST_U; // First Ave east line
+
+const circle = (cu, cv, r, n = 24) =>
+  Array.from({ length: n }, (_, i) => [cu + r * Math.cos((2 * Math.PI * i) / n), cv + r * Math.sin((2 * Math.PI * i) / n)]);
+
+export const HORIZON_ID = 'horizon';
+
+export const FEATURES = [
+  // ───────────────────────── Colonial / farm era ─────────────────────────
+  {
+    id: 'kip-house',
+    name: 'Kip family farmhouse',
+    address: 'near present Second Avenue & East 35th Street',
+    kind: 'building',
+    use: 'Farmhouse of the Kip family, whose 17th-century patent gave Kips Bay its name',
+    built: 1655, demolished: 1851,
+    builtLabel: 'c. 1655', demolishedLabel: '1851',
+    parts: [{ poly: rect(W0 + 6, W0 + 22, streetV(35) - 5, streetV(35) + 5), height: 9, shape: 'gable' }],
+    color: '#c9b08a',
+    confidence: 'approximate',
+    notes: [
+      'Built by Jacobus Kip on land at the head of the bay that took his family’s name. Brick-and-stone Dutch farmhouse, enlarged in the 18th century.',
+      'Used by British and Hessian officers during the occupation after September 1776.',
+      'Demolished in 1851 when East 35th Street was cut through on the Commissioners’ grid — it stood in the bed of the new street.',
+    ],
+    sources: ['stokes', 'ratzer1767', 'britishHQ', 'encyclopedia'],
+    photoSearch: 'Kip house Kips Bay',
+    label: true,
+  },
+  {
+    id: 'kip-barn',
+    name: 'Kip farm outbuilding',
+    kind: 'building',
+    use: 'Barn / farm outbuilding',
+    built: 1700, demolished: 1845,
+    builtLabel: '18th c.', demolishedLabel: 'by c. 1845',
+    parts: [{ poly: rect(W0 + 40, W0 + 54, streetV(35) + 14, streetV(35) + 22), height: 7, shape: 'gable' }],
+    color: '#a88a62',
+    confidence: 'unverified',
+    notes: ['Representative outbuilding: period maps show the Kip farm as a cluster of buildings near the shore road. Position is illustrative.'],
+    sources: ['ratzer1767', 'britishHQ'],
+    photoSearch: 'Kips Bay farm',
+  },
+
+  // ───────────────────────── Infrastructure ─────────────────────────
+  {
+    id: 'second-ave-el',
+    name: 'Second Avenue Elevated',
+    address: 'over Second Avenue',
+    kind: 'infrastructure',
+    use: 'Elevated rapid-transit line (Manhattan Railway Co., later IRT)',
+    built: 1880, demolished: 1942,
+    builtLabel: '1880', demolishedLabel: '1942 (service ended June 1942; structure scrapped)',
+    parts: [{ poly: rect(AVE.second - 5, AVE.second + 5, -320, 330), base: 10, height: 1.4, shape: 'deck' }],
+    color: '#5b4e45',
+    confidence: 'documented',
+    notes: [
+      'Opened along Second Avenue in 1880, darkening the avenue and its tenement storefronts for six decades.',
+      'Service south of 57th Street ended in 1942 and the steel was scrapped during the war effort.',
+    ],
+    sources: ['encyclopedia', 'nypl'],
+    photoSearch: 'Second Avenue elevated 34th Street',
+    clears: false,
+    label: true,
+  },
+  {
+    id: 'qmt-portal',
+    name: 'Queens–Midtown Tunnel — Manhattan portal & approaches',
+    address: 'between First and Second Avenues, E 36th–37th Streets',
+    kind: 'infrastructure',
+    use: 'Vehicular tunnel portal, ramps and plaza',
+    built: 1940, demolished: null,
+    builtLabel: '1940 (construction 1936–40)',
+    parts: [
+      { poly: rect(W0 + 12, W1 - 70, B36s + 8, B36n - 6), height: 0.6, shape: 'prism' },
+      { poly: rect(W0 + 12, W0 + 34, B36s + 4, B36n - 2), height: 6, shape: 'prism' },
+    ],
+    color: '#4a4f57',
+    confidence: 'approximate',
+    notes: [
+      'The New York City Tunnel Authority cleared tenements and St. Gabriel’s Church for the Manhattan approaches; the tunnel opened in November 1940.',
+      'The portal drops below grade toward the river; the dark slab marks the depressed roadway and plaza. Exact ramp geometry should be traced from current footprints.',
+    ],
+    sources: ['tbta', 'encyclopedia', 'nytimes'],
+    photoSearch: 'Queens Midtown Tunnel Manhattan entrance',
+    clearYear: 1937,
+    label: true,
+  },
+  {
+    id: 'fdr-drive',
+    name: 'FDR Drive (East River Drive)',
+    kind: 'infrastructure',
+    use: 'Limited-access highway along the East River',
+    built: 1942, demolished: null,
+    builtLabel: 'early 1940s (this section)',
+    parts: [{ poly: rect(204, 232, -320, 330), height: 0.5, shape: 'prism' }],
+    color: '#3d4148',
+    confidence: 'approximate',
+    notes: ['Built in sections from the late 1930s; the Kips Bay–Turtle Bay stretch was completed in the early 1940s on new fill outside the old bulkhead.'],
+    sources: ['encyclopedia', 'bromley'],
+    photoSearch: 'East River Drive 1940s',
+    clears: false,
+  },
+
+  // ───────────────────────── 1850–1950 ─────────────────────────
+  {
+    id: 'st-gabriels',
+    name: 'St. Gabriel’s Roman Catholic Church',
+    address: '310 East 37th Street',
+    kind: 'building',
+    use: 'Parish church (Roman Catholic)',
+    built: 1859, demolished: 1939,
+    builtLabel: 'parish 1859; church c. 1860s', demolishedLabel: '1939 (cleared for the tunnel)',
+    parts: [
+      { poly: rect(W0 + 30, W0 + 52, B36n - 40, B36n), height: 18, shape: 'gable' },
+      { poly: rect(W0 + 36, W0 + 46, B36n - 8, B36n), height: 34, shape: 'prism' },
+      { poly: rect(W0 + 36, W0 + 46, B36n - 8, B36n), base: 34, height: 18, shape: 'spire' },
+    ],
+    color: '#9a8f86',
+    confidence: 'approximate',
+    notes: [
+      'An Irish working-class parish serving the tenements and waterfront workers of Kips Bay.',
+      'Demolished for the Queens–Midtown Tunnel approaches; the parish name survived in St. Gabriel’s Park (now St. Vartan Park) one block south.',
+    ],
+    sources: ['nycparks', 'nytimes', 'bromley'],
+    photoSearch: 'St. Gabriel\'s Church East 37th Street',
+    clearYear: 1857,
+    label: true,
+  },
+  {
+    id: 'kips-bay-brewery',
+    name: 'Kips Bay Brewing & Malting Co.',
+    address: 'First Avenue, East 37th–38th Streets (east side)',
+    kind: 'building',
+    use: 'Lager brewery and malt house',
+    built: 1888, demolished: 1946,
+    builtLabel: 'c. 1880s', demolishedLabel: 'by mid-1940s',
+    parts: [
+      { poly: rect(E0 + 2, E0 + 60, B37s + 2, B37n - 28), height: 24, shape: 'prism' },
+      { poly: rect(E0 + 60, E0 + 104, B37s + 6, B37n - 22), height: 15, shape: 'gable' },
+      { poly: rect(E0 + 14, E0 + 26, B37s + 10, B37s + 22), base: 24, height: 10, shape: 'prism' },
+      { poly: circle(E0 + 80, B37n - 10, 2.4, 12), height: 42, shape: 'cylinder' },
+    ],
+    color: '#8c5a3c',
+    confidence: 'unverified',
+    notes: [
+      'One of the many German-American breweries that lined the East Side waterfront around 1900, taking ice and shipping by river.',
+      'Name, footprint and closing date are research leads, not confirmed: check Bromley 1899/1916 plates for the First Avenue frontage between 37th and 38th Streets.',
+      'This footprint overlaps the later Horizon site — confirming it is the key step in tracing The Horizon’s lot history.',
+    ],
+    sources: ['bromley', 'sanborn', 'taxphotos1940'],
+    photoSearch: 'brewery First Avenue 38th Street',
+    label: true,
+  },
+  {
+    id: 'waterside-1',
+    name: 'Waterside Generating Station No. 1',
+    address: 'First Avenue to the river, East 38th–39th Streets',
+    kind: 'building',
+    use: 'Electric generating station (New York Edison Co., later Con Edison); later steam',
+    built: 1901, demolished: 2006,
+    builtLabel: '1901', demolishedLabel: 'retired 2005, demolished 2005–07',
+    parts: [
+      { poly: rect(E0 + 2, 190, B38s + 2, B38n - 2), height: 42, shape: 'gable' },
+      ...[0, 1, 2, 3].map((i) => ({ poly: circle(E0 + 50 + i * 34, (B38s + B38n) / 2, 3.6, 16), base: 42, height: 64, shape: 'cylinder' })),
+    ],
+    color: '#7d4b3a',
+    confidence: 'documented',
+    notes: [
+      'Built by the New York Edison Company to power Manhattan’s electrification; coal arrived by barge at the plant’s own wharf.',
+      'Converted to steam production in later decades; Con Edison sold the site in 2000 and the plant was demolished after 2005.',
+    ],
+    sources: ['conEd', 'bromley', 'mcny', 'encyclopedia'],
+    photoSearch: 'Waterside station Con Edison 38th Street',
+    label: true,
+  },
+  {
+    id: 'waterside-2',
+    name: 'Waterside Generating Station No. 2',
+    address: 'First Avenue to the river, East 39th–40th Streets',
+    kind: 'building',
+    use: 'Electric generating station (New York Edison Co., later Con Edison)',
+    built: 1906, demolished: 2006,
+    builtLabel: 'c. 1906', demolishedLabel: 'demolished 2005–07',
+    parts: [
+      { poly: rect(E0 + 2, 190, B39s + 2, B39n - 2), height: 46, shape: 'gable' },
+      ...[0, 1, 2].map((i) => ({ poly: circle(E0 + 64 + i * 40, (B39s + B39n) / 2, 3.8, 16), base: 46, height: 66, shape: 'cylinder' })),
+    ],
+    color: '#7a4636',
+    confidence: 'documented',
+    notes: ['Second Waterside plant, built as demand outgrew No. 1. Together the stations dominated the waterfront from 38th to 40th Street for a century.'],
+    sources: ['conEd', 'bromley', 'mcny'],
+    photoSearch: 'Waterside power station East River',
+    label: false,
+  },
+  {
+    id: 'coned-35',
+    name: 'Con Edison waterfront facilities (East 35th–36th Streets)',
+    address: 'First Avenue to the river, East 35th–36th Streets',
+    kind: 'building',
+    use: 'Utility plant / yard',
+    built: 1912, demolished: 2008,
+    builtLabel: 'c. 1910s', demolishedLabel: 'cleared 2000s',
+    parts: [
+      { poly: rect(E0 + 30, 186, B35s + 4, B35n - 4), height: 26, shape: 'gable' },
+      { poly: circle(E0 + 110, (B35s + B35n) / 2, 3.2, 16), base: 26, height: 46, shape: 'cylinder' },
+    ],
+    color: '#6f5045',
+    confidence: 'unverified',
+    notes: [
+      'This block was part of the Con Edison First Avenue holdings sold with Waterside around 2000. Building type and dates are placeholders to be checked against Bromley 1916/1930/1955.',
+    ],
+    sources: ['conEd', 'bromley'],
+    photoSearch: 'Con Edison First Avenue 35th Street',
+  },
+  {
+    id: 'pier-35', name: 'Pier at the foot of East 35th Street', kind: 'pier', use: 'Freight pier', built: 1872, demolished: 1943,
+    pierV: streetV(35), color: '#6d5a48', confidence: 'inferred', sources: ['bromley', 'perris'],
+    notes: ['Representative pier. Bromley atlases show piers or bulkhead wharves at the foot of most streets on this stretch; lengths are schematic.'], photoSearch: 'pier East 35th Street', clears: false,
+  },
+  {
+    id: 'pier-37', name: 'Pier at the foot of East 37th Street', kind: 'pier', use: 'Freight / ferry pier', built: 1872, demolished: 1943,
+    pierV: streetV(37), color: '#6d5a48', confidence: 'inferred', sources: ['bromley'], notes: ['Representative pier; see Bromley 1899 for the actual pierhead.'], photoSearch: 'pier East 37th Street', clears: false,
+  },
+  {
+    id: 'pier-38', name: 'Waterside coal wharf', kind: 'pier', use: 'Coal-barge unloading for the Waterside plants', built: 1901, demolished: 1943,
+    pierV: streetV(39), pierWidth: 22, pierLength: 46, color: '#3e3832', confidence: 'approximate', sources: ['bromley', 'mcny'],
+    notes: ['Coal for the generating stations was delivered by barge; the wharf disappeared under the FDR Drive fill.'], photoSearch: 'Waterside coal East River', clears: false,
+  },
+  {
+    id: 'st-gabriels-park',
+    name: 'St. Gabriel’s Park → St. Vartan Park',
+    address: 'First to Second Avenue, East 35th–36th Streets',
+    kind: 'park',
+    use: 'Public park and playground',
+    built: 1910, demolished: null,
+    builtLabel: 'c. 1910 (tenements cleared c. 1905)',
+    parts: [{ poly: rect(W0 + 2, W1 - 2, B35s + 2, B35n - 2), height: 0.25, shape: 'prism' }],
+    color: '#5f8f4e',
+    confidence: 'approximate',
+    notes: [
+      'Created by clearing a block of tenements; named for the nearby St. Gabriel’s Church.',
+      'Renamed St. Vartan Park after St. Vartan Armenian Cathedral on Second Avenue (renaming dates to the late 1970s — verify on the NYC Parks history page).',
+    ],
+    sources: ['nycparks', 'bromley'],
+    photoSearch: 'St. Gabriel\'s Park 35th Street',
+    clearYear: 1905,
+    label: true,
+  },
+  {
+    id: 'bideawee',
+    name: 'Bideawee — Manhattan shelter',
+    address: '410 East 38th Street',
+    kind: 'building',
+    use: 'Animal shelter and adoption centre',
+    built: 1915, demolished: null,
+    builtLabel: 'early 20th c. (verify year of arrival)',
+    parts: [{ poly: rect(E0 + 24, E0 + 46, B37n - 26, B37n), height: 15, shape: 'prism' }],
+    color: '#b9a27c',
+    confidence: 'approximate',
+    notes: [
+      'Bideawee was founded in 1903 as a no-kill shelter. Its Manhattan home on East 38th Street, on the same block as The Horizon, is the neighbourhood’s longest-surviving institution.',
+      'The year it moved here is not yet confirmed in this dataset.',
+    ],
+    sources: ['bideawee', 'taxphotos1940'],
+    photoSearch: 'Bide-a-Wee East 38th Street',
+    label: true,
+  },
+
+  // ───────────────────────── Mid-century ─────────────────────────
+  {
+    id: 'east-side-airlines-terminal',
+    name: 'East Side Airlines Terminal',
+    address: 'First Avenue, East 37th–38th Streets (west side)',
+    kind: 'building',
+    use: 'Airline check-in and airport bus terminal (to Idlewild & LaGuardia)',
+    built: 1953, demolished: 1985,
+    builtLabel: '1953', demolishedLabel: 'closed mid-1980s; demolished for The Corinthian',
+    parts: [
+      { poly: rect(W1 - 110, W1 - 2, B37s + 2, B37n - 2), height: 16, shape: 'prism' },
+      { poly: rect(W1 - 100, W1 - 12, B37s + 10, B37n - 10), base: 16, height: 6, shape: 'prism' },
+      { poly: rect(W1 - 150, W1 - 110, B37s + 20, B37s + 34), height: 6, shape: 'prism' },
+    ],
+    color: '#c7c3b4',
+    confidence: 'approximate',
+    notes: [
+      'Opened in 1953 so passengers could check in for flights in Manhattan and ride a bus straight into the Queens–Midtown Tunnel to the airports.',
+      'Declined as airline check-in moved to the airports; the site was redeveloped as The Corinthian (completed 1988). Verify demolition year.',
+    ],
+    sources: ['nytimes', 'mcny', 'taxphotos1980'],
+    photoSearch: 'East Side Airlines Terminal',
+    clearYear: 1951,
+    label: true,
+  },
+
+  // ───────────────────────── Late 20th century ─────────────────────────
+  {
+    id: 'churchill',
+    name: 'The Churchill',
+    address: '300 East 40th Street',
+    kind: 'building',
+    use: 'Residential tower (rental)',
+    built: 1971, demolished: null,
+    builtLabel: 'c. 1971',
+    parts: [
+      { poly: rect(W0 + 2, W0 + 52, B39n - 34, B39n - 2), height: 10, shape: 'prism' },
+      { poly: rect(W0 + 8, W0 + 46, B39n - 30, B39n - 6), base: 10, height: 112, shape: 'prism' },
+    ],
+    color: '#c2b8a6',
+    confidence: 'unverified',
+    notes: ['Large post-war tower at Second Avenue and 40th Street. Height and year to verify against PLUTO.'],
+    sources: ['pluto', 'ctbuh'],
+    photoSearch: 'Churchill 300 East 40th Street',
+    modern: true,
+  },
+  {
+    id: 'manhattan-place',
+    name: 'Manhattan Place',
+    address: '630 First Avenue',
+    kind: 'building',
+    use: 'Residential condominium tower',
+    built: 1984, demolished: null,
+    builtLabel: 'c. 1984',
+    parts: [
+      { poly: rect(E0 + 6, E0 + 96, B36s + 4, B36n - 4), height: 6, shape: 'prism' },
+      { poly: rect(E0 + 22, E0 + 78, B36s + 14, B36n - 18), base: 6, height: 104, shape: 'prism' },
+    ],
+    color: '#b8a48e',
+    confidence: 'unverified',
+    notes: ['Mid-1980s condominium tower with a plaza on First Avenue. Placement on the east side of First Avenue between 36th and 37th Streets should be verified.'],
+    sources: ['pluto', 'ctbuh', 'taxphotos1980'],
+    photoSearch: 'Manhattan Place 630 First Avenue',
+    modern: true,
+    label: true,
+  },
+  {
+    id: 'corinthian',
+    name: 'The Corinthian',
+    address: '330 East 38th Street',
+    kind: 'building',
+    use: 'Residential condominium tower (cluster of fluted cylinders)',
+    built: 1988, demolished: null,
+    builtLabel: '1987–88 (architect Der Scutt)',
+    parts: [
+      { poly: rect(W1 - 100, W1 - 4, B37s + 4, B37n - 4), height: 12, shape: 'prism' },
+      { poly: circle(W1 - 66, B37s + 34, 15, 28), base: 12, height: 160, shape: 'cylinder' },
+      { poly: circle(W1 - 40, B37s + 30, 13, 28), base: 12, height: 150, shape: 'cylinder' },
+      { poly: circle(W1 - 54, B37s + 18, 12, 28), base: 12, height: 138, shape: 'cylinder' },
+    ],
+    color: '#d6d0c4',
+    confidence: 'approximate',
+    notes: [
+      '55-storey condominium of linked cylindrical towers next to the tunnel exits — among the tallest residential buildings in the area when completed.',
+      'Built on the former East Side Airlines Terminal site.',
+    ],
+    sources: ['ctbuh', 'nytimes', 'pluto'],
+    photoSearch: 'Corinthian 330 East 38th Street',
+    modern: true,
+    label: true,
+  },
+  {
+    id: HORIZON_ID,
+    name: 'The Horizon',
+    address: '415 East 37th Street',
+    kind: 'building',
+    use: 'Residential tower (condominium)',
+    built: 1989, demolished: null,
+    builtLabel: 'c. 1988–89',
+    parts: [
+      { poly: rect(E0 + 4, 176, B37s + 2, B37s + 32), height: 9, shape: 'prism' },
+      { poly: rect(E0 + 48, E0 + 138, B37s + 6, B37s + 28), base: 9, height: 112, shape: 'prism' },
+      { poly: rect(E0 + 60, E0 + 126, B37s + 10, B37s + 24), base: 121, height: 5, shape: 'prism' },
+    ],
+    color: '#e3c27a',
+    confidence: 'approximate',
+    notes: [
+      'Late-1980s residential slab between First Avenue and the FDR Drive, facing south over East 37th Street and east over the river.',
+      'Its footprint sits largely on 19th-century landfill: in 1776 most of this site was the East River shore. Use “Trace footprint through time” to see every documented use of the site.',
+      'Floors, unit count and completion year are approximate; confirm in PLUTO (Block/Lot) and DOB records.',
+    ],
+    sources: ['pluto', 'nycFootprints', 'taxphotos1980', 'bromley'],
+    photoSearch: '415 East 37th Street',
+    modern: true,
+    label: true,
+  },
+  {
+    id: 'american-copper',
+    name: 'American Copper Buildings',
+    address: '626 First Avenue',
+    kind: 'building',
+    use: 'Rental residential towers joined by a sky bridge (SHoP Architects)',
+    built: 2017, demolished: null,
+    builtLabel: '2017',
+    parts: [
+      { poly: rect(E0 + 20, E0 + 62, B35s + 10, B35n - 10), height: 140, shape: 'prism' },
+      { poly: rect(E0 + 104, E0 + 150, B35s + 10, B35n - 10), height: 163, shape: 'prism' },
+      { poly: rect(E0 + 62, E0 + 104, B35s + 18, B35n - 18), base: 92, height: 12, shape: 'prism' },
+    ],
+    color: '#b46f43',
+    confidence: 'documented',
+    notes: ['Two copper-clad towers (41 and 48 storeys) on former Con Edison land, linked by a three-storey sky bridge with a pool.'],
+    sources: ['ctbuh', 'pluto', 'conEd'],
+    photoSearch: 'American Copper Buildings',
+    modern: true,
+    label: true,
+  },
+  {
+    id: 'first-ave-685',
+    name: '685 First Avenue',
+    address: '685 First Avenue',
+    kind: 'building',
+    use: 'Residential tower (Richard Meier & Partners)',
+    built: 2019, demolished: null,
+    builtLabel: '2019',
+    parts: [
+      { poly: rect(E0 + 4, E0 + 64, B39s + 6, B39n - 6), height: 10, shape: 'prism' },
+      { poly: rect(E0 + 10, E0 + 56, B39s + 14, B39n - 22), base: 10, height: 130, shape: 'prism' },
+    ],
+    color: '#2d2f35',
+    confidence: 'approximate',
+    notes: ['Black-glass residential tower on part of the former Waterside No. 2 site.'],
+    sources: ['ctbuh', 'pluto', 'conEd'],
+    photoSearch: '685 First Avenue',
+    modern: true,
+    label: true,
+  },
+  {
+    id: 'waterside-site',
+    name: 'Former Waterside No. 1 site',
+    address: 'First Avenue, East 38th–39th Streets',
+    kind: 'lot',
+    use: 'Cleared development site',
+    built: 2008, demolished: null,
+    builtLabel: 'cleared 2005–08',
+    parts: [{ poly: rect(E0 + 4, 186, B38s + 4, B38n - 4), height: 0.4, shape: 'prism' }],
+    color: '#8e8a7e',
+    confidence: 'unverified',
+    notes: ['Status in 2026 should be checked — the former plant blocks have been the subject of repeated development proposals.'],
+    sources: ['conEd'],
+    photoSearch: 'Waterside site First Avenue 38th Street',
+    clears: false,
+  },
+  {
+    id: 'st-vartan',
+    name: 'St. Vartan Armenian Cathedral',
+    address: '630 Second Avenue (just south of the study area)',
+    kind: 'building',
+    use: 'Cathedral (Armenian Apostolic)',
+    built: 1968, demolished: null,
+    builtLabel: '1968',
+    parts: [
+      { poly: rect(W0 + 10, W0 + 52, B35s - 70, B35s - 24), height: 20, shape: 'prism' },
+      { poly: circle(W0 + 31, B35s - 47, 11, 24), base: 20, height: 10, shape: 'cylinder' },
+      { poly: circle(W0 + 31, B35s - 47, 11, 24), base: 30, height: 14, shape: 'spire' },
+    ],
+    color: '#d8d0bd',
+    confidence: 'documented',
+    notes: ['Context building just outside the study area; St. Vartan Park is named for it.'],
+    sources: ['encyclopedia', 'nycparks'],
+    photoSearch: 'St. Vartan Cathedral',
+    modern: true,
+  },
+  {
+    id: 'horizon-gap',
+    name: 'Horizon site, 1946–1987 (undocumented)',
+    address: 'First Avenue to FDR Drive, north side of East 37th Street',
+    kind: 'lot',
+    use: 'Unknown — not yet researched',
+    built: 1946, demolished: 1987,
+    builtLabel: 'after the brewery', demolishedLabel: 'cleared for The Horizon',
+    parts: [{ poly: rect(E0 + 4, 176, B37s + 2, B37s + 32), height: 0.3, shape: 'prism' }],
+    color: '#9a9a9a',
+    confidence: 'unverified',
+    notes: [
+      'This dataset does not yet document what stood on the Horizon footprint between the brewery era and the late-1980s construction.',
+      'Best evidence: the 1940s and 1980s tax photographs for this Block/Lot, and the 1955 Bromley atlas.',
+    ],
+    sources: ['taxphotos1940', 'taxphotos1980', 'bromley'],
+    photoSearch: 'East 37th Street First Avenue 1960s',
+    clearYear: 1945,
+  },
+];
+
+// Events shown in the 3D scene as markers (not buildings).
+export const EVENTS = [
+  {
+    id: 'kips-bay-landing',
+    name: 'British landing at Kips Bay',
+    date: '15 September 1776',
+    from: 1776, to: 1777,
+    at: [-60, -250],
+    notes: [
+      'Five Royal Navy warships (Phoenix, Roebuck, Orpheus, Carysfort and Rose) bombarded American earthworks on the shore; some 4,000 British and Hessian troops under Clinton then crossed from Newtown Creek in flatboats and landed in the bay.',
+      'Connecticut militia broke and fled; Washington’s army retreated north to Harlem Heights. The landing beach lay at the south edge of this model, roughly 32nd–34th Streets.',
+    ],
+    sources: ['schecter', 'encyclopedia', 'britishHQ'],
+  },
+];
+
+// Timeline markers (also used for era captions).
+export const ERAS = [
+  { from: 1750, to: 1775, title: 'Colonial farmland', text: 'The Kip farm at the head of Kips Bay. Woods, orchards and salt meadow run down to a natural shoreline well west of today’s First Avenue.' },
+  { from: 1775, to: 1783, title: 'Revolution — Kips Bay landing', text: 'On 15 September 1776 British warships shelled the shore and redcoats landed in the bay. The area stays under British occupation until 1783.' },
+  { from: 1783, to: 1845, title: 'Estates and the coming grid', text: 'Country estates and farms. The 1811 Commissioners’ Plan maps streets over the hills and marsh; the avenues are opened first.' },
+  { from: 1845, to: 1880, title: 'Streets, fill and tenements', text: 'Cross streets are cut through (the Kip house falls in 1851), the shoreline is pushed out with fill, and rows of tenements fill the new lots.' },
+  { from: 1880, to: 1936, title: 'Industrial waterfront', text: 'The Second Avenue El roars overhead; breweries, piers and the Waterside power stations line the river; tenements house the workers who run them.' },
+  { from: 1936, to: 1955, title: 'Tunnel, highway and terminal', text: 'The Queens–Midtown Tunnel (1940) and FDR Drive slice through the district; the El comes down (1942); the East Side Airlines Terminal opens (1953).' },
+  { from: 1955, to: 1980, title: 'Utility district', text: 'Power plants and transport infrastructure dominate east of First Avenue; old tenements persist along Second Avenue.' },
+  { from: 1980, to: 2000, title: 'Residential towers', text: 'Manhattan Place, The Corinthian and The Horizon replace the terminal and industrial lots with high-rise apartments.' },
+  { from: 2000, to: 2027, title: 'Post-industrial waterfront', text: 'Con Edison leaves the waterfront; Waterside is demolished and new towers (American Copper Buildings, 685 First Avenue) rise on its land.' },
+];
+
+export const TIMELINE_EVENTS = [
+  { year: 1776.7, label: 'Kips Bay landing' },
+  { year: 1811, label: 'Commissioners’ Plan' },
+  { year: 1851, label: 'Kip house demolished' },
+  { year: 1880, label: '2nd Ave El opens' },
+  { year: 1901, label: 'Waterside No. 1' },
+  { year: 1940, label: 'Queens–Midtown Tunnel' },
+  { year: 1942, label: 'El closes' },
+  { year: 1953, label: 'Airline terminal' },
+  { year: 1988, label: 'The Corinthian' },
+  { year: 1989, label: 'The Horizon' },
+  { year: 2006, label: 'Waterside demolished' },
+  { year: 2017, label: 'American Copper' },
+];
+
+export const STREETS = {
+  // year each street segment is treated as opened (approximate, Randel/Perris)
+  avenues: [
+    { name: 'Second Avenue', u: AVE.second, width: AVENUE_WIDTH, opened: 1830 },
+    { name: 'First Avenue', u: AVE.first, width: AVENUE_WIDTH, opened: 1832 },
+  ],
+  streets: [34, 35, 36, 37, 38, 39, 40, 41].map((n) => ({ name: `East ${n}th Street`, short: `E ${n} St`, v: streetV(n), width: STREET_WIDTH, opened: n === 35 ? 1851 : 1848 })),
+};

@@ -1,0 +1,20 @@
+{
+  "name": "horizon-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive 3D historical time machine of East 35th–40th Streets, Second Avenue to the East River, around The Horizon (415 East 37th Street, Manhattan).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs",
+    "import-footprints": "node scripts/import-footprints.mjs"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "vite": "5.4.11"
+  }
+}
