@@ -386,7 +386,11 @@ function flyTo(u, v, h) {
 function writeHash() {
   const [a, b, c] = state.years.map((y) => y.toFixed(1));
   const h = `y=${a}` + (state.mode !== 'single' ? `&m=${state.mode}&b=${b}&c=${c}` : '');
-  history.replaceState(null, '', `#${h}`);
+  try {
+    history.replaceState(null, '', `#${h}`);
+  } catch {
+    // sandboxed hosts may refuse URL updates; the view still works
+  }
 }
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
