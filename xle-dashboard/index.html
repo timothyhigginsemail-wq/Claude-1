@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XLE Energy Explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f4; --card:#ffffff; --ink:#1b1f24; --muted:#5d6670; --faint:#8a929b;
+  --line:#e4e4de; --accent:#0f5c63;
+  --integrated:#0f5c63; --ep:#c8771a; --refining:#6b4fa0; --midstream:#3a7d3a; --services:#7a8794; --other:#c9ccd0;
+  --pos:#2e7d4f; --neg:#b23b3b; --mix:#a07a14;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+header.top{padding:40px 0 18px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:34px;line-height:1.15;margin:10px 0 8px;letter-spacing:-.02em}
+.lede{color:var(--muted);max-width:760px;margin:0}
+nav.toc{position:sticky;top:0;z-index:5;background:rgba(247,247,244,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -24px;padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap}
+nav.toc a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px}
+nav.toc a:hover{background:#ecece6;color:var(--ink)}
+section{padding:44px 0 8px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.sec-num{font:500 13px "IBM Plex Mono",monospace;color:var(--faint)}
+h2{font-size:24px;margin:0;letter-spacing:-.01em}
+.question{color:var(--muted);margin:2px 0 22px;font-size:15px}
+.question b{color:var(--ink);font-weight:600}
+h3{font-size:15px;margin:0 0 10px;letter-spacing:-.005em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g-7-5{grid-template-columns:7fr 5fr}
+@media (max-width:900px){.g2,.g3,.g-7-5{grid-template-columns:1fr}}
+p{margin:0 0 10px}
+.small{font-size:13px;color:var(--muted)}
+.src{font-size:12px;color:var(--faint);margin-top:12px;line-height:1.45}
+.src a{color:var(--faint)}
+ul.tight{margin:0;padding-left:18px} ul.tight li{margin:4px 0}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media (max-width:1000px){.metrics{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px}
+.metric .k{font-size:12px;color:var(--muted)}
+.metric .v{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+.metric .d{font-size:11.5px;color:var(--faint);margin-top:2px}
+
+/* tooltip terms */
+.term{border-bottom:1px dotted var(--faint);cursor:help;position:relative}
+.term:focus{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+#tip{position:fixed;z-index:50;max-width:290px;background:#1b1f24;color:#f3f3ef;font-size:12.5px;line-height:1.45;padding:9px 11px;border-radius:8px;pointer-events:none;opacity:0;transition:opacity .12s;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#tip.on{opacity:1}
+
+/* compare table */
+.vs{width:100%;border-collapse:collapse;font-size:13.5px}
+.vs th,.vs td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.vs th{font-size:12px;color:var(--muted);font-weight:600}
+.vs td:first-child{font-weight:500;width:28%}
+
+/* exposure bar */
+.stack{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.stack div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* holdings chart */
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 52px;align-items:center;gap:10px;padding:5px 6px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:none;font:inherit;color:inherit;text-align:left;width:100%}
+.bar-row:hover{background:#f3f3ee}
+.bar-row.sel{background:#eef4f4;border-color:#cfe0e1}
+.bar-row:focus-visible{outline:2px solid var(--accent)}
+.bar-name{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-name .tk{font:500 11px "IBM Plex Mono",monospace;color:var(--faint);margin-left:4px}
+.bar-track{height:18px;position:relative}
+.bar-fill{height:100%;border-radius:0 4px 4px 0;transition:opacity .15s}
+.bar-val{font-size:13px;font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.bars.dim .bar-row:not(.match) .bar-fill{opacity:.18}
+.bars.dim .bar-row:not(.match) .bar-name{color:var(--faint)}
+.cum{font-size:12px;color:var(--muted);margin:14px 0 0;display:flex;gap:18px;flex-wrap:wrap}
+.cum b{color:var(--ink)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{font:500 12.5px Inter,sans-serif;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.chip:hover{border-color:#cfcfc6;color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+@media (max-width:560px){.bar-row{grid-template-columns:104px 1fr 44px}}
+
+/* detail */
+.detail .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;color:#fff;margin-bottom:8px}
+.detail h3{font-size:19px;margin-bottom:4px}
+.detail .w{font-size:13px;color:var(--muted);margin-bottom:14px}
+.detail dt{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:600;margin-top:14px}
+.detail dd{margin:4px 0 0}
+
+/* group cards */
+.models{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media (max-width:1000px){.models{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.models{grid-template-columns:1fr}}
+.model{background:var(--card);border:1px solid var(--line);border-top:4px solid;border-radius:10px;padding:14px}
+.model .nm{font-weight:600;font-size:14px}
+.model .pct{font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0}
+.model .who{font-size:12px;color:var(--faint);margin-bottom:6px}
+.model p{font-size:12.5px;color:var(--muted);margin:0}
+
+/* driver flow */
+.flow svg{width:100%;height:auto;display:block}
+.flow text{font-family:Inter,sans-serif}
+.drv{cursor:pointer}
+.drv rect{transition:fill .15s,stroke .15s}
+.drv:hover rect,.drv.sel rect{stroke:var(--accent);stroke-width:2}
+.drv:focus{outline:none}
+.drv:focus-visible rect{stroke:var(--accent);stroke-width:2.5}
+
+/* matrix */
+.matrix{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.matrix th{font-size:12px;color:var(--muted);font-weight:600;text-align:center;padding:8px 6px;border-bottom:1px solid var(--line)}
+.matrix th:first-child{text-align:left}
+.matrix td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:center}
+.matrix td:first-child{text-align:left;font-weight:500}
+.matrix tr{cursor:pointer}
+.matrix tr:hover td{background:#f6f6f1}
+.matrix tr.sel td{background:#eef4f4}
+.cell{display:inline-flex;align-items:center;justify-content:center;width:30px;height:24px;border-radius:6px;font-weight:700;font-size:13px}
+.c-pos{background:#e3f1e8;color:var(--pos)}
+.c-neg{background:#f7e3e3;color:var(--neg)}
+.c-mix{background:#f6eed6;color:var(--mix)}
+.c-neu{background:#efefea;color:var(--faint)}
+.mx-wrap{overflow-x:auto}
+.drv-note{margin-top:14px;padding:14px 16px;background:#fbfbf8;border:1px solid var(--line);border-radius:10px;font-size:13.5px}
+.drv-note b{font-weight:600}
+.exc{margin-top:8px;padding-left:10px;border-left:3px solid var(--mix);color:var(--muted);font-size:13px}
+
+/* scenarios */
+.scen-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+@media (max-width:800px){.scen-btns{grid-template-columns:1fr 1fr}}
+.scen-btn{font:inherit;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:12px 14px;cursor:pointer;color:var(--ink)}
+.scen-btn .s1{font-weight:600;font-size:14px}
+.scen-btn .s2{font-size:12px;color:var(--muted);margin-top:2px}
+.scen-btn:hover{border-color:#c9c9c0}
+.scen-btn.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#f2f7f7}
+.effects{display:flex;flex-direction:column;gap:8px}
+.eff{display:grid;grid-template-columns:150px 140px 1fr;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.eff:last-child{border-bottom:0}
+@media (max-width:640px){.eff{grid-template-columns:1fr 1fr}.eff .why{grid-column:1/-1}}
+.eff .nm{font-weight:600;display:flex;align-items:center;gap:8px}
+.dir{display:flex;gap:3px;align-items:center}
+.dir i{width:16px;height:10px;border-radius:2px;background:#ececE6}
+.dir .lbl{font-size:11.5px;color:var(--muted);margin-left:6px;font-style:normal}
+.why{color:var(--muted);font-size:13px}
+.caveat{background:#fbf6e8;border:1px solid #eadfb9;border-radius:10px;padding:12px 14px;font-size:13.5px;margin-top:14px}
+.disclaimer{font-size:12px;color:var(--faint);margin-top:12px}
+.banner{background:#fbfbf8;border:1px dashed #d2d2c8;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint)}
+footer a{color:var(--muted)}
+.pill{display:inline-block;font:500 11px "IBM Plex Mono",monospace;background:#ecece6;color:var(--muted);border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="tip" role="tooltip"></div>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Sector ETF explainer · Data snapshot as of 31 Mar 2026</div>
+  <h1>XLE: what you own, what moves it, and when it diverges from oil</h1>
+  <p class="lede">XLE holds the 25 energy stocks in the S&amp;P 500, weighted by market cap. You own <b>companies</b>, and their cash flows come from producing, refining, moving or servicing hydrocarbons. You don't own a barrel of oil.</p>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#glance">1 · At a glance</a>
+  <a href="#inside">2 · What's inside</a>
+  <a href="#drivers">3 · What drives returns</a>
+  <a href="#scenarios">4 · Scenarios</a>
+</nav>
+
+<!-- 1 ─────────────────────────────────────────── -->
+<section id="glance">
+  <div class="sec-head"><span class="sec-num">01</span><h2>XLE at a glance</h2></div>
+  <p class="question">Question: <b>what exposure does this fund actually give me?</b></p>
+
+  <div class="metrics" id="metrics"></div>
+  <div class="src">Source: Select Sector SPDR Trust, <a href="https://www.sec.gov/Archives/edgar/data/0001064641/000119312526256847/d128483dncsrs.htm" target="_blank" rel="noopener">Form N-CSRS semi-annual shareholder report</a> (period ended 31 Mar 2026). The issuer's live pages couldn't be reached when this was built, so yield is left out. Check the <a href="https://www.ssga.com/us/en/intermediary/etfs/the-energy-select-sector-spdr-fund-xle" target="_blank" rel="noopener">State Street fund page</a> for current SEC yield and daily holdings.</div>
+
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card">
+      <h3>What it owns, in plain English</h3>
+      <ul class="tight">
+        <li>The energy-sector stocks in the S&amp;P 500, as defined by the <span class="term" data-tip="Global Industry Classification Standard. S&P/MSCI's taxonomy that decides which sector a company belongs to. XLE follows the GICS Energy sector.">GICS</span> Energy sector. That means large-cap US companies only.</li>
+        <li>Weighted by market cap, with a <span class="term" data-tip="The index rules limit any single company to roughly 25% and require the stocks above ~4.8% to sum to no more than 50%. That is why Exxon sits just under the ceiling.">capping rule</span>. Even so, Exxon and Chevron together are over 40% of the fund.</li>
+        <li>In practice that's mostly oil-weighted producers and integrated majors, plus refiners, gas pipelines and oilfield services.</li>
+      </ul>
+      <h3 style="margin-top:18px">What it does <em>not</em> give you</h3>
+      <ul class="tight">
+        <li><b>No direct commodity exposure.</b> It holds no futures and no physical oil or gas.</li>
+        <li><b>No utilities, no renewables developers</b>, and almost no coal or uranium. Those sit in other GICS sectors or outside the S&amp;P 500.</li>
+        <li><b>No non-US majors</b> such as Shell, BP, TotalEnergies or Saudi Aramco, and no small-cap shale producers.</li>
+        <li><b>Little diversification within energy.</b> Two stocks drive close to half of the fund's returns.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Why energy equities ≠ oil</h3>
+      <table class="vs">
+        <thead><tr><th></th><th>Owning oil (e.g. futures, USO-type fund)</th><th>Owning XLE</th></tr></thead>
+        <tbody>
+          <tr><td>What you hold</td><td>A claim on barrels at a future date</td><td>Claims on company cash flows over decades</td></tr>
+          <tr><td>Price that matters</td><td>Spot and the <span class="term" data-tip="The shape of futures prices across delivery dates. In contango (later > nearer), rolling long futures costs money. In backwardation it earns money.">futures curve</span></td><td>Expected <em>long-run</em> oil and gas prices, which markets often treat as more stable than spot</td></tr>
+          <tr><td>Return sources</td><td>Price change ± <span class="term" data-tip="The gain or loss from selling an expiring futures contract and buying a later one. Over long periods it can dominate a futures fund's return.">roll yield</span>, plus collateral interest</td><td>Earnings, buybacks and dividends, plus re-rating of the valuation multiple</td></tr>
+          <tr><td>Leverage to price</td><td>About 1:1</td><td>Producers' profits rise faster than oil because costs are partly fixed. Refiners and pipelines respond to different things.</td></tr>
+          <tr><td>Management decisions</td><td>None</td><td>Capital spending, M&amp;A, hedging and payouts can add or destroy value</td></tr>
+          <tr><td>Equity-market beta</td><td>Low and indirect</td><td>Meaningful. The fund still trades with the stock market in sell-offs.</td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:12px">Bottom line: XLE is a bet on how much cash energy companies generate and hand back, which depends on oil, gas and margins. It is not a bet on the spot price of oil.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 ─────────────────────────────────────────── -->
+<section id="inside">
+  <div class="sec-head"><span class="sec-num">02</span><h2>What's inside</h2></div>
+  <p class="question">Question: <b>which businesses am I really exposed to, and how concentrated is it?</b></p>
+
+  <div class="card" style="margin-bottom:18px">
+    <h3>Complete fund exposure <span class="pill">100% of net assets</span></h3>
+    <div class="stack" id="fullStack" aria-label="Full fund industry breakdown"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:#33464f"></i>Oil, Gas &amp; Consumable Fuels: 90.9%. Covers integrated, E&amp;P, refining, midstream and coal.</span>
+      <span><i class="sw" style="background:var(--services)"></i>Energy Equipment &amp; Services: 9.0%</span>
+      <span><i class="sw" style="background:var(--other)"></i>Cash/other: ~0.1%</span>
+    </div>
+    <div class="src">Source: N-CSRS, industry breakdown as of 31 Mar 2026. GICS industry level. The filing doesn't break exposure down by business model for the full fund.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <h3>Top-10 holdings by business model <span class="pill">covers 75.9% of the fund</span></h3>
+    <div class="stack" id="topStack" aria-label="Top 10 grouped by business model"></div>
+    <div class="legend" id="topLegend"></div>
+    <div class="src">The business-model classification is the author's own, applied to the top 10 only. The other 15 holdings (24.1%) are shown in grey. They're smaller E&amp;Ps, refiners, pipelines and service companies whose individual weights the filing doesn't list.</div>
+  </div>
+
+  <div class="grid g-7-5">
+    <div class="card">
+      <h3>Top 10 holdings, % of net assets</h3>
+      <div class="filters" id="filters"></div>
+      <div class="bars" id="bars"></div>
+      <div class="cum" id="cum"></div>
+      <div class="src">Source: N-CSRS top-ten holdings table, as of 31 Mar 2026. Weights drift with prices daily. Click a company for details.</div>
+    </div>
+    <div class="card detail" id="detail" aria-live="polite"></div>
+  </div>
+
+  <h3 style="margin:26px 0 12px">The five business models</h3>
+  <div class="models" id="models"></div>
+</section>
+
+<!-- 3 ─────────────────────────────────────────── -->
+<section id="drivers">
+  <div class="sec-head"><span class="sec-num">03</span><h2>What drives performance</h2></div>
+  <p class="question">Question: <b>how do commodity prices and management decisions turn into stock returns?</b></p>
+
+  <div class="card flow">
+    <h3>From drivers to returns <span class="small" style="font-weight:400">· click a driver</span></h3>
+    <svg id="flow" viewBox="0 0 1100 380" role="img" aria-label="Diagram of energy drivers flowing into profits, free cash flow and stock returns"></svg>
+    <div class="drv-note" id="drvNote"></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h3>Who benefits from each driver going <em>up</em>?</h3>
+    <div class="mx-wrap"><table class="matrix" id="matrix"></table></div>
+    <div class="legend">
+      <span><span class="cell c-pos">+</span> usually helps</span>
+      <span><span class="cell c-neg">−</span> usually hurts</span>
+      <span><span class="cell c-mix">±</span> mixed / depends</span>
+      <span><span class="cell c-neu">·</span> little direct effect</span>
+    </div>
+    <div class="src">These are qualitative directions based on how each business model earns money. They are not measured sensitivities.</div>
+  </div>
+
+  <div class="banner" style="margin-top:18px">
+    <b>Performance chart omitted.</b> I couldn't get clean, consistently dated total-return series for XLE, the S&amp;P 500 and an oil benchmark (e.g. WTI front-month) without paid or fragile sources, so this version doesn't include one. The usual pattern: XLE tends to fall less than oil in crashes and rise less than oil in spikes, because equity prices discount the long-run outlook, not the spot price.
+  </div>
+</section>
+
+<!-- 4 ─────────────────────────────────────────── -->
+<section id="scenarios">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Explore scenarios</h2></div>
+  <p class="question">Question: <b>what would make XLE do well or badly, and where does the intuition break down?</b></p>
+  <div class="scen-btns" id="scenBtns"></div>
+  <div class="grid g-7-5">
+    <div class="card">
+      <h3 id="scenTitle"></h3>
+      <p class="small" id="scenSetup"></p>
+      <div class="effects" id="effects"></div>
+    </div>
+    <div class="card">
+      <h3>Implication for XLE</h3>
+      <p id="scenXle"></p>
+      <div class="caveat"><b>Main caveat:</b> <span id="scenCaveat"></span></div>
+      <p class="disclaimer">These are educational scenarios, not forecasts. Arrows show likely direction and relative strength from business-model logic, not estimated returns.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><b>Data:</b> fund statistics and top-ten holdings come from Select Sector SPDR Trust Form N-CSRS (period ended 31 Mar 2026), filed with the SEC. Everything else on the page (business-model labels, driver directions, scenarios) is qualitative analysis, not fund data. Not investment advice.</p>
+</footer>
+</div>
+
+<script>
+// ── Data snapshot (N-CSRS, period ended 2026-03-31) ──────────────
+const MODELS = {
+  integrated:{name:"Integrated majors", color:"var(--integrated)", hex:"#0f5c63",
+    blurb:"Upstream production plus refining, chemicals and trading. Weak segments partly offset strong ones, so the overall business is less volatile."},
+  ep:{name:"Exploration & production", color:"var(--ep)", hex:"#c8771a",
+    blurb:"Pure producers. Revenue is volume × realized price, so profits are the most sensitive to oil and gas prices."},
+  refining:{name:"Refining & marketing", color:"var(--refining)", hex:"#6b4fa0",
+    blurb:"Buy crude, sell fuels. Profit comes from the crack spread, not the oil price, and can rise when crude is cheap."},
+  midstream:{name:"Midstream / pipelines", color:"var(--midstream)", hex:"#3a7d3a",
+    blurb:"Toll-road businesses that move and store gas and liquids. Earnings depend on volumes and are mostly fee-based."},
+  services:{name:"Oilfield services", color:"var(--services)", hex:"#7a8794",
+    blurb:"Paid from producers' capital spending, so revenue follows activity levels and rig counts with a lag."},
+};
+
+const HOLDINGS = [
+  {t:"XOM", n:"Exxon Mobil", w:23.8, m:"integrated",
+   how:"The largest US producer, with heavy exposure to the Permian Basin and Guyana. It also has one of the world's biggest refining systems and a large chemicals business.",
+   drivers:["Oil and gas realizations (the largest earnings driver)","Refining margins and chemical spreads","Volume growth from Guyana and the Permian Basin, and cost discipline"],
+   role:"Close to a quarter of the fund, sitting just under the cap. Exxon on its own heavily shapes XLE's returns."},
+  {t:"CVX", n:"Chevron", w:17.3, m:"integrated",
+   how:"An integrated major with upstream production in the US, Australia's LNG projects and Kazakhstan, plus a large downstream business. Hess, acquired in 2025, added a stake in Guyana.",
+   drivers:["Oil and LNG-linked prices","Production growth, including the ramp-up of acquired assets","Downstream margins; buybacks are a big share of shareholder returns"],
+   role:"#2 holding. With XOM it makes up 41.1% of the fund, so roughly two-fifths of XLE behaves like a two-stock integrated-major portfolio."},
+  {t:"COP", n:"ConocoPhillips", w:7.2, m:"ep",
+   how:"The largest independent E&P. It sells oil, gas and NGLs from the Lower 48 (Permian, Eagle Ford, Bakken), Alaska and international LNG, and owns no refineries.",
+   drivers:["Oil price (the most direct sensitivity among the large holdings)","Production volumes and well productivity","Capital efficiency and payouts, using a framework that returns a set share of cash flow"],
+   role:"The largest pure upstream holding. It adds commodity leverage beyond what the majors provide."},
+  {t:"EOG", n:"EOG Resources", w:4.2, m:"ep",
+   how:"A shale producer known for drilling returns and a low-debt balance sheet. It has a sizeable natural-gas position (Dorado, Utica) alongside oil.",
+   drivers:["Oil and US gas (Henry Hub) prices","Well costs and productivity","Discipline: reinvestment rate versus cash returned"],
+   role:"E&P exposure with more natural gas than most oil-weighted peers."},
+  {t:"SLB", n:"SLB", w:4.1, m:"services",
+   how:"The world's largest oilfield services company, formerly Schlumberger. It sells reservoir evaluation, drilling, production and digital services to operators around the world, especially internationally and offshore.",
+   drivers:["Upstream capital spending budgets, especially international and offshore","Pricing power and technology mix","Activity in the Middle East and Latin America, not just US shale"],
+   role:"The largest services holding. Its earnings respond to producers' spending decisions, which react to oil prices with a lag."},
+  {t:"WMB", n:"Williams Cos.", w:4.1, m:"midstream",
+   how:"Owns the Transco pipeline, the largest US interstate natural-gas pipeline, plus gathering and processing assets. Most revenue comes from long-term, fee-based contracts.",
+   drivers:["Natural-gas volumes, including LNG exports and gas-fired power demand","Approval and completion of expansion projects","Interest rates, since markets value it partly like an infrastructure or yield stock"],
+   role:"Adds steadier, gas-volume-driven cash flows. Its returns often look more like a utility than an oil producer."},
+  {t:"VLO", n:"Valero Energy", w:4.0, m:"refining",
+   how:"The largest independent US refiner. It buys crude, sells gasoline, diesel and jet fuel, and also runs renewable diesel and ethanol operations.",
+   drivers:["Crack spreads (product prices minus crude cost)","Utilization and the price gap between heavy and light crude","Global refining capacity additions and closures"],
+   role:"A refiner. It can do well when crude is cheap and fuel demand holds, which dampens XLE's dependence on oil."},
+  {t:"PSX", n:"Phillips 66", w:3.9, m:"refining",
+   how:"A refiner with large midstream (NGL pipelines and fractionation) and chemicals segments, the latter through its CPChem joint venture with Chevron.",
+   drivers:["Refining margins","NGL volumes through its midstream assets","Chemical margins via CPChem"],
+   role:"Partly a refiner and partly a midstream company, which makes its earnings steadier than a pure refiner's."},
+  {t:"MPC", n:"Marathon Petroleum", w:3.8, m:"refining",
+   how:"The largest US refining system by capacity. It also controls MPLX, a midstream partnership whose distributions are a stable source of cash.",
+   drivers:["Crack spreads and throughput","Distributions from MPLX","Buybacks (MPC has shrunk its share count considerably)"],
+   role:"Refining exposure with a midstream cushion underneath."},
+  {t:"KMI", n:"Kinder Morgan", w:3.5, m:"midstream",
+   how:"One of the largest North American natural-gas pipeline and storage networks, plus products terminals and CO₂ assets. Mostly fee-based.",
+   drivers:["Gas transport volumes and demand for new capacity","Contract renewals and expansion projects","Leverage and interest rates"],
+   role:"A second large gas-midstream holding. Together, WMB and KMI make up 7.6% of the fund in toll-road businesses."},
+];
+const TOP10 = HOLDINGS.reduce((s,h)=>s+h.w,0); // 75.9
+
+// ── Tooltip ──────────────────────────────────────────────────────
+const tip = document.getElementById('tip');
+function bindTips(root=document){
+  root.querySelectorAll('.term').forEach(el=>{
+    if(el.dataset.bound) return; el.dataset.bound=1; el.tabIndex=0;
+    const show=()=>{tip.textContent=el.dataset.tip;tip.classList.add('on');place(el)};
+    const hide=()=>tip.classList.remove('on');
+    el.addEventListener('mouseenter',show);el.addEventListener('mouseleave',hide);
+    el.addEventListener('focus',show);el.addEventListener('blur',hide);
+  });
+}
+function place(el){
+  const r=el.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight;
+  let x=Math.min(Math.max(8,r.left+r.width/2-tw/2),innerWidth-tw-8);
+  let y=r.top-th-8; if(y<8) y=r.bottom+8;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+const T=(word,def)=>`<span class="term" data-tip="${def.replace(/"/g,'&quot;')}">${word}</span>`;
+
+// ── 1. Metrics ───────────────────────────────────────────────────
+const metrics=[
+  {k:"Holdings",v:"25",d:"stocks · 31 Mar 2026"},
+  {k:"Net expense ratio",v:"0.07%",d:"annualized · 6 mo. to 31 Mar 2026"},
+  {k:"Net assets",v:"$43.8B",d:"31 Mar 2026"},
+  {k:"Top 2 weight",v:"41.1%",d:"XOM + CVX"},
+  {k:"Top 10 weight",v:"75.9%",d:"10 of 25 holdings"},
+  {k:"Portfolio turnover",v:"2%",d:"6 months to 31 Mar 2026"},
+];
+document.getElementById('metrics').innerHTML=metrics.map(m=>`<div class="metric"><div class="k">${m.k}</div><div class="v">${m.v}</div><div class="d">${m.d}</div></div>`).join('');
+
+// ── 2. Exposure stacks ───────────────────────────────────────────
+document.getElementById('fullStack').innerHTML=
+  `<div style="width:90.9%;background:#33464f">Oil, Gas &amp; Consumable Fuels 90.9%</div>
+   <div style="width:9.0%;background:var(--services)">9.0%</div>
+   <div style="width:0.1%;background:var(--other)"></div>`;
+
+const byModel={}; HOLDINGS.forEach(h=>byModel[h.m]=(byModel[h.m]||0)+h.w);
+const order=["integrated","ep","refining","midstream","services"];
+document.getElementById('topStack').innerHTML=order.map(k=>
+  `<div style="width:${byModel[k]}%;background:${MODELS[k].color}" title="${MODELS[k].name} ${byModel[k].toFixed(1)}%">${byModel[k]>=5?byModel[k].toFixed(1)+'%':''}</div>`).join('')
+  +`<div style="width:${(100-TOP10).toFixed(1)}%;background:var(--other);color:#4a5058">Other 15 · ${(100-TOP10).toFixed(1)}%</div>`;
+document.getElementById('topLegend').innerHTML=order.map(k=>
+  `<span><i class="sw" style="background:${MODELS[k].color}"></i>${MODELS[k].name} ${byModel[k].toFixed(1)}%</span>`).join('')
+  +`<span><i class="sw" style="background:var(--other)"></i>Holdings 11–25 (not classified) ${(100-TOP10).toFixed(1)}%</span>`;
+
+// ── 2. Bars + filters + detail ───────────────────────────────────
+let selected="XOM", filter=null;
+const maxW=25; // the fund's approximate single-name cap, used as the axis max
+function renderBars(){
+  const bars=document.getElementById('bars');
+  bars.classList.toggle('dim',!!filter);
+  bars.innerHTML=HOLDINGS.map(h=>`
+    <button class="bar-row ${h.t===selected?'sel':''} ${filter===h.m?'match':''}" data-t="${h.t}" aria-pressed="${h.t===selected}">
+      <span class="bar-name">${h.n}<span class="tk">${h.t}</span></span>
+      <span class="bar-track"><span class="bar-fill" style="display:block;width:${h.w/maxW*100}%;background:${MODELS[h.m].color}"></span></span>
+      <span class="bar-val">${h.w.toFixed(1)}%</span>
+    </button>`).join('');
+  bars.querySelectorAll('.bar-row').forEach(b=>b.onclick=()=>{selected=b.dataset.t;renderBars();renderDetail();});
+}
+function renderFilters(){
+  const f=document.getElementById('filters');
+  f.innerHTML=`<button class="chip ${!filter?'on':''}" data-m="">All</button>`+order.map(k=>
+    `<button class="chip ${filter===k?'on':''}" data-m="${k}"><i class="sw" style="background:${MODELS[k].color}"></i>${MODELS[k].name}</button>`).join('');
+  f.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{filter=c.dataset.m||null;renderFilters();renderBars();renderCum();});
+}
+function renderCum(){
+  const top2=HOLDINGS[0].w+HOLDINGS[1].w, top5=HOLDINGS.slice(0,5).reduce((s,h)=>s+h.w,0);
+  let html=`<span>Top 2: <b>${top2.toFixed(1)}%</b></span><span>Top 5: <b>${top5.toFixed(1)}%</b></span><span>Top 10: <b>${TOP10.toFixed(1)}%</b></span><span>Other 15 holdings: <b>${(100-TOP10).toFixed(1)}%</b></span>`;
+  if(filter) html=`<span>${MODELS[filter].name} within the top 10: <b>${byModel[filter].toFixed(1)}%</b> of the fund</span>`+html;
+  document.getElementById('cum').innerHTML=html;
+}
+function renderDetail(){
+  const h=HOLDINGS.find(x=>x.t===selected), m=MODELS[h.m];
+  const rank=HOLDINGS.indexOf(h)+1;
+  document.getElementById('detail').innerHTML=`
+    <span class="tag" style="background:${m.color}">${m.name}</span>
+    <h3>${h.n} <span class="tk" style="font:500 13px 'IBM Plex Mono',monospace;color:var(--faint)">${h.t}</span></h3>
+    <div class="w">#${rank} holding · ${h.w.toFixed(1)}% of XLE · as of 31 Mar 2026</div>
+    <dl>
+      <dt>How it makes money</dt><dd>${h.how}</dd>
+      <dt>Main earnings drivers</dt><dd><ul class="tight">${h.drivers.map(d=>`<li>${d}</li>`).join('')}</ul></dd>
+      <dt>Role in the ETF</dt><dd>${h.role}</dd>
+    </dl>`;
+}
+document.getElementById('models').innerHTML=order.map(k=>`
+  <div class="model" style="border-top-color:${MODELS[k].color}">
+    <div class="nm">${MODELS[k].name}</div>
+    <div class="pct">${byModel[k].toFixed(1)}%</div>
+    <div class="who">in top 10 · ${HOLDINGS.filter(h=>h.m===k).map(h=>h.t).join(', ')}</div>
+    <p>${MODELS[k].blurb}</p>
+  </div>`).join('');
+renderFilters();renderBars();renderCum();renderDetail();
+
+// ── 3. Drivers ───────────────────────────────────────────────────
+// effect per model: 1 helps, -1 hurts, 0.5 mixed, 0 little
+const DRIVERS=[
+  {id:"oil",n:"Oil price",lvl:"Price",
+   eff:{integrated:1,ep:1,refining:-0.5,midstream:0,services:1},
+   note:"Higher crude lifts upstream revenue, and because many costs are fixed, profits rise faster than revenue. Producers benefit most, then the majors, whose downstream businesses partly offset the gain. Services benefit later, once producers raise budgets.",
+   exc:"Refiners: crude is their main input cost, so a crude spike without matching fuel prices squeezes margins. Also, markets value producers on the expected long-run price, so a spike seen as temporary moves the stocks much less than spot."},
+  {id:"gas",n:"Natural gas price",lvl:"Price",
+   eff:{integrated:1,ep:1,refining:0,midstream:0.5,services:0.5},
+   note:"US gas (Henry Hub) matters most to gas-weighted E&Ps and to LNG-linked sales by the majors. XLE's top holdings are mostly oil-weighted, so gas is a secondary driver for the fund.",
+   exc:"Pipeline companies care about gas volumes more than gas prices. Very low gas prices can boost demand for gas-fired power and LNG exports, and with it the volumes pipelines carry."},
+  {id:"crack",n:"Refining margins",lvl:"Margin",
+   eff:{integrated:1,ep:0,refining:1,midstream:0,services:0},
+   note:"The crack spread is the price of gasoline and diesel minus the cost of crude. It is the main earnings driver for VLO, MPC and PSX, and a meaningful one for XOM and CVX.",
+   exc:"Margins often widen when crude falls and fuel demand holds (e.g. a demand-led recovery), so refiners can rise while oil drops. That is a key reason XLE doesn't track oil."},
+  {id:"vol",n:"Production volumes",lvl:"Volume",
+   eff:{integrated:1,ep:1,refining:0,midstream:1,services:0.5},
+   note:"Each company's own production growth multiplies whatever price it gets. Rising basin-wide volumes also fill pipelines and processing plants.",
+   exc:"Industry-wide volume growth can push prices down. Shale's rapid supply response is what has historically capped price spikes, so one company's gain can become the whole sector's loss."},
+  {id:"cost",n:"Operating costs",lvl:"Cost",
+   eff:{integrated:-1,ep:-1,refining:-1,midstream:-0.5,services:1},
+   note:"Lifting costs, labor, steel and energy inputs eat into margins. Low-cost producers keep earning cash when prices fall.",
+   exc:"One company's cost is another's revenue. Higher oilfield service prices hurt producers' margins but are revenue for SLB."},
+  {id:"capex",n:"Capital spending",lvl:"Decision",
+   eff:{integrated:-0.5,ep:-0.5,refining:0,midstream:0.5,services:1},
+   note:"More capex means more future volume but less free cash flow today. Since about 2020, markets have rewarded restraint, i.e. lower reinvestment rates, with higher valuations.",
+   exc:"For services companies, producers' capex is their revenue, so restraint by producers is bad for SLB. Spending can also be value-creating when returns on projects are high (e.g. Guyana)."},
+  {id:"dist",n:"Shareholder distributions",lvl:"Decision",
+   eff:{integrated:1,ep:1,refining:1,midstream:1,services:1},
+   note:"Dividends and buybacks turn free cash flow into per-share returns. Buybacks also shrink the share count, so per-share earnings grow even when total profit is flat.",
+   exc:"Variable dividends and buybacks shrink when prices fall. A buyback funded by peak-cycle cash buys shares at peak-cycle prices."},
+];
+let selDrv="oil";
+const NODE_H=40;
+function renderFlow(){
+  const svg=document.getElementById('flow');
+  const x0=10,w0=260, x1=430,w1=220, x2=760,w2=180, x3=960,w3=120;
+  const ys=DRIVERS.map((d,i)=>20+i*50);
+  // mid nodes
+  const mids=[{n:"Revenue × margin",y:70,sub:"price · volume · spread"},{n:"Operating profit",y:170,sub:"after costs"},{n:"Free cash flow",y:270,sub:"after capex"}];
+  const tgt={oil:0,gas:0,crack:0,vol:0,cost:1,capex:2,dist:2};
+  let s="";
+  // links driver->mid
+  DRIVERS.forEach((d,i)=>{
+    const m=mids[tgt[d.id]], on=d.id===selDrv;
+    const y1=ys[i]+NODE_H/2, y2=m.y+NODE_H/2;
+    s+=`<path d="M${x0+w0},${y1} C${x0+w0+90},${y1} ${x1-90},${y2} ${x1},${y2}" fill="none" stroke="${on?'#0f5c63':'#d6d6ce'}" stroke-width="${on?2.5:1.5}"/>`;
+  });
+  // mid chain
+  s+=`<path d="M${x1+w1/2},${mids[0].y+NODE_H} L${x1+w1/2},${mids[1].y}" stroke="#bfc3c7" stroke-width="1.5" marker-end="url(#ar)"/>`;
+  s+=`<path d="M${x1+w1/2},${mids[1].y+NODE_H} L${x1+w1/2},${mids[2].y}" stroke="#bfc3c7" stroke-width="1.5" marker-end="url(#ar)"/>`;
+  // FCF -> EPS/ payout -> returns
+  const outY=[90,200];
+  s+=`<path d="M${x1+w1},${mids[2].y+20} C${x1+w1+60},${mids[2].y+20} ${x2-60},${outY[1]+20} ${x2},${outY[1]+20}" fill="none" stroke="#bfc3c7" stroke-width="1.5"/>`;
+  s+=`<path d="M${x1+w1},${mids[1].y+20} C${x1+w1+60},${mids[1].y+20} ${x2-60},${outY[0]+20} ${x2},${outY[0]+20}" fill="none" stroke="#bfc3c7" stroke-width="1.5"/>`;
+  s+=`<path d="M${x2+w2},${outY[0]+20} C${x2+w2+30},${outY[0]+20} ${x3-30},150 ${x3},150" fill="none" stroke="#bfc3c7" stroke-width="1.5"/>`;
+  s+=`<path d="M${x2+w2},${outY[1]+20} C${x2+w2+30},${outY[1]+20} ${x3-30},170 ${x3},170" fill="none" stroke="#bfc3c7" stroke-width="1.5"/>`;
+  s+=`<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#bfc3c7"/></marker></defs>`;
+  // driver nodes
+  DRIVERS.forEach((d,i)=>{
+    const on=d.id===selDrv;
+    s+=`<g class="drv ${on?'sel':''}" data-id="${d.id}" tabindex="0" role="button" aria-label="${d.n}">
+      <rect x="${x0}" y="${ys[i]}" width="${w0}" height="${NODE_H}" rx="8" fill="${on?'#eef4f4':'#fff'}" stroke="#d6d6ce"/>
+      <text x="${x0+14}" y="${ys[i]+25}" font-size="14" font-weight="600" fill="#1b1f24">${d.n}</text>
+      <text x="${x0+w0-12}" y="${ys[i]+25}" font-size="11" fill="#8a929b" text-anchor="end">${d.lvl}</text></g>`;
+  });
+  mids.forEach(m=>{
+    s+=`<rect x="${x1}" y="${m.y}" width="${w1}" height="${NODE_H}" rx="8" fill="#f3f3ee" stroke="#d6d6ce"/>
+      <text x="${x1+w1/2}" y="${m.y+18}" font-size="14" font-weight="600" text-anchor="middle" fill="#1b1f24">${m.n}</text>
+      <text x="${x1+w1/2}" y="${m.y+33}" font-size="11" text-anchor="middle" fill="#8a929b">${m.sub}</text>`;
+  });
+  [["Earnings per share","multiple × EPS"],["Dividends + buybacks","cash to holders"]].forEach((o,i)=>{
+    s+=`<rect x="${x2}" y="${outY[i]}" width="${w2}" height="${NODE_H}" rx="8" fill="#f3f3ee" stroke="#d6d6ce"/>
+      <text x="${x2+w2/2}" y="${outY[i]+18}" font-size="13.5" font-weight="600" text-anchor="middle" fill="#1b1f24">${o[0]}</text>
+      <text x="${x2+w2/2}" y="${outY[i]+33}" font-size="11" text-anchor="middle" fill="#8a929b">${o[1]}</text>`;
+  });
+  s+=`<rect x="${x3}" y="130" width="${w3}" height="60" rx="10" fill="#0f5c63"/>
+    <text x="${x3+w3/2}" y="156" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">Stock</text>
+    <text x="${x3+w3/2}" y="174" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">total return</text>
+    <text x="${x3+w3/2}" y="215" font-size="11" text-anchor="middle" fill="#5d6670">also: valuation</text>
+    <text x="${x3+w3/2}" y="229" font-size="11" text-anchor="middle" fill="#5d6670">multiple, rates,</text>
+    <text x="${x3+w3/2}" y="243" font-size="11" text-anchor="middle" fill="#5d6670">market beta</text>`;
+  svg.innerHTML=s;
+  svg.querySelectorAll('.drv').forEach(g=>{
+    const pick=()=>{selDrv=g.dataset.id;renderFlow();renderMatrix();renderNote();};
+    g.addEventListener('click',pick);
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});
+  });
+}
+const sym=v=>v===1?['+','c-pos']:v===-1?['−','c-neg']:v===0.5?['±','c-mix']:v===-0.5?['±','c-mix']:['·','c-neu'];
+function renderMatrix(){
+  const t=document.getElementById('matrix');
+  t.innerHTML=`<thead><tr><th>Driver ↑</th>${order.map(k=>`<th><i class="sw" style="background:${MODELS[k].color}"></i> ${MODELS[k].name}</th>`).join('')}</tr></thead>
+  <tbody>${DRIVERS.map(d=>`<tr class="${d.id===selDrv?'sel':''}" data-id="${d.id}">
+    <td>${d.n}</td>${order.map(k=>{const [c,cl]=sym(d.eff[k]);return `<td><span class="cell ${cl}">${c}</span></td>`}).join('')}</tr>`).join('')}</tbody>`;
+  t.querySelectorAll('tbody tr').forEach(r=>r.onclick=()=>{selDrv=r.dataset.id;renderFlow();renderMatrix();renderNote();});
+}
+function renderNote(){
+  const d=DRIVERS.find(x=>x.id===selDrv);
+  document.getElementById('drvNote').innerHTML=`<b>${d.n}.</b> ${d.note}<div class="exc"><b>Exception:</b> ${d.exc}</div>`;
+}
+renderFlow();renderMatrix();renderNote();
+
+// ── 4. Scenarios ─────────────────────────────────────────────────
+// dir: -2..+2 qualitative strength
+const SCEN=[
+  {id:"shock",n:"Oil supply shock",s:"Disruption sends crude sharply higher",
+   setup:"A geopolitical or OPEC+ disruption removes supply, so crude spikes and the futures curve moves into steep backwardation. Demand is initially unchanged.",
+   eff:{ep:[2,"Highest leverage to realized price; upside depends on how much they've hedged"],integrated:[1,"Upstream gains, partly offset by squeezed downstream and chemical margins"],refining:[-1,"Input cost jumps; margins hold only if fuel prices rise in step"],midstream:[0,"Mostly fee-based; little direct effect"],services:[1,"Helps only if producers believe the price lasts and raise budgets, which happens with a lag"]},
+   xle:"Likely positive, led by the 41% in XOM/CVX and the E&Ps. But XLE usually rises <em>less</em> than spot oil: investors price stocks on long-dated oil, which moves less in a spike, and refiners plus pipelines (≈19% of the fund, top-10 basis) dilute the effect.",
+   caveat:"If the shock is big enough to cause a recession, demand destruction can reverse the gains. The equity market's reaction then dominates the oil price's."},
+  {id:"recess",n:"Global recession",s:"Demand falls; risk assets sell off",
+   setup:"Global GDP contracts and oil and fuel demand falls. Crude and refined-product prices drop and equity markets sell off broadly.",
+   eff:{ep:[-2,"Price and sentiment both fall; high-cost and high-debt producers suffer most"],integrated:[-1,"Diversification and strong balance sheets cushion the fall; dividends usually protected"],refining:[-1,"Lower crude helps, but weak demand for diesel and jet fuel compresses spreads"],midstream:[-0.5,"Contracted fees hold up; volume and rate concerns weigh on the stocks"],services:[-2,"Producers cut capex first, so services revenue falls hardest"]},
+   xle:"Likely negative on two counts: lower commodity cash flows and general equity beta. Exxon and Chevron's balance sheets and integrated models tend to make XLE fall less than pure E&P or services baskets.",
+   caveat:"OPEC+ supply cuts can hold up prices. And because energy stocks often price in a downturn early, XLE can bottom before oil does."},
+  {id:"growth",n:"Strong economic growth",s:"Broad demand strength",
+   setup:"Industrial activity, travel and trade expand, and demand for oil, fuels and gas rises. Supply responds gradually.",
+   eff:{ep:[1,"Higher prices and volumes, if supply growth doesn't keep pace"],integrated:[1,"Every segment benefits: upstream, refining and chemicals"],refining:[2,"Strong fuel demand widens crack spreads; this is often refiners' best environment"],midstream:[1,"Higher throughput, and new capacity gets contracted"],services:[1,"Producers' budgets rise and pricing power improves"]},
+   xle:"Broadly positive, with the gains spread across business models, unlike a supply shock. Even so, XLE may lag the S&P 500 if growth is led by tech and investors favor growth stocks.",
+   caveat:"Rapid shale and OPEC+ supply growth can cap prices. Rising interest rates hurt the valuations of rate-sensitive midstream holdings."},
+  {id:"flat",n:"Flat oil + capex discipline",s:"Range-bound prices; companies hold back spending",
+   setup:"Crude stays in a stable range. Companies keep reinvestment low and return most free cash flow through dividends and buybacks.",
+   eff:{ep:[1,"Low reinvestment turns stable prices into large free cash flow per share"],integrated:[1,"Steady cash flow, buybacks and project-driven volume growth"],refining:[0,"Driven by crack spreads, which this scenario doesn't determine"],midstream:[0.5,"Steady fees; lower volume growth limits upside"],services:[-1,"Less spending by customers; growth limited to international and offshore work"]},
+   xle:"Potentially solid without oil going up. Returns would come from distributions, the shrinking share count and possible re-rating, not from commodity prices. This is the clearest case of XLE diverging from oil.",
+   caveat:"Low reinvestment can mean declining reserves and production later. And if the market doesn't reward cash returns, valuation multiples won't expand."},
+];
+let selScen="shock";
+const scenOrder=["integrated","ep","refining","midstream","services"];
+function dirBar(v){
+  const cells=[-2,-1,1,2].map(p=>{
+    const fill = (v<0 && p<0 && p>=v) || (v>0 && p>0 && p<=v) ? (v<0?'var(--neg)':'var(--pos)') : '#ececE6';
+    return `<i style="background:${fill}"></i>`; });
+  const half=Math.abs(v)===0.5, lbl=v>=2?'Strong +':v>=1?'Positive':v===0.5?'Slight +':v===0?'Neutral':v===-0.5?'Slight −':v<=-2?'Strong −':'Negative';
+  if(half){cells[v>0?2:1]=`<i style="background:${v>0?'var(--pos)':'var(--neg)'};opacity:.45"></i>`;}
+  cells.splice(2,0,`<i style="width:2px;background:#bfc3c7"></i>`);
+  return `<span class="dir">${cells.join('')}<em class="lbl">${lbl}</em></span>`;
+}
+function renderScen(){
+  document.getElementById('scenBtns').innerHTML=SCEN.map(s=>`<button class="scen-btn ${s.id===selScen?'on':''}" data-id="${s.id}" aria-pressed="${s.id===selScen}"><div class="s1">${s.n}</div><div class="s2">${s.s}</div></button>`).join('');
+  document.querySelectorAll('.scen-btn').forEach(b=>b.onclick=()=>{selScen=b.dataset.id;renderScen();});
+  const s=SCEN.find(x=>x.id===selScen);
+  document.getElementById('scenTitle').textContent=s.n+": likely direction by business model";
+  document.getElementById('scenSetup').textContent=s.setup;
+  document.getElementById('effects').innerHTML=scenOrder.map(k=>{const [v,why]=s.eff[k];return `
+    <div class="eff"><span class="nm"><i class="sw" style="background:${MODELS[k].color}"></i>${MODELS[k].name}</span>${dirBar(v)}<span class="why">${why}</span></div>`}).join('');
+  document.getElementById('scenXle').innerHTML=s.xle;
+  document.getElementById('scenCaveat').textContent=s.caveat;
+}
+renderScen();
+bindTips();
+</script>
+</body>
+</html>
