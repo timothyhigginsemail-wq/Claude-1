@@ -5,7 +5,6 @@
 Sources
   - oobrien/vis tubecreature data (tfl_lines.json, tfl_stations.json): OpenStreetMap-derived
     TfL network geometry, ODbL. Filtered to services operating in 2026.
-  - vega/vega-datasets londonBoroughs.json: simplified borough TopoJSON.
 """
 import json
 import pathlib
@@ -13,7 +12,6 @@ import urllib.request
 
 DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
 OOBRIEN = "https://raw.githubusercontent.com/oobrien/vis/master/tubecreature/data/"
-VEGA = "https://raw.githubusercontent.com/vega/vega-datasets/main/data/londonBoroughs.json"
 YEAR = 2026
 BBOX = (-0.42, 51.38, 0.12, 51.65)  # inner London plus a margin
 DROP = {"Crossrail 2", "East London"}  # proposed / pre-2010 services
@@ -64,35 +62,5 @@ def transport():
     print(f"transport: {len(lines)} segments, {len(stations)} stations")
 
 
-def boroughs():
-    t = fetch(VEGA)
-    (sx, sy), (tx, ty) = t["transform"]["scale"], t["transform"]["translate"]
-    arcs = []
-    for a in t["arcs"]:  # TopoJSON quantised delta-encoded arcs
-        x = y = 0
-        pts = []
-        for dx, dy in a:
-            x += dx
-            y += dy
-            pts.append([round(x * sx + tx, 5), round(y * sy + ty, 5)])
-        arcs.append(pts)
-
-    def ring(r):
-        pts = []
-        for i in r:
-            a = arcs[i] if i >= 0 else arcs[~i][::-1]
-            pts.extend(a if not pts else a[1:])
-        return pts
-
-    feats = []
-    for g in t["objects"]["boroughs"]["geometries"]:
-        coords = [ring(r) for r in g["arcs"]] if g["type"] == "Polygon" else [[ring(r) for r in p] for p in g["arcs"]]
-        feats.append({"type": "Feature", "properties": {"name": g["id"]}, "geometry": {"type": g["type"], "coordinates": coords}})
-    write_js("boroughs.js", "ATLAS_BOROUGHS", {"type": "FeatureCollection", "features": feats,
-                                               "source": "vega-datasets londonBoroughs.json (simplified). Heavily generalised — for orientation only."})
-    print(f"boroughs: {len(feats)}")
-
-
 if __name__ == "__main__":
     transport()
-    boroughs()

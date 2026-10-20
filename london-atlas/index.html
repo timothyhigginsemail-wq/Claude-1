@@ -39,12 +39,13 @@
     <div id="line-picker" class="line-picker" hidden></div>
     <label><input type="checkbox" data-layer="landmarks"> Landmarks</label>
     <label><input type="checkbox" data-layer="character"> Area character <span class="hint">sourced only</span></label>
-    <label><input type="checkbox" data-layer="roads"> Main roads <span class="hint">approx.</span></label>
+    <label><input type="checkbox" data-layer="roads"> A roads &amp; motorways <span class="hint">OS</span></label>
     <label><input type="checkbox" data-layer="mine" checked> My places &amp; apartments</label>
     <label><input type="checkbox" data-layer="boroughs"> Borough boundaries</label>
     <h3>Base map</h3>
     <select id="basemap" aria-label="Base map tiles">
-      <option value="voyager">CARTO Voyager (default)</option>
+      <option value="atlas">London Atlas (OS open data, no tiles needed)</option>
+      <option value="voyager">CARTO Voyager streets</option>
       <option value="positron">CARTO Positron (plainer)</option>
       <option value="osm">OpenStreetMap standard</option>
     </select>
@@ -56,15 +57,25 @@
     <p class="small">Everything you add is stored only in this browser. Export regularly — clearing site data deletes it.</p>
     <div class="row">
       <button id="btn-export">Export JSON</button>
-      <label class="button-like">Import JSON<input id="file-import" type="file" accept="application/json,.json" hidden></label>
+      <label class="button-like">Import file<input id="file-import" type="file" accept="application/json,.json" hidden></label>
     </div>
+    <div id="export-box" hidden>
+      <p class="small">Copy this and keep it somewhere safe (a note or email to yourself). Paste it back below to restore.</p>
+      <textarea id="export-text" class="copybox" readonly></textarea>
+      <button id="btn-copy">Copy</button>
+    </div>
+    <details id="paste-import"><summary class="small">Import by pasting JSON</summary>
+      <textarea id="import-text" class="copybox" placeholder="Paste an exported London Atlas JSON here"></textarea>
+      <button id="btn-paste-import">Read pasted JSON</button>
+    </details>
+    <div id="import-choice" hidden></div>
     <h3>Commute target</h3>
     <label class="inline">Door-to-door target <input id="threshold" type="number" min="5" max="90" step="1"> min</label>
     <p class="small">Only real times (from TfL, or ones you enter) are compared with the target. Straight-line distance is never converted into minutes.</p>
     <h3>Offices</h3>
     <div id="office-settings"></div>
     <h3>Reset</h3>
-    <button id="btn-wipe" class="danger">Delete all local data…</button>
+    <div class="confirm-row"><button id="btn-wipe" class="danger">Delete all local data…</button></div>
   </section>
 
   <aside id="panel" class="panel" aria-live="polite" aria-label="Details">
@@ -91,7 +102,7 @@
 <script src="data/areas-rest.js"></script>
 <script src="data/transport-lines.js"></script>
 <script src="data/stations.js"></script>
-<script src="data/boroughs.js"></script>
+<script src="data/osbase.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

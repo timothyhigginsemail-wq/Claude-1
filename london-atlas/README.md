@@ -15,13 +15,25 @@ cd london-atlas
 python3 -m http.server 8000      # then open http://localhost:8000
 ```
 
-You can also open `index.html` directly. All data ships as `.js` files, so `file://` works. The app needs a normal internet connection for:
+You can also open `index.html` directly. All data ships as `.js` files, so `file://` works.
 
-- the base map tiles (CARTO, or OpenStreetMap as a fallback, chosen under **Layers**)
-- the fonts
-- the optional lookups (TfL Journey Planner, postcodes.io)
+Two kinds of base map, chosen under **Layers**:
 
-Everything researched is bundled with the app.
+- **CARTO street tiles** (local default): full street detail; needs an internet connection.
+- **London Atlas** (OS open data, bundled): land, the Thames, real park outlines and the A-road network, drawn in the app. It needs no tile server and follows light/dark mode, but has no minor streets.
+
+The optional lookups (TfL Journey Planner, postcodes.io) also need a connection. Everything researched is bundled.
+
+### Hosted copy
+
+`python3 scripts/build_hosted.py` writes `dist/london-atlas.html`, a single self-contained page for hosting as a claude.ai Artifact. Hosted pages can't load map tiles, call TfL or postcodes.io, start downloads or show browser dialogs, so the hosted build:
+
+- uses the London Atlas base map only
+- replaces the TfL button with planner links plus a box for the time you measure
+- exports by copy-and-paste rather than a file download
+- uses in-page confirmations
+
+Saved data lives in that browser, separate from the local copy; move it across with export/import.
 
 On a phone, serve it from a laptop on the same Wi-Fi and open `http://<laptop-ip>:8000`, or host the folder on any static host. The side panel becomes a bottom sheet; tap the grip to expand it.
 
@@ -30,13 +42,13 @@ On a phone, serve it from a laptop on the same Wi-Fi and open `http://<laptop-ip
 | Layer | Default | Source / notes |
 |---|---|---|
 | Neighbourhoods | on | 60 researched entries (11 in depth, 49 full). Italic grey names are base map only. Click a name, or click inside its halo. |
-| Parks & gardens | always on | 36 curated markers: **public** (green dot), **private keyholder squares** (dashed square), **restricted** (Coram's Fields). Royal Parks hours are cited; gates are approximate. Park outlines come from the base tiles. |
+| Parks & gardens | always on | 791 public park and garden outlines from OS Open Greenspace (clickable), plus 36 researched markers: **public** (green dot), **private keyholder squares** (dashed square), **restricted** (Coram's Fields). Royal Parks hours are cited; gates are approximate. |
 | Transport | off | Tube, Elizabeth line, Overground, DLR, tram and cable car, from an OSM-derived TfL dataset filtered to 2026 services. Each line can be toggled. |
 | Landmarks | off | 28 orientation points, each with a one-line note on how it affects the area around it. |
 | Area character | off | Drawn **only where a cited source supports it**: conservation areas, night-time economy zones, police/council street-crime priorities, regeneration sites, seasonal events. |
-| Main roads | off | 19 hand-placed approximate alignments, used to flag "near a main road" for a pin. |
+| A roads & motorways | off | OS Open Roads. Also used to flag any A road within 150 m of a pin. |
 | My places & apartments | on | Your pins. Solid = precise, ringed = approximate; colour = viewing status. |
-| Borough boundaries | off | Simplified vega-datasets TopoJSON. For orientation only. |
+| Borough boundaries | off | London Datastore borough boundaries (excluding the river). |
 
 **Search** covers neighbourhoods, base-map places, parks, landmarks, stations, offices and your saved flats and places.
 
@@ -66,7 +78,8 @@ Each panel has these sections:
   - which entry it falls in
   - both commutes
   - the nearest stations and park entrances, and any private squares nearby
-  - mapped main roads within about 200 m
+  - A roads and motorways within 150 m (OS Open Roads)
+  - the nearest public green spaces by distance to their edge, and the nearest park of 20 ha or more
   - Overground/sub-surface/DLR lines within about 150 m
   - crowd, night-time and event zones
   - a viewing checklist tailored to the pin, saved per flat
@@ -117,10 +130,12 @@ Sources live in `data/sources.js`. Each has a URL, a *kind* and a note on what i
 
 ## Material limitations
 
-- **No park polygons in the data.** I couldn't get open park boundaries, so outlines come from the base tiles. The green markers carry the facts: access, hours, gates. Gate positions are approximate.
+- **Park outlines cover public parks only.** OS Open Greenspace has no private squares, cemeteries or sports grounds, so those appear only as researched markers. Opening hours exist only for the researched parks, and gate positions are approximate.
+- **No lakes or docks on the London Atlas base map.** The OS water layer I found sits 300–400 m out of position, so I left it out. The Thames is accurate: it is the gap in borough boundaries drawn at mean high water.
+- **The London Atlas base map has no minor streets.** It shows A roads and motorways only; use the CARTO tiles locally for street-level detail.
 - **Neighbourhoods have no boundaries.** Entries are centre points with a rough halo. "Within the area" and "where this stops applying" do the boundary work in words, and a pin is assigned to the nearest entry, scaled by its radius.
-- **Main roads and pressure zones are hand-placed.** They are approximate (roughly 50–150 m) and tell you to *check*, not that a flat is noisy. National Rail main lines aren't in the transport data, so rail noise near Victoria, Paddington, Euston and Clapham Junction is covered only in the text.
-- **Commute times depend on TfL's public API being reachable from your browser.** If it isn't, use the links and type the time in. Nothing is estimated.
+- **Crowd and night-time zones are hand-placed circles.** They tell you to *check*, not that a flat is noisy. Road proximity uses OS centrelines; B roads and busy side streets are not included. National Rail main lines aren't in the transport data, so rail noise near Victoria, Paddington, Euston and Clapham Junction is covered only in the text.
+- **Commute times depend on TfL's public API being reachable from your browser.** If it isn't, and always in the hosted copy, use the links and type the time in. Nothing is estimated.
 - **Rents are borough-level.** For district-level figures (SW1V, NW8, W9, NW3…), download the ONS ad-hoc London table linked in Sources.
 - **The Overground's six 2024 line names** (Lioness, Mildmay, etc.) are shown as a single "London Overground" line, as in the source data.
 - **Storage is per browser.** Export regularly, and import on another device.
@@ -130,10 +145,12 @@ Sources live in `data/sources.js`. Each has a URL, a *kind* and a note on what i
 ```
 index.html  styles.css  app.js        the app
 data/areas-core.js, areas-rest.js     neighbourhood entries (edit these to add or correct areas)
-data/places.js                        offices, parks, landmarks, base-map names, main roads, pressure zones
+data/places.js                        offices, parks, landmarks, base-map names, pressure zones
 data/sources.js                       source register
-data/transport-lines.js, stations.js, boroughs.js   generated — rebuild with scripts/build_geodata.py
+data/transport-lines.js, stations.js  generated — scripts/build_geodata.py
+data/osbase.js                        generated — scripts/build_osbase.py (OS open data via jreades/fsds, BNG→WGS84)
+scripts/build_hosted.py               single-file hosted build → dist/ (git-ignored)
 vendor/                               Leaflet 1.9.4
 ```
 
-Map data © OpenStreetMap contributors (ODbL). Tiles © CARTO. Transport geometry via [oobrien/vis](https://github.com/oobrien/vis).
+Contains OS data © Crown copyright and database right (OGL v3); borough boundaries © London Datastore/ONS (OGL). Transport © OpenStreetMap contributors (ODbL). Tiles © CARTO. Transport geometry via [oobrien/vis](https://github.com/oobrien/vis).

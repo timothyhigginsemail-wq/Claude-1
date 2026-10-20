@@ -9,7 +9,6 @@
   var PARKS = window.ATLAS_PARKS || [];
   var LANDMARKS = window.ATLAS_LANDMARKS || [];
   var BASE = window.ATLAS_BASE_PLACES || [];
-  var ROADS = window.ATLAS_ROADS || [];
   var PRESSURE = window.ATLAS_PRESSURE || [];
   var OFFICE_DEFAULTS = window.ATLAS_OFFICES || [];
   var ACCESSED = window.ATLAS_ACCESSED || '';
@@ -109,6 +108,21 @@
     }
     return best;
   }
+  function inRing(p, r) {
+    var x = p[1], y = p[0], ins = false;
+    for (var i = 0, j = r.length - 1; i < r.length; j = i++) {
+      var xi = r[i][1], yi = r[i][0], xj = r[j][1], yj = r[j][0];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) ins = !ins;
+    }
+    return ins;
+  }
+  /* metres from a point to a polygon (0 inside); rings[0] is the outer ring */
+  function distToPoly(p, rings) {
+    var r0 = rings[0];
+    if (Math.abs(r0[0][0] - p[0]) > .05 || Math.abs(r0[0][1] - p[1]) > .08) return Infinity;
+    if (inRing(p, r0) && !rings.slice(1).some(function (h) { return inRing(p, h); })) return 0;
+    return Math.min.apply(null, rings.map(function (r) { return distToLine(p, r.concat([r[0]])); }));
+  }
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’'.]/g, '').replace(/&/g, 'and'); }
   function today() { return new Date().toISOString().slice(0, 10); }
   function nextWeekday() {
@@ -143,33 +157,122 @@
   });
   map.addControl(new ResetCtl());
 
+  map.createPane('osbase').style.zIndex = 150;
+  map.createPane('osparks').style.zIndex = 340;
   map.createPane('halos').style.zIndex = 350;
+  map.createPane('oshi').style.zIndex = 410;
   map.createPane('lines').style.zIndex = 420;
   map.createPane('streetLabels').style.zIndex = 430;
   map.getPane('streetLabels').style.pointerEvents = 'none';
   map.createPane('labels').style.zIndex = 640;
 
+  /* ------------------------------------------------ OS open-data vector base (works with no tile server) */
+  function cssv(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#999'; }
+  var OS = window.ATLAS_OS || { land: [], water: [], green: [], roads: [] };
+  /* Natural Earth Thames centreline (coarse), extended to the GLA edges. Only used as a generous water corridor
+     underneath the borough polygons, which exclude the river at mean high water — the river shows through the gap. */
+  var THAMES_NE = [[51.413, -0.370], [51.404, -0.345], [51.4009, -0.3237], [51.4073, -0.3155], [51.419, -0.3082], [51.428, -0.3188], [51.4361, -0.3204], [51.4457, -0.3082],
+    [51.4647, -0.3232], [51.4727, -0.3101], [51.4737, -0.271], [51.4758, -0.2596], [51.4852, -0.2471], [51.4873, -0.2365], [51.4842, -0.2261], [51.4706, -0.21], [51.4674, -0.1983],
+    [51.4701, -0.1793], [51.4774, -0.1567], [51.4872, -0.1355], [51.5091, -0.1022], [51.5117, -0.0848], [51.5081, -0.0672], [51.5009, -0.0488], [51.4975, -0.0377], [51.4941, -0.0066],
+    [51.5006, 0.0099], [51.5024, 0.0207], [51.4912, 0.0483], [51.4925, 0.072], [51.507, 0.11], [51.49, 0.17], [51.48, 0.215]];
+  function corridor(pts, metres) {
+    var ky = metres / 111000, kx = metres / 69400, left = [], right = [];
+    pts.forEach(function (p, i) {
+      var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      var dx = (b[1] - a[1]) * 69400, dy = (b[0] - a[0]) * 111000, L = Math.sqrt(dx * dx + dy * dy) || 1;
+      var nx = -dy / L, ny = dx / L;
+      left.push([p[0] + ny * ky, p[1] + nx * kx]); right.push([p[0] - ny * ky, p[1] - nx * kx]);
+    });
+    return left.concat(right.reverse());
+  }
+  var osBaseRenderer = L.canvas({ pane: 'osbase', padding: .3 });
+  var osParkRenderer = L.canvas({ pane: 'osparks', padding: .3 });
+  var osHiRenderer = L.canvas({ pane: 'oshi', padding: .3 });
+  var osLand = L.layerGroup(), osRoadsBase = L.layerGroup(), osParks = L.layerGroup(), osRoadsHi = L.layerGroup();
+  var osShapes = { river: null, land: [], water: [], roadCase: [], roadFill: [], parks: [], hi: [] };
+  osShapes.river = L.polygon(corridor(THAMES_NE, 2300), { renderer: osBaseRenderer, stroke: false, fillOpacity: 1, interactive: false });
+  osLand.addLayer(osShapes.river);
+  OS.land.forEach(function (b) {
+    var p = L.polygon(b.r, { renderer: osBaseRenderer, weight: 1.2, fillOpacity: 1, interactive: false });
+    p._inner = b.inner; osShapes.land.push(p); osLand.addLayer(p);
+  });
+  OS.water.forEach(function (w) { var p = L.polygon(w, { renderer: osBaseRenderer, stroke: false, fillOpacity: 1, interactive: false }); osShapes.water.push(p); osLand.addLayer(p); });
+  OS.roads.forEach(function (r) {
+    var c = L.polyline(r.p, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' });
+    var f = L.polyline(r.p, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' });
+    c._m = f._m = r.m; osShapes.roadCase.push(c); osShapes.roadFill.push(f);
+  });
+  osShapes.roadCase.forEach(function (l) { osRoadsBase.addLayer(l); });
+  osShapes.roadFill.forEach(function (l) { osRoadsBase.addLayer(l); });
+  /* OS names some park pieces differently (Battersea Park's main polygon is "Festival Pleasure Gardens"):
+     where a researched park marker sits inside an OS outline, use the researched name */
+  OS.green.forEach(function (g) {
+    var cur = PARKS.filter(function (p) { return p.access !== 'private' && inRing(p.ll, g.r[0]); })[0];
+    if (cur) { if (g.n && norm(g.n) !== norm(cur.name).replace(/^the /, '')) g.osName = g.n; g.n = cur.name; }
+  });
+  OS.green.forEach(function (g) {
+    var p = L.polygon(g.r, { renderer: osParkRenderer, weight: 1 });
+    p.bindTooltip(esc(g.n || 'Public park or garden') + ' <span class="small">' + g.ha + ' ha</span>', { className: 'atlas-tip', sticky: true });
+    p.on('click', function (e) { L.DomEvent.stopPropagation(e); openGreen(g); });
+    osShapes.parks.push(p); osParks.addLayer(p);
+  });
+  OS.roads.forEach(function (r) {
+    var h = L.polyline(r.p, { renderer: osHiRenderer, lineCap: 'round', weight: 4 });
+    h.bindTooltip(esc([r.no, r.n].filter(Boolean).join(' · ') || 'A road'), { className: 'atlas-tip', sticky: true });
+    osShapes.hi.push(h); osRoadsHi.addLayer(h);
+  });
+  function styleOS() {
+    var atlas = S.basemap === 'atlas', z = map.getZoom();
+    var land = cssv('--map-land'), landIn = cssv('--map-land-inner'), water = cssv('--map-water');
+    osShapes.river.setStyle({ fillColor: water });
+    osShapes.land.forEach(function (p) { var c = p._inner ? landIn : land; p.setStyle({ fillColor: c, color: c }); });
+    osShapes.water.forEach(function (p) { p.setStyle({ fillColor: water }); });
+    var w = z >= 16 ? 7 : z >= 15 ? 5 : z >= 14 ? 3.6 : z >= 13 ? 2.4 : 1.4;
+    var edge = cssv('--map-road-edge'), fill = cssv('--map-road'), mw = cssv('--map-motorway');
+    osShapes.roadCase.forEach(function (l) { l.setStyle({ color: edge, weight: w + 1.6 }); });
+    osShapes.roadFill.forEach(function (l) { l.setStyle({ color: l._m ? mw : fill, weight: w }); });
+    var pf = cssv('--map-park'), pe = cssv('--map-park-edge');
+    osShapes.parks.forEach(function (p) { p.setStyle({ fillColor: pf, color: pe, fillOpacity: atlas ? 1 : .35, opacity: atlas ? 1 : .6 }); });
+    var hi = cssv('--map-highlight-road');
+    osShapes.hi.forEach(function (l) { l.setStyle({ color: hi, opacity: .55, weight: Math.max(3, w * .9) }); });
+  }
+  map.getContainer().style.background = '';
+
   var BASEMAPS = {
-    voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', labels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-    positron: { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', labels: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-    osm: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', labels: null, attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }
+    atlas: { attr: 'Contains OS data &copy; Crown copyright and database right (OGL) · Transport &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors via oobrien/vis' },
+    voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', labels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> · parks &amp; roads: OS (OGL)' },
+    positron: { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', labels: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> · parks &amp; roads: OS (OGL)' },
+    osm: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', labels: null, attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · parks &amp; roads: OS (OGL)' }
   };
-  var baseLayer = null, streetLabelLayer = null, tileErrors = 0;
+  var HOSTED = !!window.ATLAS_HOSTED;
+  if (HOSTED || !BASEMAPS[S.basemap]) S.basemap = HOSTED ? 'atlas' : 'voyager';
+  var baseLayer = null, streetLabelLayer = null, tileErrors = 0, attrCtl = map.attributionControl, lastAttr = null;
   function setBasemap(key) {
-    var b = BASEMAPS[key] || BASEMAPS.voyager;
+    var b = BASEMAPS[key] || BASEMAPS.atlas;
     if (baseLayer) map.removeLayer(baseLayer);
     if (streetLabelLayer) map.removeLayer(streetLabelLayer);
-    tileErrors = 0;
-    baseLayer = L.tileLayer(b.url, { subdomains: 'abcd', maxZoom: 19, attribution: b.attr + ' · Transport: OSM/TfL via oobrien/vis', className: key === 'osm' ? 'tiles-muted' : '' }).addTo(map);
-    baseLayer.on('tileerror', function () {
-      tileErrors++;
-      if (tileErrors === 6) toast('Base map tiles are not loading — try another base map under Layers. The researched layers still work.');
-    });
-    streetLabelLayer = b.labels ? L.tileLayer(b.labels, { subdomains: 'abcd', maxZoom: 19, minZoom: 15, pane: 'streetLabels', opacity: .85 }) : null;
-    if (streetLabelLayer) streetLabelLayer.addTo(map);
-    S.basemap = key; save();
+    baseLayer = streetLabelLayer = null; tileErrors = 0;
+    if (lastAttr) attrCtl.removeAttribution(lastAttr);
+    attrCtl.addAttribution(b.attr); lastAttr = b.attr;
+    if (key === 'atlas') {
+      osLand.addTo(map); osRoadsBase.addTo(map);
+    } else {
+      map.removeLayer(osLand); map.removeLayer(osRoadsBase);
+      baseLayer = L.tileLayer(b.url, { subdomains: 'abcd', maxZoom: 19, className: key === 'osm' ? 'tiles-muted' : '' }).addTo(map);
+      baseLayer.on('tileerror', function () {
+        tileErrors++;
+        if (tileErrors === 6) toast('Street tiles are not loading. Switch the base map to “London Atlas” under Layers — it needs no tile server.');
+      });
+      streetLabelLayer = b.labels ? L.tileLayer(b.labels, { subdomains: 'abcd', maxZoom: 19, minZoom: 15, pane: 'streetLabels', opacity: .85 }) : null;
+      if (streetLabelLayer) streetLabelLayer.addTo(map);
+    }
+    osParks.addTo(map);
+    S.basemap = key; save(); styleOS();
   }
   setBasemap(S.basemap);
+  /* follow the viewer's theme: OS polygons are canvas-drawn, so restyle them on change */
+  if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener ? mq.addEventListener('change', styleOS) : mq.addListener(styleOS)); }
+  new MutationObserver(styleOS).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   function zoomClass() {
     var c = map.getContainer(), z = Math.round(map.getZoom());
@@ -180,7 +283,7 @@
   /* ------------------------------------------------ layers */
   var L_ = {
     areas: L.layerGroup(), halos: L.layerGroup(), parks: L.layerGroup(), gates: L.layerGroup(), transport: L.layerGroup(),
-    stations: L.layerGroup(), landmarks: L.layerGroup(), character: L.layerGroup(), roads: L.layerGroup(),
+    stations: L.layerGroup(), landmarks: L.layerGroup(), character: L.layerGroup(), roads: osRoadsHi,
     mine: L.layerGroup(), boroughs: L.layerGroup(), offices: L.layerGroup(), base: L.layerGroup()
   };
   var labelMarkers = []; /* {marker, prio, text, cls} for collision */
@@ -219,9 +322,9 @@
   function parkIcon(p) {
     var size = p.size === 'large' ? 11 : p.size === 'medium' ? 9 : 7;
     var style = p.access === 'public'
-      ? 'background:#5f8f54;border:1.5px solid #fff;border-radius:50%;'
-      : p.access === 'restricted' ? 'background:#c9d8c3;border:1.5px solid #5f8f54;border-radius:50%;'
-        : 'background:#fff;border:1.5px dashed #8a7a5a;border-radius:2px;';
+      ? 'background:var(--green);border:1.5px solid var(--field);border-radius:50%;'
+      : p.access === 'restricted' ? 'background:var(--green-soft);border:1.5px solid var(--green);border-radius:50%;'
+        : 'background:var(--field);border:1.5px dashed var(--estate-ink);border-radius:2px;';
     return L.divIcon({ className: '', html: '<i style="display:block;width:' + size + 'px;height:' + size + 'px;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(0,0,0,.08);' + style + '"></i>', iconSize: [0, 0] });
   }
   PARKS.forEach(function (p) {
@@ -306,18 +409,12 @@
   });
 
   /* main roads (approximate) */
-  ROADS.forEach(function (r) {
-    L_.roads.addLayer(L.polyline(r.pts, { color: '#9b4a2c', weight: 5, opacity: .35, lineCap: 'round' })
-      .bindTooltip(esc(r.name) + ' <span style="color:#6c7078">— approximate alignment</span>', { className: 'atlas-tip', sticky: true }));
-  });
 
   /* boroughs */
-  if (window.ATLAS_BOROUGHS) {
-    L.geoJSON(window.ATLAS_BOROUGHS, {
-      style: { color: '#6c7078', weight: 1.2, opacity: .7, dashArray: '5 4', fill: false },
-      onEachFeature: function (f, layer) { layer.bindTooltip(esc(f.properties.name) + ' <span style="color:#6c7078">(simplified boundary)</span>', { className: 'atlas-tip', sticky: true }); }
-    }).addTo(L_.boroughs);
-  }
+  OS.land.forEach(function (b) {
+    L_.boroughs.addLayer(L.polygon(b.r, { color: '#6c7078', weight: 1.2, opacity: .7, dashArray: '5 4', fill: false, interactive: true })
+      .bindTooltip(esc(b.n) + ' <span class="small">(borough; river excluded)</span>', { className: 'atlas-tip', sticky: true }));
+  });
 
   /* offices — always on */
   var officeMarkers = {};
@@ -402,7 +499,7 @@
     return b;
   }
 
-  map.on('zoomend', function () { zoomClass(); if (S.layers.transport) drawTransport(); applyLayers(); });
+  map.on('zoomend', function () { zoomClass(); styleOS(); if (S.layers.transport) drawTransport(); applyLayers(); });
   map.on('moveend', function () { S.view = { center: [map.getCenter().lat, map.getCenter().lng], zoom: map.getZoom() }; save(); declutter(); });
 
   /* ================================================================ panel */
@@ -473,11 +570,11 @@
         (!blank(r.manual) ? '<div class="row"><span class="time">' + esc(r.manual) + ' min</span><span class="note">measured by you</span></div>' : '') +
         '<div class="row">' + (t ? '<span class="' + (blank(r.manual) ? 'time' : 'note') + '">' + t.min + ' min</span><span class="note">TfL, arriving 08:45 on ' + esc(t.forDate) + (stale ? ' · <b>office moved since</b>' : '') + '</span>' : (blank(r.manual) ? '<span class="note">No measured time yet.</span>' : '')) + '</div>' +
         (t && t.summary ? '<div class="note">' + esc(t.summary) + '</div>' : '') +
-        '<div class="row"><button data-tfl="' + o.id + '">' + (t ? 'Re-check with TfL' : 'Look up with TfL') + '</button>' +
+        '<div class="row">' + (HOSTED ? '' : '<button data-tfl="' + o.id + '">' + (t ? 'Re-check with TfL' : 'Look up with TfL') + '</button>') +
         '<a href="' + gmaps(ll, oll) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="' + citymapper(ll, oll) + '" target="_blank" rel="noopener">Citymapper</a></div>' +
         '<div class="row"><label class="note">My measured time <input type="number" min="1" max="180" data-manual="' + o.id + '" value="' + (blank(r.manual) ? '' : esc(r.manual)) + '"> min</label>' + verdict + '</div>' +
         '</div>';
-    }).join('') + '<p class="small">Times are door-to-door ' + origin + '. TfL lookups run from your browser against the public TfL Journey Planner; if it is unreachable, use the links and type the time in.</p>';
+    }).join('') + '<p class="small">Times are door-to-door ' + origin + '. ' + (HOSTED ? 'This hosted copy cannot call TfL directly: open a planner link, then type the time in. (The local version in the repo can look it up for you.)' : 'TfL lookups run from your browser against the public TfL Journey Planner; if it is unreachable, use the links and type the time in.') + '</p>';
   }
   function gmaps(a, b) { return 'https://www.google.com/maps/dir/?api=1&origin=' + a[0] + ',' + a[1] + '&destination=' + b[0] + ',' + b[1] + '&travelmode=transit'; }
   function citymapper(a, b) { return 'https://citymapper.com/directions?startcoord=' + a[0] + ',' + a[1] + '&endcoord=' + b[0] + ',' + b[1]; }
@@ -606,6 +703,18 @@
       (p.gates && p.gates.length ? '<h3>Entrances (approximate positions)</h3><ul>' + p.gates.map(function (g) { return '<li>' + esc(g[0]) + '</li>'; }).join('') + '</ul><p class="small">Gates appear on the map from zoom 15.</p>' : '') +
       '<p class="small">The park outline is drawn by the base map; this marker carries the access facts.</p>' + sourcesHtml(p.src, []), { kind: 'park', id: id });
   }
+  function curatedFor(name) {
+    var n = norm(name).replace(/^the /, '');
+    return PARKS.filter(function (p) { return p.access !== 'private' && norm(p.name).replace(/^the /, '') === n; })[0] || null;
+  }
+  function openGreen(g) {
+    var c = curatedFor(g.n);
+    if (c) { openPark(c.id); return; }
+    openPanel('<h1>' + esc(g.n || 'Public park or garden') + '</h1><div class="badges"><span class="badge public">Public park or garden</span><span class="badge">' + g.ha + ' ha</span></div>' +
+      '<p>' + (g.ha >= 20 ? 'Big enough for a proper run.' : g.ha >= 4 ? 'Good for short loops and a walk.' : 'A local green space: for sitting, not running.') + '</p>' +
+      (g.osName ? '<p class="small">OS calls this piece “' + esc(g.osName) + '”.</p>' : '') +
+      '<p class="small">Outline and name from OS Open Greenspace (public parks and gardens only; private squares, cemeteries and sports grounds are not in this set). Opening hours are not in the data — check the borough’s page.</p>', { kind: 'green', id: g.n });
+  }
   function openLandmark(l) {
     openPanel('<h1>' + esc(l.name) + '</h1><div class="badges"><span class="badge">Landmark</span></div><p>' + esc(l.note) + '</p>', { kind: 'landmark', id: l.name });
   }
@@ -651,7 +760,17 @@
     out.publicParks.sort(function (x, y) { return x.d - y.d; });
     out.publicParks = out.publicParks.filter(function (x, i) { return i < 3 || (x.p.size === 'large' && x.d < 2500); }).slice(0, 5);
     out.privateSquares = PARKS.filter(function (p) { return p.access === 'private' && dist(ll, p.ll) < 350; });
-    out.roads = ROADS.map(function (r) { return { r: r, d: distToLine(ll, r.pts) }; }).filter(function (x) { return x.d < 200; }).sort(function (a, b) { return a.d - b.d; });
+    var roads = {};
+    OS.roads.forEach(function (r) {
+      var b = r.p[0]; if (Math.abs(b[0] - ll[0]) > .02 || Math.abs(b[1] - ll[1]) > .03) return; /* cheap prefilter */
+      var d = distToLine(ll, r.p); if (d > 150) return;
+      var key = r.no || r.n || 'A road';
+      if (!roads[key] || d < roads[key].d) roads[key] = { name: [r.no, r.n].filter(Boolean).join(' · ') || 'A road', motorway: r.m, d: d };
+    });
+    out.roads = Object.keys(roads).map(function (k) { return roads[k]; }).sort(function (a, b) { return a.d - b.d; }).slice(0, 4);
+    out.greens = OS.green.map(function (g) { return { g: g, d: distToPoly(ll, g.r) }; }).sort(function (a, b) { return a.d - b.d; });
+    out.nearGreen = out.greens.filter(function (x) { return x.g.ha >= 1; }).slice(0, 3);
+    out.bigGreen = out.greens.filter(function (x) { return x.g.ha >= 20; })[0] || null;
     var lines = {};
     LINES.forEach(function (f) {
       var ls = f.properties.lines.filter(function (l) { return SURFACE_LINES[l]; });
@@ -669,11 +788,14 @@
     h += '<h3>Neighbourhood</h3><p>' + (an.area ? 'Within <button class="link" data-area="' + an.area.a.id + '">' + esc(an.area.a.name) + '</button>' + (an.area.d > an.area.a.r ? ' (towards its edge — read “where this stops applying”)' : '')
       : 'Not inside a researched entry. Nearest: <button class="link" data-area="' + an.nearestArea.a.id + '">' + esc(an.nearestArea.a.name) + '</button> (' + fmtDist(an.nearestArea.d) + ').') + '</p>';
     h += '<h3>Nearest stations (straight-line)</h3><div class="stations">' + an.stations.map(function (x) { return stationChip(x.s, fmtDist(x.d)); }).join('') + '</div>';
-    h += '<h3>Parks and entrances (straight-line)</h3><ul>' + an.publicParks.map(function (x) {
+    h += '<h3>Nearest public green space (to its edge, straight-line)</h3><ul>' + an.nearGreen.map(function (x) {
+      return '<li>' + esc(x.g.n || 'Public park or garden') + ' <span class="small">' + x.g.ha + ' ha</span> — ' + (x.d === 0 ? 'the pin is inside it' : fmtDist(x.d)) + '</li>';
+    }).join('') + '</ul>' + (an.bigGreen ? '<p class="small">Nearest park of 20 ha or more (room for a proper run): <b>' + esc(an.bigGreen.g.n) + '</b>, ' + fmtDist(an.bigGreen.d) + ' to its edge.</p>' : '');
+    h += '<h3>Royal Parks and big-park gates (straight-line)</h3><ul>' + an.publicParks.map(function (x) {
       return '<li><button class="link" data-park="' + x.p.id + '">' + esc(x.p.name) + '</button> — ' + esc(x.gate.name) + ', ' + fmtDist(x.d) + '</li>';
     }).join('') + '</ul>';
     if (an.privateSquares.length) h += '<p class="small">Private garden squares nearby: ' + an.privateSquares.map(function (p) { return esc(p.name); }).join(', ') + ' — keys only if the lease includes one.</p>';
-    h += '<h3>Main roads within ~200 m (approximate alignments)</h3>' + (an.roads.length ? '<ul>' + an.roads.map(function (x) { return '<li>' + esc(x.r.name) + ' — about ' + fmtDist(x.d) + '</li>'; }).join('') + '</ul>' : '<p class="small">None of the mapped main roads. Smaller busy streets are not mapped.</p>');
+    h += '<h3>A roads and motorways within 150 m</h3>' + (an.roads.length ? '<ul>' + an.roads.map(function (x) { return '<li>' + esc(x.name) + ' — about ' + fmtDist(x.d) + '</li>'; }).join('') + '</ul><p class="small">Measured to the road centreline (OS Open Roads). B roads and busy unclassified streets are not included.</p>' : '<p class="small">No A road or motorway within 150 m (OS Open Roads). B roads and busy side streets are not included.</p>');
     h += '<h3>Surface-capable rail within ~150 m</h3>' + (an.rail.length ? '<ul>' + an.rail.map(function (x) { return '<li>' + dotsHtml([x.l]) + ' ' + esc(x.l) + ' — about ' + fmtDist(x.d) + '</li>'; }).join('') + '</ul><p class="small">These lines run on the surface or in shallow cuttings in parts of inner London, but may be in tunnel here — the data does not say. Main-line National Rail tracks are not in this dataset.</p>' : '<p class="small">None in the dataset (deep-level Tube lines and National Rail are not counted).</p>');
     h += '<h3>Crowd, night-time and event pressure</h3>' + (an.pressure.length ? '<ul>' + an.pressure.map(function (x) {
       return '<li>' + esc(x.z.name) + ' — ' + (x.d < x.z.r ? 'inside the mapped zone' : fmtDist(x.d - x.z.r) + ' beyond its edge') + (x.z.src.length ? '' : ' <span class="small">(' + esc(x.z.basis) + ')</span>') + '</li>';
@@ -697,7 +819,7 @@
       ['furn', 'Furnished/unfurnished: what exactly stays, and its condition']
     ];
     if (blank(apt.lift) || apt.lift === 'no') q.push(['lift', 'Floor and stairs: is there a lift? How are deliveries and furniture brought up?']);
-    if (an.roads.length) q.push(['road', 'Which rooms face ' + an.roads[0].r.name.split(' (')[0] + '? Visit at rush hour with windows open and closed']);
+    if (an.roads.length) q.push(['road', 'Which rooms face ' + an.roads[0].name + '? Visit at rush hour with windows open and closed']);
     if (an.rail.length) q.push(['rail', 'Is the ' + an.rail[0].l + ' on the surface near here? Listen for trains (and vibration) during the viewing']);
     if (an.pressure.some(function (x) { return x.z.kind === 'night' || x.z.kind === 'street'; })) q.push(['night', 'Walk the street on a Friday or Saturday around 11pm, and ask the agent about late-night noise']);
     if (an.pressure.some(function (x) { return x.z.kind === 'seasonal'; })) q.push(['event', 'Ask how the building copes on event days (' + an.pressure.filter(function (x) { return x.z.kind === 'seasonal'; }).map(function (x) { return x.z.name.split(' (')[0]; }).join('; ') + ')']);
@@ -746,8 +868,9 @@
       var i = S.compareApts.indexOf(id); if (i >= 0) S.compareApts.splice(i, 1); else S.compareApts.push(id); save(); openApartment(id, true);
     });
     $('#apt-arch').addEventListener('click', function () { a.archived = !a.archived; save(); drawMine(); openApartment(id, true); });
-    $('#apt-del').addEventListener('click', function () {
-      if (!confirm('Delete this apartment permanently? (Archive keeps it.)')) return;
+    $('#apt-del').addEventListener('click', function (e) {
+      var b = e.currentTarget;
+      if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Click again to delete permanently (Archive keeps it)'; return; }
       S.apartments = S.apartments.filter(function (x) { return x.id !== id; });
       S.compareApts = S.compareApts.filter(function (x) { return x !== id; });
       delete S.commutes[commuteKey('apt', id)]; save(); drawMine(); openHome();
@@ -783,9 +906,10 @@
       '<label class="full">Listing notes<textarea name="notes">' + esc(a.notes || '') + '</textarea></label>' +
       '<label class="full">Our notes<textarea name="personal">' + esc(a.personal || '') + '</textarea></label>' +
       '<div class="full" style="grid-column:1/-1"><h3>Pin</h3><p class="small" id="pin-state">' + (a.ll ? 'Pinned at ' + a.ll[0].toFixed(5) + ', ' + a.ll[1].toFixed(5) : 'Not pinned yet.') + '</p>' +
-      '<div class="actions"><button type="button" id="f-pin">Click map to place</button><button type="button" id="f-pc">Locate from postcode</button></div>' +
+      '<div class="actions"><button type="button" id="f-pin">Click map to place</button></div>' +
+      (HOSTED ? '' : '<div class="actions"><input type="text" id="f-pcin" placeholder="Postcode" style="width:9em"><button type="button" id="f-pc">Locate postcode</button></div>') +
       '<label class="check"><input type="checkbox" name="precise"' + (a.precise ? ' checked' : '') + '> Precise pin (on the actual building)</label>' +
-      '<p class="small">Postcode lookup uses postcodes.io and gives the postcode centre — always approximate.</p></div>' +
+      (HOSTED ? '' : '<p class="small">Postcode lookup uses postcodes.io and gives the postcode centre — always approximate.</p>') + '</div>' +
       '<div class="actions full" style="grid-column:1/-1"><button type="submit" class="primary">Save</button><button type="button" id="f-cancel">Cancel</button></div>' +
       '</form>';
     openPanel(html, { kind: 'aptform', id: a.id });
@@ -807,10 +931,11 @@
     });
     $('#f-cancel').addEventListener('click', function () { if (isNew) openHome(); else openApartment(a.id); });
     $('#f-pin').addEventListener('click', function () { read(); startPlacing(null, function (ll) { draft.ll = ll; $('#pin-state').textContent = 'Pinned at ' + ll[0].toFixed(5) + ', ' + ll[1].toFixed(5) + ' — remember to save.'; }); });
-    $('#f-pc').addEventListener('click', function () {
+    var pcBtn = $('#f-pc');
+    if (pcBtn) pcBtn.addEventListener('click', function () {
       var m = (f.address.value.match(/[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}/i) || [])[0];
-      var pc = prompt('Postcode', m || '');
-      if (!pc) return;
+      var pc = $('#f-pcin').value.trim() || m;
+      if (!pc) { toast('Type a postcode first.'); return; }
       fetch('https://api.postcodes.io/postcodes/' + encodeURIComponent(pc.trim())).then(function (r) { return r.json(); }).then(function (j) {
         if (!j.result) throw new Error(j.error || 'not found');
         draft.ll = [j.result.latitude, j.result.longitude]; f.precise.checked = false;
@@ -940,7 +1065,8 @@
       ['→ Bressenden Place', f(function (a) { return a.ll ? commuteCell('apt', a.id, a.ll, 'bressenden') : '—'; })],
       ['Nearest station', f(function (a, x) { return needPin(x, function (x) { return esc(x.stations[0].s.name) + ' <span class="small">' + fmtDist(x.stations[0].d) + '</span>'; }); })],
       ['Nearest park entrance', f(function (a, x) { return needPin(x, function (x) { var p = x.publicParks[0]; return esc(p.p.name) + ' — ' + esc(p.gate.name) + ' <span class="small">' + fmtDist(p.d) + '</span>'; }); })],
-      ['Main roads ≤200 m', f(function (a, x) { return needPin(x, function (x) { return x.roads.length ? x.roads.map(function (r) { return esc(r.r.name.split(' (')[0]); }).join(', ') : 'none mapped'; }); })],
+      ['A roads ≤150 m', f(function (a, x) { return needPin(x, function (x) { return x.roads.length ? x.roads.map(function (r) { return esc(r.name) + ' <span class="small">' + fmtDist(r.d) + '</span>'; }).join('<br>') : 'none'; }); })],
+      ['Nearest 20 ha+ park', f(function (a, x) { return needPin(x, function (x) { return x.bigGreen ? esc(x.bigGreen.g.n) + ' <span class="small">' + fmtDist(x.bigGreen.d) + '</span>' : '—'; }); })],
       ['Pressure zones', f(function (a, x) { return needPin(x, function (x) { return x.pressure.length ? x.pressure.map(function (p) { return esc(p.z.name.split(' (')[0]); }).join('; ') : 'none mapped'; }); })],
       ['Listing notes', f(function (a) { return show(a.notes); })],
       ['Our notes', f(function (a) { return show(a.personal); })],
@@ -962,7 +1088,7 @@
       '<li>Rents quote ONS borough averages for all existing tenancies (August 2026). New-let asking rents run higher; budget lines marked “interpretation” are judgements, not data.</li>' +
       '<li>Commute minutes only appear when they come from TfL’s Journey Planner or from you. Distances are straight-line and never turned into times.</li>' +
       '<li>Office pins are approximate until you move them to the real entrances (click an office).</li></ul>' +
-      '<p class="small">Sources accessed ' + esc(ACCESSED) + '. Map data © OpenStreetMap contributors; tiles © CARTO.</p>', { kind: 'intro', id: null });
+      '<p class="small">Sources accessed ' + esc(ACCESSED) + '. Contains OS data © Crown copyright and database right (OGL). Transport © OpenStreetMap contributors. Street tiles © CARTO.</p>', { kind: 'intro', id: null });
     $all('[data-area]', panelBody).forEach(function (b) { b.addEventListener('click', function () { var a = AREA_BY_ID[b.dataset.area]; openArea(a.id); flyTo(a.ll, 14); }); });
   }
 
@@ -978,7 +1104,7 @@
     if (S.mode === 'home') {
       var near = analyse(ll);
       var pop = L.popup({ maxWidth: 240 }).setLatLng(e.latlng).setContent(
-        '<div class="actions"><button class="primary" data-act="apt">Add apartment here</button><button data-act="place">Add a personal place here</button>' +
+        '<div class="actions"><button class="primary" data-act="apt">Add apartment here</button><input type="text" id="pop-place" placeholder="Place name, e.g. Gym"><button data-act="place">Add as personal place</button>' +
         (near.area ? '<button class="ghost" data-act="area">Open ' + esc(near.area.a.name) + '</button>' : '') + '</div>').openOn(map);
       var el = pop.getElement();
       $all('[data-act]', el).forEach(function (b) {
@@ -986,8 +1112,8 @@
           map.closePopup();
           if (b.dataset.act === 'apt') aptForm(null, ll);
           else if (b.dataset.act === 'place') {
-            var name = prompt('Name this place', 'My place'); if (!name) return;
-            var pl = { id: uid(), name: name.trim(), ll: ll, note: '' }; S.places.push(pl); save(); drawMine(); openPlace(pl.id);
+            var name = (el.querySelector('#pop-place').value || '').trim() || 'My place';
+            var pl = { id: uid(), name: name, ll: ll, note: '' }; S.places.push(pl); save(); drawMine(); openPlace(pl.id);
           } else openArea(near.area.a.id);
         });
       });
@@ -1087,14 +1213,15 @@
   renderLinePicker();
   function renderLegend() {
     var h = '<div class="item"><span class="key" style="font:600 12px var(--serif)">Aa</span> Researched neighbourhood <i class="small">(italic grey = base map only)</i></div>' +
-      '<div class="item"><span class="key"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#5f8f54;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.1)"></i></span> Public park</div>' +
-      '<div class="item"><span class="key"><i style="display:inline-block;width:9px;height:9px;border:1.5px dashed #8a7a5a;background:#fff"></i></span> Private garden square (keyholders)</div>' +
+      '<div class="item"><span class="key"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--map-park);border:1.5px solid var(--green)"></i></span> Public park (OS outline) · <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);border:1.5px solid var(--field)"></i> researched park</div>' +
+      '<div class="item"><span class="key"><i style="display:inline-block;width:9px;height:9px;border:1.5px dashed var(--estate-ink);background:var(--field)"></i></span> Private garden square (keyholders)</div>' +
       '<div class="item"><span class="key"><i style="display:inline-block;background:#1e2023;color:#fff;font:600 9px/14px var(--sans);padding:0 3px;border-radius:2px">P</i></span> Office anchor (dashed = approximate)</div>';
     if (S.layers.character) h += Object.keys(CHAR_KINDS).filter(function (k) { return k !== 'crowds'; }).map(function (k) { return '<div class="item"><span class="key" style="border:2px solid ' + CHAR_KINDS[k].color + ';border-radius:50%"></span>' + esc(CHAR_KINDS[k].label) + '</div>'; }).join('');
-    if (S.layers.roads) h += '<div class="item"><span class="key" style="height:5px;background:#9b4a2c;opacity:.5"></span> Main road (approximate)</div>';
+    if (S.layers.roads) h += '<div class="item"><span class="key" style="height:5px;background:var(--map-highlight-road);opacity:.6"></span> A road / motorway (OS Open Roads)</div>';
     if (S.layers.mine) h += '<div class="item"><span class="key"><i style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2e4a66;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)"></i></span> Apartment (colour = status; ring = approximate)</div>';
     $('#legend').innerHTML = h;
   }
+  if (HOSTED) $all('#basemap option').forEach(function (o) { if (o.value !== 'atlas') o.remove(); });
   $('#basemap').value = S.basemap;
   $('#basemap').addEventListener('change', function (e) { setBasemap(e.target.value); });
 
@@ -1109,34 +1236,54 @@
     $all('[data-office]', $('#office-settings')).forEach(function (b) { b.addEventListener('click', function () { $('#datapanel').hidden = true; openOffice(b.dataset.office); flyTo(officeLL(b.dataset.office), 16); }); });
   }
   $('#btn-data').addEventListener('click', renderOfficeSettings);
+  function exportJson() { return JSON.stringify({ app: 'london-atlas', exported: new Date().toISOString(), data: S }, null, 2); }
   $('#btn-export').addEventListener('click', function () {
-    var blob = new Blob([JSON.stringify({ app: 'london-atlas', exported: new Date().toISOString(), data: S }, null, 2)], { type: 'application/json' });
+    var txt = exportJson();
+    $('#export-text').value = txt; $('#export-box').hidden = false;
+    if (HOSTED) return; /* hosted pages cannot start downloads: copy instead */
+    var blob = new Blob([txt], { type: 'application/json' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'london-atlas-' + today() + '.json';
     document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   });
+  $('#btn-copy').addEventListener('click', function () {
+    var t = $('#export-text');
+    navigator.clipboard.writeText(t.value).then(function () { toast('Copied.'); }).catch(function () { t.focus(); t.select(); toast('Select-all is done — press copy on your keyboard.'); });
+  });
+  function offerImport(txt) {
+    var d;
+    try { var j = JSON.parse(txt); d = j && j.data ? j.data : j; if (!d || typeof d !== 'object' || !Array.isArray(d.apartments)) throw new Error('this is not a London Atlas export'); }
+    catch (err) { toast('Import failed: ' + err.message); return; }
+    var box = $('#import-choice');
+    box.innerHTML = '<p class="small">Found ' + d.apartments.length + ' apartments, ' + (d.places || []).length + ' places, ' + (d.shortlist || []).length + ' shortlisted areas.</p>' +
+      '<div class="confirm-row"><button class="primary" id="imp-merge">Merge into my data</button><button class="danger" id="imp-replace">Replace my data</button><button class="ghost" id="imp-cancel">Cancel</button></div>';
+    box.hidden = false;
+    function done() { box.hidden = true; save(); drawOffices(); drawMine(); applyLayers(); toast('Imported.'); if (S.mode === 'home') openHome(); }
+    $('#imp-cancel').onclick = function () { box.hidden = true; };
+    $('#imp-replace').onclick = function () { S = merge(defaults(), d); if (HOSTED) S.basemap = 'atlas'; done(); };
+    $('#imp-merge').onclick = function () {
+      var ids = {}; S.apartments.forEach(function (a) { ids[a.id] = 1; });
+      d.apartments.forEach(function (a) { if (!ids[a.id]) S.apartments.push(a); });
+      var pids = {}; S.places.forEach(function (p) { pids[p.id] = 1; });
+      (d.places || []).forEach(function (p) { if (!pids[p.id]) S.places.push(p); });
+      (d.shortlist || []).forEach(function (id) { if (S.shortlist.indexOf(id) < 0 && AREA_BY_ID[id]) S.shortlist.push(id); });
+      Object.keys(d.commutes || {}).forEach(function (k) { if (!S.commutes[k]) S.commutes[k] = d.commutes[k]; });
+      Object.keys(d.areaNotes || {}).forEach(function (k) { if (!S.areaNotes[k]) S.areaNotes[k] = d.areaNotes[k]; });
+      done();
+    };
+  }
   $('#file-import').addEventListener('change', function (e) {
     var file = e.target.files[0]; if (!file) return;
-    file.text().then(function (txt) {
-      var j = JSON.parse(txt), d = j && j.data ? j.data : j;
-      if (!d || typeof d !== 'object' || !Array.isArray(d.apartments)) throw new Error('not a London Atlas export');
-      var replace = confirm('Replace your current data with this file?\n\nOK = replace everything · Cancel = merge (adds apartments, places and shortlist entries you don’t already have)');
-      if (replace) S = merge(defaults(), d);
-      else {
-        var ids = {}; S.apartments.forEach(function (a) { ids[a.id] = 1; });
-        d.apartments.forEach(function (a) { if (!ids[a.id]) S.apartments.push(a); });
-        var pids = {}; S.places.forEach(function (p) { pids[p.id] = 1; });
-        (d.places || []).forEach(function (p) { if (!pids[p.id]) S.places.push(p); });
-        (d.shortlist || []).forEach(function (id) { if (S.shortlist.indexOf(id) < 0 && AREA_BY_ID[id]) S.shortlist.push(id); });
-        Object.keys(d.commutes || {}).forEach(function (k) { if (!S.commutes[k]) S.commutes[k] = d.commutes[k]; });
-        Object.keys(d.areaNotes || {}).forEach(function (k) { if (!S.areaNotes[k]) S.areaNotes[k] = d.areaNotes[k]; });
-      }
-      save(); drawOffices(); drawMine(); applyLayers(); toast('Imported.'); if (S.mode === 'home') openHome();
-    }).catch(function (err) { toast('Import failed: ' + err.message); }).then(function () { e.target.value = ''; });
+    var r = new FileReader();
+    r.onload = function () { offerImport(String(r.result)); e.target.value = ''; };
+    r.readAsText(file);
   });
-  $('#btn-wipe').addEventListener('click', function () {
-    if (!confirm('Delete all apartments, places, notes, shortlist and settings stored in this browser? Export first if you want a copy.')) return;
-    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
-    S = defaults(); save(); drawOffices(); drawMine(); applyLayers(); setMode('explore'); openIntro(); $('#datapanel').hidden = true;
+  $('#btn-paste-import').addEventListener('click', function () { offerImport($('#import-text').value); });
+  $('#btn-wipe').addEventListener('click', function (e) {
+    var b = e.currentTarget;
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Click again: delete everything in this browser'; return; }
+    try { localStorage.removeItem(STORE_KEY); } catch (err) { /* ignore */ }
+    S = defaults(); if (HOSTED) S.basemap = 'atlas'; save(); drawOffices(); drawMine(); applyLayers(); setMode('explore'); openIntro(); $('#datapanel').hidden = true;
+    delete b.dataset.armed; b.textContent = 'Delete all local data…';
   });
 
   /* ================================================================ boot */

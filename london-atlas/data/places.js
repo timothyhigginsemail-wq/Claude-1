@@ -122,33 +122,6 @@ window.ATLAS_BASE_PLACES = [
   ['Willesden', 51.5468, -0.2341], ['Barnsbury', 51.5418, -0.1106], ['Canonbury', 51.5439, -0.095], ['Westbourne Park', 51.521, -0.201]
 ].map(function (p) { return { name: p[0], ll: [p[1], p[2]] }; });
 
-/*
- * Context lines and zones used when describing a pin. All hand-placed and APPROXIMATE
- * (alignment to within roughly 50–150 m). They say "this is near a main road", never
- * "this flat is noisy".
- */
-window.ATLAS_ROADS = [
-  { name: 'Marylebone Road / Euston Road (A501)', pts: [[51.5203, -0.1700], [51.5226, -0.1567], [51.5237, -0.1440], [51.5257, -0.1357], [51.5302, -0.1240]] },
-  { name: 'Westway (A40, elevated)', pts: [[51.5203, -0.1700], [51.5195, -0.1800], [51.5205, -0.2000], [51.5180, -0.2120], [51.5150, -0.2280]] },
-  { name: 'Edgware Road / Maida Vale / Kilburn High Rd (A5)', pts: [[51.5132, -0.1600], [51.5203, -0.1700], [51.5290, -0.1820], [51.5380, -0.1930], [51.5470, -0.2045]] },
-  { name: 'Park Lane (A4202)', pts: [[51.5132, -0.1593], [51.5030, -0.1520]] },
-  { name: 'Bayswater Road', pts: [[51.5132, -0.1600], [51.5118, -0.1760], [51.5090, -0.1960]] },
-  { name: 'Vauxhall Bridge Road (A202)', pts: [[51.4965, -0.1415], [51.4905, -0.1365], [51.4880, -0.1275]] },
-  { name: 'Grosvenor Road / Chelsea Embankment (A3212)', pts: [[51.4865, -0.1290], [51.4848, -0.1500], [51.4840, -0.1620], [51.4815, -0.1735]] },
-  { name: 'Cromwell Road / Talgarth Road (A4)', pts: [[51.4950, -0.1730], [51.4945, -0.1825], [51.4945, -0.1960], [51.4920, -0.2100], [51.4910, -0.2240]] },
-  { name: 'Knightsbridge / Brompton Road', pts: [[51.5025, -0.1525], [51.5015, -0.1605], [51.4980, -0.1680], [51.4945, -0.1730]] },
-  { name: 'Wellington Road / Finchley Road (A41)', pts: [[51.5296, -0.1720], [51.5347, -0.1740], [51.5432, -0.1748], [51.5472, -0.1803], [51.5560, -0.1860]] },
-  { name: 'Haverstock Hill / Rosslyn Hill (A502)', pts: [[51.5442, -0.1535], [51.5502, -0.1642], [51.5545, -0.1720]] },
-  { name: 'Notting Hill Gate / Holland Park Avenue (A402)', pts: [[51.5090, -0.1960], [51.5075, -0.2060], [51.5045, -0.2185]] },
-  { name: 'Kensington High Street (A315)', pts: [[51.5025, -0.1850], [51.5005, -0.1925], [51.4985, -0.2060]] },
-  { name: 'Upper Street / Holloway Road (A1)', pts: [[51.5322, -0.1058], [51.5462, -0.1040], [51.5530, -0.1130]] },
-  { name: 'Kennington Road / Clapham Road (A3)', pts: [[51.4880, -0.1060], [51.4818, -0.1125], [51.4723, -0.1228], [51.4650, -0.1300]] },
-  { name: 'Brixton Road (A23)', pts: [[51.4818, -0.1125], [51.4627, -0.1145]] },
-  { name: 'Nine Elms Lane (A3205)', pts: [[51.4860, -0.1240], [51.4825, -0.1350], [51.4800, -0.1450]] },
-  { name: 'Buckingham Palace Road', pts: [[51.4985, -0.1430], [51.4925, -0.1490], [51.4880, -0.1530]] },
-  { name: 'King’s Road', pts: [[51.4925, -0.1565], [51.4870, -0.1700], [51.4810, -0.1810]] }
-];
-
 /* Zones of crowd / night-time / seasonal pressure. `src` points at evidence; `basis` says when it is impression only. */
 window.ATLAS_PRESSURE = [
   { name: 'Soho late-night economy (West End Cumulative Impact Zone)', ll: [51.5130, -0.1320], r: 350, kind: 'night', src: ['soho_licensing'] },
