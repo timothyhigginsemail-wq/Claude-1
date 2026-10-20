@@ -1,6 +1,17 @@
 # London Atlas
 
-**Start with the guide: `guide/index.html` — “London, sorted”.** One illustrated map sorts central and inner London into seven kinds of place (grand west, quiet central, north villages, the core, lively & creative, new riverside, south & west). The 13 spots that best fit the brief carry their median asking rent on the map, and below it as cards with icon ratings (parks, quiet, cafés & pubs, ease of getting to each office). Pick 1 or 2 beds and a budget; spots over budget fade. Rents are RentReboot median asking rents (listings first seen in the 90 days to mid-October 2026). Rebuild with `python3 guide/build_sorted.py`; this is the page published as the Artifact.
+**Start with the guide: `guide/index.html`, “London, sorted”.** A one-page mental map: every researched area is an indicative zone coloured by one of eight kinds of place:
+
+- stucco & Royal Parks
+- squares & mansion blocks
+- hill villages
+- terraces & commons
+- working core
+- markets & nightlife
+- new towers
+- estates & high streets
+
+Three kinds of flag mark pockets worth knowing about. **Watch out** marks a specific problem named by police or a council. **Communities** marks long-established centres such as Bangladeshi Brick Lane, Arab Edgware Road and Caribbean Brixton. **Events & crowds** marks Carnival, the Hyde Park concerts and match days. Every flag links to its source. Content lives in `guide/mental-data.js`; rebuild with `python3 guide/build_guide.py`. This is the page published as the Artifact.
 
 The rest of this README describes the full **explorer** (`index.html`): every researched entry, layers, commute lookups and an apartment tracker.
 

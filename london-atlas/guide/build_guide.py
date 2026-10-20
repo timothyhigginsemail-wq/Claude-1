@@ -1,4 +1,4 @@
-"""Build "London, sorted": one static illustrated map plus a spot list.
+"""Build "London, sorted": a one-page mental map of London (kinds of place + flags).
 
     python3 london-atlas/guide/build_sorted.py
       -> london-atlas/guide/index.html          (open locally)
@@ -85,10 +85,10 @@ for a in areas:
 
 geo = {"w": W, "h": H, "cells": cells, "pos": pos, "names": {a["id"]: a["name"] for a in areas},
        "proj": {"lng0": LNG0, "lat1": LAT1, "kx": KX, "ky": KY}}
-tpl = (HERE / "sorted-template.html").read_text()
+tpl = (HERE / "template.html").read_text()
 page = (tpl.replace("{{W}}", str(W)).replace("{{H}}", str(H)).replace("{{LAND}}", land).replace("{{PARKS}}", parks)
         .replace("{{GEO}}", json.dumps(geo, separators=(",", ":")))
-        .replace("{{DATA}}", (HERE / "sorted-data.js").read_text() + "\n" + (ROOT / "data/ratings.js").read_text()))
+        .replace("{{DATA}}", (HERE / "mental-data.js").read_text()))
 out = ROOT / "dist" / "london-atlas.html"
 out.parent.mkdir(exist_ok=True)
 out.write_text(page)
