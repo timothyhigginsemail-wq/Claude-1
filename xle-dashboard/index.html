@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>XLE Energy Explainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -17,12 +18,13 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:0 80px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
 header.top{padding:40px 0 18px;border-bottom:1px solid var(--line);margin-bottom:8px}
 .eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 h1{font-size:34px;line-height:1.15;margin:10px 0 8px;letter-spacing:-.02em}
 .lede{color:var(--muted);max-width:760px;margin:0}
-nav.toc{position:sticky;top:0;z-index:5;background:rgba(247,247,244,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -24px;padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(247,247,244,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -24px;padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap}
 nav.toc a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px}
 nav.toc a:hover{background:#ecece6;color:var(--ink)}
 section{padding:44px 0 8px}
