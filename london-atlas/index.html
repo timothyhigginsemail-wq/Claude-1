@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>London Atlas</title>
+<meta name="description" content="A researched map of London neighbourhoods and a rental shortlist tool for a move from New York.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar" role="banner">
+    <div class="brand">London Atlas</div>
+    <div class="mode" role="tablist" aria-label="Mode">
+      <button role="tab" data-mode="explore" aria-selected="true">Explore</button>
+      <button role="tab" data-mode="home" aria-selected="false">Find a home</button>
+    </div>
+    <div class="search">
+      <input id="search" type="search" placeholder="Search areas, places, stations, saved…" autocomplete="off" aria-label="Search">
+      <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+    </div>
+    <div class="top-actions">
+      <button id="btn-layers" class="ghost" aria-expanded="false" aria-controls="layers">Layers</button>
+      <button id="btn-data" class="ghost" aria-expanded="false" aria-controls="datapanel">Data</button>
+    </div>
+  </header>
+
+  <div id="map" aria-label="Map of London"></div>
+
+  <section id="layers" class="floating layers" hidden aria-label="Layers">
+    <h2>Layers</h2>
+    <label><input type="checkbox" data-layer="areas" checked> Neighbourhoods</label>
+    <label class="locked"><input type="checkbox" checked disabled> Parks &amp; gardens <span class="hint">always on</span></label>
+    <label><input type="checkbox" data-layer="transport"> Transport</label>
+    <div id="line-picker" class="line-picker" hidden></div>
+    <label><input type="checkbox" data-layer="landmarks"> Landmarks</label>
+    <label><input type="checkbox" data-layer="character"> Area character <span class="hint">sourced only</span></label>
+    <label><input type="checkbox" data-layer="roads"> Main roads <span class="hint">approx.</span></label>
+    <label><input type="checkbox" data-layer="mine" checked> My places &amp; apartments</label>
+    <label><input type="checkbox" data-layer="boroughs"> Borough boundaries</label>
+    <h3>Base map</h3>
+    <select id="basemap" aria-label="Base map tiles">
+      <option value="voyager">CARTO Voyager (default)</option>
+      <option value="positron">CARTO Positron (plainer)</option>
+      <option value="osm">OpenStreetMap standard</option>
+    </select>
+    <div id="legend" class="legend"></div>
+  </section>
+
+  <section id="datapanel" class="floating datapanel" hidden aria-label="Data and settings">
+    <h2>Your data</h2>
+    <p class="small">Everything you add is stored only in this browser. Export regularly — clearing site data deletes it.</p>
+    <div class="row">
+      <button id="btn-export">Export JSON</button>
+      <label class="button-like">Import JSON<input id="file-import" type="file" accept="application/json,.json" hidden></label>
+    </div>
+    <h3>Commute target</h3>
+    <label class="inline">Door-to-door target <input id="threshold" type="number" min="5" max="90" step="1"> min</label>
+    <p class="small">Only real times (from TfL, or ones you enter) are compared with the target. Straight-line distance is never converted into minutes.</p>
+    <h3>Offices</h3>
+    <div id="office-settings"></div>
+    <h3>Reset</h3>
+    <button id="btn-wipe" class="danger">Delete all local data…</button>
+  </section>
+
+  <aside id="panel" class="panel" aria-live="polite" aria-label="Details">
+    <div class="panel-grip" aria-hidden="true"></div>
+    <button id="panel-close" class="panel-close" aria-label="Close panel">×</button>
+    <div id="panel-body" class="panel-body"></div>
+  </aside>
+
+  <section id="compare" class="compare" hidden aria-label="Comparison">
+    <div class="compare-head">
+      <h2 id="compare-title">Compare</h2>
+      <button id="compare-close" class="ghost" aria-label="Close comparison">Close</button>
+    </div>
+    <div id="compare-body" class="compare-body"></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="data/sources.js"></script>
+<script src="data/places.js"></script>
+<script src="data/areas-core.js"></script>
+<script src="data/areas-rest.js"></script>
+<script src="data/transport-lines.js"></script>
+<script src="data/stations.js"></script>
+<script src="data/boroughs.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
