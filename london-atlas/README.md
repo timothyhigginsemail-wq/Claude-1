@@ -1,5 +1,9 @@
 # London Atlas
 
+**Start with the guide: `guide/index.html` — “London, sorted”.** One illustrated map sorts central and inner London into seven kinds of place (grand west, quiet central, north villages, the core, lively & creative, new riverside, south & west). The 13 spots that best fit the brief carry their median asking rent on the map, and below it as cards with icon ratings (parks, quiet, cafés & pubs, ease of getting to each office). Pick 1 or 2 beds and a budget; spots over budget fade. Rents are RentReboot median asking rents (listings first seen in the 90 days to mid-October 2026). Rebuild with `python3 guide/build_sorted.py`; this is the page published as the Artifact.
+
+The rest of this README describes the full **explorer** (`index.html`): every researched entry, layers, commute lookups and an apartment tracker.
+
 An interactive 2D map of central and inner London with two jobs:
 
 1. **Explore:** build a mental map of the city: neighbourhoods, how they connect, what they are like on the ground.

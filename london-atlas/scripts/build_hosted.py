@@ -2,7 +2,7 @@
 styles and data inlined, Leaflet from cdnjs, and hosted mode on (no tile servers, no TfL /
 postcode calls, no file downloads or browser dialogs — the artifact sandbox blocks them).
 
-    python3 london-atlas/scripts/build_hosted.py   ->  london-atlas/dist/london-atlas.html
+    python3 london-atlas/scripts/build_hosted.py   ->  london-atlas/dist/london-atlas-explorer.html
 """
 import pathlib, re
 
@@ -24,7 +24,7 @@ def inline(m):
 
 
 body = re.sub(r'<script src="([^"]+)"></script>', inline, body)
-out = ROOT / "dist" / "london-atlas.html"
+out = ROOT / "dist" / "london-atlas-explorer.html"
 out.parent.mkdir(exist_ok=True)
 out.write_text(head.strip() + "\n" + body.strip() + "\n")
 print(out, out.stat().st_size // 1024, "KB")

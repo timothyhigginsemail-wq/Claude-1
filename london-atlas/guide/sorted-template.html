@@ -1,0 +1,299 @@
+<title>London Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="London in seven kinds of place, and the spots that fit two offices and £3–5k a month.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one wide illustrated map, one control row, then a grid of spot cards. */
+:root {
+  --page: #f4f3ef; --card: #ffffff; --ink: #1d2430; --muted: #5f6772; --rule: #dfddd6;
+  --land: #ebe9e2; --water: #a8c3d4; --park: #bfd5ad; --halo: #ebe9e2; --cell-op: .5;
+  --k-grand: #d29f4e; --k-central: #5b8fc2; --k-north: #74a85f; --k-core: #9c9da7; --k-lively: #dc7350; --k-river: #9480c4; --k-south: #45a596;
+  --display: 'DM Serif Display', Georgia, serif;
+  --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --label: 'IBM Plex Sans Condensed', 'Arial Narrow', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #13171c; --card: #1b2027; --ink: #e8e6e0; --muted: #9aa1ab; --rule: #2c333b;
+  --land: #20262d; --water: #2b4a60; --park: #2c4632; --halo: #20262d; --cell-op: .34; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --page: #13171c; --card: #1b2027; --ink: #e8e6e0; --muted: #9aa1ab; --rule: #2c333b;
+  --land: #20262d; --water: #2b4a60; --park: #2c4632; --halo: #20262d; --cell-op: .34; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1 { font: 400 clamp(34px, 5vw, 52px)/1 var(--display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* kinds */
+.kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+.kind { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--rule); background: var(--card); border-radius: 999px; padding: 6px 12px 6px 8px; font-size: 14px; }
+.kind i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+.kind[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.kind-line { margin: -6px 0 0; min-height: 1.5em; color: var(--muted); font-size: 14px; }
+
+/* map */
+.map { margin: 0; position: relative; background: var(--water); border-radius: 14px; overflow: hidden; border: 1px solid var(--rule); }
+.map-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.map svg { display: block; width: 100%; height: auto; min-width: 760px; }
+.cell { fill: var(--c); fill-opacity: var(--cell-op); stroke: var(--land); stroke-width: 2; cursor: pointer; transition: fill-opacity .15s; }
+.cell:hover { fill-opacity: .7; }
+body[data-kind] .cell { fill-opacity: .08; }
+body[data-kind] .cell.on { fill-opacity: .65; }
+.cell.sel { stroke: var(--ink); stroke-width: 2.5; fill-opacity: .75; }
+.lbl { font: 500 11px var(--label); fill: var(--muted); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.lbl.spot { font: 600 13.5px var(--label); fill: var(--ink); }
+body[data-kind] .lbl:not(.on) { opacity: .25; }
+.park-lbl { font: italic 500 10.5px var(--label); fill: color-mix(in srgb, var(--park) 35%, var(--ink)); pointer-events: none; opacity: .8; }
+.pin { cursor: pointer; }
+.pin rect { fill: var(--ink); }
+.pin text { font: 600 11px var(--body); fill: var(--page); font-variant-numeric: tabular-nums; }
+.pin.over { opacity: .3; }
+.pin.sel rect { fill: var(--k-lively); }
+.office rect { fill: var(--page); stroke: var(--ink); stroke-width: 1.5; }
+.office text { font: 700 11px var(--body); fill: var(--ink); }
+.office .olbl { font: 600 11px var(--label); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.tip { position: absolute; left: 12px; top: 12px; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; font-size: 13px; box-shadow: 0 4px 18px rgba(0,0,0,.12); max-width: 260px; }
+.tip b { font-size: 15px; }
+.tip .k { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.tip .k i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.scale { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+.scale i { display: block; height: 4px; border: 1.5px solid var(--ink); border-top: 0; }
+
+/* controls */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; background: var(--card); }
+.seg button { border: 0; background: none; padding: 6px 14px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.budget { display: flex; align-items: center; gap: 10px; }
+.budget input { width: 180px; accent-color: var(--ink); }
+.budget output { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 5ch; }
+.key { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.key span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tip .k { display: flex; margin: 2px 0 4px; }
+
+/* spot cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.spot { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; cursor: pointer; border-top: 5px solid var(--c); transition: opacity .15s; }
+.spot.over { opacity: .45; }
+.spot.sel { border-color: var(--ink); border-top-color: var(--c); box-shadow: 0 0 0 1px var(--ink); }
+.spot h3 { font: 400 22px/1.1 var(--display); margin: 0; }
+.spot .kn { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.price { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.price b { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.price span { color: var(--muted); font-size: 13px; }
+.src { color: var(--muted); font-size: 11px; margin-top: -6px; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.mark { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.mark svg { width: 15px; height: 15px; fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.dots { display: inline-flex; gap: 2px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--rule); }
+.dots i.on { background: var(--ink); }
+.ob { font: 700 10px/1 var(--body); border: 1.3px solid var(--ink); border-radius: 3px; padding: 2px 3px; color: var(--ink); }
+.spot p { margin: 0; font-size: 14px; }
+footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; border-top: 1px solid var(--rule); padding-top: 14px; }
+footer a { color: inherit; }
+@media (max-width: 520px) { .budget input { width: 140px; } .map svg { min-width: 720px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<!--body-->
+<main class="wrap">
+  <header>
+    <h1>London, sorted</h1>
+    <p class="lede">Seven kinds of London, and the spots that fit two offices and £3–5k a month.</p>
+  </header>
+
+  <div class="kinds" id="kinds" role="group" aria-label="Kinds of place"></div>
+  <p class="kind-line" id="kindLine">Tap a kind to see where it is. Tap a zone for its rent.</p>
+
+  <figure class="map">
+    <div class="map-scroll" id="mapScroll">
+      <svg id="map" viewBox="0 0 {{W}} {{H}}" role="img" aria-label="Map of central and inner London coloured by kind of place">
+        <defs><path id="landPath" d="{{LAND}}"/><clipPath id="landClip"><use href="#landPath"/></clipPath></defs>
+        <rect width="{{W}}" height="{{H}}" fill="var(--water)"/>
+        <use href="#landPath" fill="var(--land)"/>
+        <g id="cells" clip-path="url(#landClip)"></g>
+        <path d="{{PARKS}}" fill="var(--park)" pointer-events="none"/>
+        <g id="parkLabels"></g>
+        <g id="labels"></g>
+        <g id="offices"></g>
+        <g id="pins"></g>
+      </svg>
+    </div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="scale" aria-hidden="true"><i id="scaleBar"></i>1 km</div>
+  </figure>
+
+  <section aria-label="Spots">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Bedrooms">
+        <button id="b1" aria-pressed="false">1 bed</button><button id="b2" aria-pressed="true">2 bed</button>
+      </div>
+      <label class="budget">Up to <input id="budget" type="range" min="2500" max="6000" step="100" value="5000"><output id="budgetOut">£5,000</output></label>
+      <div class="key" id="key"></div>
+    </div>
+    <div class="grid" id="grid" style="margin-top:14px"></div>
+  </section>
+
+  <footer>
+    <div>Rents: median <em>asking</em> rents from <a id="priceSrc" href="#" target="_blank" rel="noopener">RentReboot</a>, whole-home listings first seen in the 90 days to mid-October 2026, for the grouping named on each card. Rents actually agreed are often a little lower.</div>
+    <div>Zones are indicative: London neighbourhoods have no official boundaries. Kinds and dots are our read of researched notes on each area, not measurements. Map: contains OS data © Crown copyright (OGL).</div>
+  </footer>
+</main>
+
+<script>{{DATA}}</script>
+<script>window.GEO = {{GEO}};</script>
+<script>
+(function () {
+  var D = window.SORTED, G = window.GEO, R = window.ATLAS_RATINGS || {};
+  var NS = 'http://www.w3.org/2000/svg';
+  var SPOT = {}; D.spots.forEach(function (s) { SPOT[s.id] = s; });
+  var state = { beds: 2, budget: 5000, kind: null, sel: null };
+  try { var saved = JSON.parse(localStorage.getItem('london-sorted') || 'null'); if (saved) { state.beds = saved.beds === 1 ? 1 : 2; state.budget = +saved.budget || 5000; } } catch (e) { /* storage unavailable */ }
+  function persist() { try { localStorage.setItem('london-sorted', JSON.stringify({ beds: state.beds, budget: state.budget })); } catch (e) { /* ignore */ } }
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, parent) { var n = document.createElementNS(NS, tag); for (var k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+  function kc(k) { return 'var(--k-' + k + ')'; }
+  function gbp(n) { return '£' + n.toLocaleString('en-GB'); }
+  function short(n) { return '£' + (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k'; }
+  function priceOf(id) { var s = SPOT[id]; return s ? s.price : D.otherPrices[id] || null; }
+  function proj(ll) { return [(ll[1] - G.proj.lng0) * G.proj.kx, (G.proj.lat1 - ll[0]) * G.proj.ky]; }
+
+  /* kinds */
+  Object.keys(D.kinds).forEach(function (k) {
+    var b = document.createElement('button'); b.className = 'kind'; b.style.setProperty('--c', kc(k)); b.setAttribute('aria-pressed', 'false'); b.dataset.k = k;
+    b.innerHTML = '<i></i>' + D.kinds[k].name; $('kinds').appendChild(b);
+    b.addEventListener('click', function () { setKind(state.kind === k ? null : k); });
+  });
+  function setKind(k) {
+    state.kind = k;
+    if (k) document.body.dataset.kind = k; else delete document.body.dataset.kind;
+    Array.prototype.forEach.call($('kinds').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.k === k)); });
+    $('kindLine').textContent = k ? D.kinds[k].line : 'Tap a kind to see where it is. Tap a zone for its rent.';
+    document.querySelectorAll('[data-kind]').forEach(function (n) { n.classList.toggle('on', n.getAttribute('data-kind') === k); });
+  }
+
+  /* zones and labels */
+  var cellsG = $('cells'), labelsG = $('labels');
+  Object.keys(G.cells).forEach(function (id) {
+    var k = D.areaKind[id]; if (!G.cells[id]) return;
+    var c = el('path', { d: G.cells[id], class: 'cell', 'data-kind': k, 'data-id': id }, cellsG);
+    c.style.setProperty('--c', kc(k));
+    c.addEventListener('click', function () { select(id, true); });
+    var p = G.pos[id], spot = !!SPOT[id];
+    var t = el('text', { x: p[0], y: p[1] + (spot ? -12 : 4), 'text-anchor': 'middle', class: 'lbl' + (spot ? ' spot' : ''), 'data-kind': k }, labelsG);
+    t.textContent = labelText(id);
+  });
+  [['Hyde Park', 51.5086, -0.1636], ['Kensington Gdns', 51.5065, -0.1795], ['Regent’s Park', 51.5290, -0.1545], ['Hampstead Heath', 51.5625, -0.1600], ['Battersea Park', 51.4785, -0.1590], ['Victoria Park', 51.5364, -0.0398], ['Clapham Common', 51.4560, -0.1494]].forEach(function (p) {
+    var xy = proj([p[1], p[2]]); el('text', { x: xy[0], y: xy[1], 'text-anchor': 'middle', class: 'park-lbl' }, $('parkLabels')).textContent = p[0];
+  });
+  D.spots.forEach(function (s) { /* nothing: pins drawn in render() */ });
+  (window.SORTED_OFFICES || [['P', 'Portman Sq', 51.5157, -0.1557], ['B', 'Bressenden Pl', 51.4971, -0.1429]]).forEach(function (o) {
+    var xy = proj([o[2], o[3]]), g = el('g', { class: 'office', transform: 'translate(' + xy[0].toFixed(0) + ' ' + xy[1].toFixed(0) + ')' }, $('offices'));
+    el('rect', { x: -8, y: -8, width: 16, height: 16, rx: 2 }, g);
+    var t = el('text', { x: 0, y: 4, 'text-anchor': 'middle' }, g); t.textContent = o[0];
+    var l = el('text', { x: 0, y: 21, 'text-anchor': 'middle', class: 'olbl' }, g); l.textContent = o[1];
+  });
+  /* 1 km scale bar: viewBox units are 20 m; convert to on-screen pixels */
+  function scale() { var svg = $('map'); $('scaleBar').style.width = (1000 / 20) * svg.getBoundingClientRect().width / G.w + 'px'; }
+  window.addEventListener('resize', scale);
+
+  /* key */
+  var ICON = {
+    parks: '<svg viewBox="0 0 16 16"><circle cx="8" cy="6" r="4.5"/><path d="M8 10.5V15"/></svg>',
+    quiet: '<svg viewBox="0 0 16 16"><path d="M12.5 10.5A6 6 0 0 1 5.5 3.5a6 6 0 1 0 7 7z"/></svg>',
+    cafes: '<svg viewBox="0 0 16 16"><path d="M2.5 6h9v4a4 4 0 0 1-4 4h-1a4 4 0 0 1-4-4z"/><path d="M11.5 7.5h1.5a1.5 1.5 0 0 1 0 3h-1.5"/><path d="M6 1.5v2M9 1.5v2"/></svg>'
+  };
+  function dots(n) { return '<span class="dots" aria-label="' + n + ' of 3">' + [1, 2, 3].map(function (i) { return '<i class="' + (i <= n ? 'on' : '') + '"></i>'; }).join('') + '</span>'; }
+  $('key').innerHTML = '<span>' + ICON.parks + 'parks</span><span>' + ICON.quiet + 'quiet</span><span>' + ICON.cafes + 'cafés &amp; pubs</span><span><b class="ob">P</b><b class="ob">B</b> to work:</span><span>' + dots(3) + ' walk or one line</span><span>' + dots(2) + ' one change</span>';
+  $('key').querySelectorAll('svg').forEach(function (s) { s.setAttribute('width', 14); s.setAttribute('height', 14); s.style.cssText = 'fill:none;stroke:currentColor;stroke-width:1.6'; });
+  $('priceSrc').href = D.priceSource.u;
+
+  /* spots */
+  function render() {
+    var bi = state.beds - 1;
+    $('b1').setAttribute('aria-pressed', String(state.beds === 1)); $('b2').setAttribute('aria-pressed', String(state.beds === 2));
+    $('budget').value = state.budget; $('budgetOut').textContent = gbp(state.budget);
+    var list = D.spots.slice().sort(function (a, b) {
+      var oa = a.price[bi] > state.budget, ob = b.price[bi] > state.budget;
+      return oa - ob || a.price[bi] - b.price[bi];
+    });
+    $('grid').innerHTML = list.map(function (s) {
+      var r = R[s.id] || [0, 0, 0], k = D.areaKind[s.id], over = s.price[bi] > state.budget;
+      return '<article class="spot' + (over ? ' over' : '') + (state.sel === s.id ? ' sel' : '') + '" data-id="' + s.id + '" style="--c:' + kc(k) + '" tabindex="0">' +
+        '<div class="kn">' + D.kinds[k].name + '</div><h3>' + labelText(s.id) + '</h3>' +
+        '<div class="price"><b>' + gbp(s.price[bi]) + '</b><span>/ month · ' + state.beds + ' bed' + (over ? ' · over budget' : '') + '</span></div>' +
+        '<div class="src">' + s.priceArea + '</div>' +
+        '<div class="marks"><span class="mark">' + ICON.parks + dots(r[0]) + '</span><span class="mark">' + ICON.quiet + dots(r[1]) + '</span><span class="mark">' + ICON.cafes + dots(r[2]) + '</span></div>' +
+        '<div class="marks"><span class="mark">To work</span><span class="mark"><b class="ob">P</b>' + dots(s.commute[0]) + '</span><span class="mark"><b class="ob">B</b>' + dots(s.commute[1]) + '</span></div>' +
+        '<p>' + s.line + '</p></article>';
+    }).join('');
+    var pinsG = $('pins'); pinsG.innerHTML = '';
+    D.spots.forEach(function (s) {
+      var p = G.pos[s.id], txt = short(s.price[bi]), w = txt.length * 6.6 + 10;
+      var g = el('g', { class: 'pin' + (s.price[bi] > state.budget ? ' over' : '') + (state.sel === s.id ? ' sel' : ''), transform: 'translate(' + p[0] + ' ' + (p[1] + 6) + ')', 'data-id': s.id }, pinsG);
+      el('rect', { x: -w / 2, y: -9, width: w, height: 18, rx: 9 }, g);
+      var t = el('text', { x: 0, y: 4, 'text-anchor': 'middle' }, g); t.textContent = txt;
+      g.addEventListener('click', function () { select(s.id, true); });
+    });
+    document.querySelectorAll('.cell').forEach(function (c) { c.classList.toggle('sel', c.getAttribute('data-id') === state.sel); });
+    declutter();
+    persist();
+  }
+  $('grid').addEventListener('click', function (e) { var c = e.target.closest('.spot'); if (c) select(c.dataset.id, false); });
+  $('grid').addEventListener('keydown', function (e) { var c = e.target.closest('.spot'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(c.dataset.id, false); } });
+  $('b1').addEventListener('click', function () { state.beds = 1; render(); showTip(); });
+  $('b2').addEventListener('click', function () { state.beds = 2; render(); showTip(); });
+  $('budget').addEventListener('input', function (e) { state.budget = +e.target.value; render(); });
+
+  /* label placement: offices and price pins are fixed; each spot name tries above, right, left, below
+     its pin; other names and park names hide when they would collide */
+  function box(n, pad) { var b = n.getBBox(), m = n.transform && n.transform.baseVal.consolidate(); var x = b.x + (m ? m.matrix.e : 0), y = b.y + (m ? m.matrix.f : 0); pad = pad || 1; return [x - pad, y - pad, x + b.width + pad, y + b.height + pad]; }
+  function hit(a, list) { return list.some(function (b) { return !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]); }); }
+  function declutter() {
+    var kept = [];
+    $('offices').querySelectorAll('g').forEach(function (g) { kept.push(box(g, 2)); });
+    $('pins').querySelectorAll('g').forEach(function (g) { kept.push(box(g, 1)); });
+    var spots = [], others = [];
+    $('labels').querySelectorAll('text').forEach(function (t) { (t.classList.contains('spot') ? spots : others).push(t); });
+    spots.forEach(function (t) {
+      var id = Object.keys(G.names).filter(function (k) { return t.textContent === labelText(k); })[0], p = G.pos[id];
+      var tries = [[p[0], p[1] - 9, 'middle'], [p[0] + 26, p[1] + 10, 'start'], [p[0] - 26, p[1] + 10, 'end'], [p[0], p[1] + 32, 'middle'], [p[0], p[1] - 24, 'middle']];
+      for (var i = 0; i < tries.length; i++) {
+        t.setAttribute('x', tries[i][0]); t.setAttribute('y', tries[i][1]); t.setAttribute('text-anchor', tries[i][2]);
+        if (!hit(box(t, 1), kept) || i === tries.length - 1) break;
+      }
+      t.style.display = ''; kept.push(box(t, 1));
+    });
+    others.concat(Array.prototype.slice.call($('parkLabels').querySelectorAll('text'))).forEach(function (t) {
+      t.style.display = ''; var b = box(t, 1);
+      if (hit(b, kept)) t.style.display = 'none'; else kept.push(b);
+    });
+  }
+  function labelText(id) { return G.names[id].replace(' & Victoria Street', '').replace(' & Queen’s Gate', '').replace(' & South Hampstead', '').replace(' (London Fields & Mare Street)', '').replace(' (Angel & Upper Street)', ''); }
+  function select(id, fromMap) {
+    state.sel = state.sel === id && fromMap ? null : id;
+    render(); showTip();
+    if (!fromMap) { var s = $('mapScroll'), p = G.pos[id], svgW = $('map').getBoundingClientRect().width; s.scrollLeft = p[0] / G.w * svgW - s.clientWidth / 2; $('map').scrollIntoView({ block: 'nearest' }); }
+    else if (SPOT[id]) { var card = document.querySelector('.spot[data-id="' + id + '"]'); if (card) card.scrollIntoView({ block: 'nearest' }); }
+  }
+  function showTip() {
+    var id = state.sel, tip = $('tip');
+    if (!id) { tip.hidden = true; return; }
+    var k = D.areaKind[id], pr = priceOf(id), bi = state.beds - 1;
+    tip.innerHTML = '<b>' + G.names[id] + '</b><div class="k" style="--c:' + kc(k) + '"><i></i>' + D.kinds[k].name + '</div>' +
+      (pr ? '<div>' + (pr[0] ? '1 bed ' + gbp(pr[0]) : '') + (pr[1] ? ' · 2 bed ' + gbp(pr[1]) : '') + '</div>' : '<div style="color:var(--muted)">No rent figure for this zone.</div>') +
+      (SPOT[id] ? '<div style="color:var(--muted)">' + SPOT[id].line + '</div>' : '');
+    tip.hidden = false;
+  }
+
+  render(); setKind(null); scale();
+  /* on narrow screens the map scrolls sideways: start centred on the offices */
+  var ms = $('mapScroll'); if (ms.scrollWidth > ms.clientWidth) ms.scrollLeft = (G.pos.marylebone[0] / G.w) * ms.scrollWidth - ms.clientWidth / 2;
+})();
+</script>
