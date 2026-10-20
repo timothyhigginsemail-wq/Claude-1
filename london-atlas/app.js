@@ -151,7 +151,7 @@
     onAdd: function () {
       var c = L.DomUtil.create('div', 'leaflet-bar reset-control');
       c.innerHTML = '<a href="#" role="button" title="Reset to central London" aria-label="Reset to central London">Centre</a>';
-      L.DomEvent.on(c, 'click', function (e) { L.DomEvent.stop(e); map.flyTo(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom, { duration: .6 }); });
+      L.DomEvent.on(c, 'click', function (e) { L.DomEvent.stop(e); map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom, { animate: false }); });
       return c;
     }
   });
@@ -197,13 +197,13 @@
     p._inner = b.inner; osShapes.land.push(p); osLand.addLayer(p);
   });
   OS.water.forEach(function (w) { var p = L.polygon(w, { renderer: osBaseRenderer, stroke: false, fillOpacity: 1, interactive: false }); osShapes.water.push(p); osLand.addLayer(p); });
-  OS.roads.forEach(function (r) {
-    var c = L.polyline(r.p, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' });
-    var f = L.polyline(r.p, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' });
-    c._m = f._m = r.m; osShapes.roadCase.push(c); osShapes.roadFill.push(f);
-  });
-  osShapes.roadCase.forEach(function (l) { osRoadsBase.addLayer(l); });
-  osShapes.roadFill.forEach(function (l) { osRoadsBase.addLayer(l); });
+  var aRoads = [], mRoads = [];
+  OS.roads.forEach(function (r) { Array.prototype.push.apply(r.m ? mRoads : aRoads, r.l); });
+  osShapes.roadCase = [L.polyline(aRoads.concat(mRoads), { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' })];
+  var aFill = L.polyline(aRoads, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' });
+  var mFill = L.polyline(mRoads, { renderer: osBaseRenderer, interactive: false, lineCap: 'round', lineJoin: 'round' }); mFill._m = true;
+  osShapes.roadFill = [aFill, mFill];
+  osShapes.roadCase.concat(osShapes.roadFill).forEach(function (l) { osRoadsBase.addLayer(l); });
   /* OS names some park pieces differently (Battersea Park's main polygon is "Festival Pleasure Gardens"):
      where a researched park marker sits inside an OS outline, use the researched name */
   OS.green.forEach(function (g) {
@@ -212,15 +212,11 @@
   });
   OS.green.forEach(function (g) {
     var p = L.polygon(g.r, { renderer: osParkRenderer, weight: 1 });
-    p.bindTooltip(esc(g.n || 'Public park or garden') + ' <span class="small">' + g.ha + ' ha</span>', { className: 'atlas-tip', sticky: true });
     p.on('click', function (e) { L.DomEvent.stopPropagation(e); openGreen(g); });
     osShapes.parks.push(p); osParks.addLayer(p);
   });
-  OS.roads.forEach(function (r) {
-    var h = L.polyline(r.p, { renderer: osHiRenderer, lineCap: 'round', weight: 4 });
-    h.bindTooltip(esc([r.no, r.n].filter(Boolean).join(' · ') || 'A road'), { className: 'atlas-tip', sticky: true });
-    osShapes.hi.push(h); osRoadsHi.addLayer(h);
-  });
+  osShapes.hi = [L.polyline(aRoads.concat(mRoads), { renderer: osHiRenderer, lineCap: 'round', lineJoin: 'round', interactive: false })];
+  osRoadsHi.addLayer(osShapes.hi[0]);
   function styleOS() {
     var atlas = S.basemap === 'atlas', z = map.getZoom();
     var land = cssv('--map-land'), landIn = cssv('--map-land-inner'), water = cssv('--map-water');
@@ -297,10 +293,8 @@
   AREAS.forEach(function (a) {
     var halo = L.circle(a.ll, { radius: a.r, pane: 'halos', stroke: false, fillColor: '#2e4a66', fillOpacity: 0, interactive: false });
     areaHalos[a.id] = halo; L_.halos.addLayer(halo);
-    var m = L.marker(a.ll, { icon: divLabel('area-label ' + a.depth, a.name.replace(/ \(.*\)$/, '')), pane: 'labels', keyboard: true, title: a.name, riseOnHover: true });
+    var m = L.marker(a.ll, { icon: divLabel('area-label ' + a.depth, a.name.replace(/ \(.*\)$/, '')), pane: 'labels', keyboard: true, title: a.name });
     m.on('click', function () { openArea(a.id); });
-    m.on('mouseover', function () { if (selected.kind !== 'area' || selected.id !== a.id) halo.setStyle({ fillOpacity: .07 }); });
-    m.on('mouseout', function () { if (selected.kind !== 'area' || selected.id !== a.id) halo.setStyle({ fillOpacity: 0 }); });
     areaMarkers[a.id] = m; L_.areas.addLayer(m);
     labelMarkers.push({ marker: m, prio: a.depth === 'deep' ? 3 : 2, text: a.name.replace(/ \(.*\)$/, ''), cls: a.depth, id: a.id });
   });
@@ -327,13 +321,18 @@
         : 'background:var(--field);border:1.5px dashed var(--estate-ink);border-radius:2px;';
     return L.divIcon({ className: '', html: '<i style="display:block;width:' + size + 'px;height:' + size + 'px;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(0,0,0,.08);' + style + '"></i>', iconSize: [0, 0] });
   }
+  /* public parks are drawn by their OS outline and carry only a name label; private squares and
+     gates are detail, shown from zoom 15 (L_.gates) */
   PARKS.forEach(function (p) {
-    var m = L.marker(p.ll, { icon: parkIcon(p), title: p.name, keyboard: false });
-    m.on('click', function () { openPark(p.id); });
-    L_.parks.addLayer(m);
+    var detail = p.access !== 'public';
+    if (detail) {
+      var m = L.marker(p.ll, { icon: parkIcon(p), title: p.name, keyboard: false });
+      m.on('click', function () { openPark(p.id); });
+      L_.gates.addLayer(m);
+    }
     var lab = L.marker(p.ll, { icon: divLabel('park-label ' + p.access + ' ' + p.size, p.name), pane: 'labels', title: p.name });
     lab.on('click', function () { openPark(p.id); });
-    L_.parks.addLayer(lab);
+    (detail ? L_.gates : L_.parks).addLayer(lab);
     labelMarkers.push({ marker: lab, prio: p.size === 'large' ? 2.5 : 0.5, text: p.name, cls: 'park', park: p });
     (p.gates || []).forEach(function (g) {
       L_.gates.addLayer(L.circleMarker([g[1], g[2]], { radius: 3, color: '#fff', weight: 1, fillColor: '#3f6438', fillOpacity: 1 })
@@ -358,27 +357,33 @@
   function lineRank(l) { var i = LINE_ORDER.indexOf(l); return i < 0 ? 99 : i; }
   var LINES = window.ATLAS_LINES ? window.ATLAS_LINES.features : [];
   var lineRenderer = L.svg({ pane: 'lines' });
+  /* one multi-polyline per line, built once; zoom only restyles the width */
+  var lineGeoms = {}, lineLayers = {}, stationMarkers = [];
+  LINES.forEach(function (f) {
+    var pts = f.geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
+    f.properties.lines.forEach(function (l) { (lineGeoms[l] = lineGeoms[l] || []).push(pts); });
+  });
+  var transportRenderer = L.canvas({ pane: 'lines', padding: .3 });
+  function lineWeight() { var z = map.getZoom(); return z >= 15 ? 4 : z >= 13 ? 2.6 : 1.8; }
   function drawTransport() {
-    L_.transport.clearLayers(); L_.stations.clearLayers();
+    L_.transport.clearLayers(); L_.stations.clearLayers(); lineLayers = {}; stationMarkers = [];
     var sel = {}; S.lines.forEach(function (l) { sel[l] = 1; });
-    var z = map.getZoom(), w = z >= 15 ? 4 : z >= 13 ? 3 : 2;
-    LINES.forEach(function (f) {
-      var ls = f.properties.lines.filter(function (l) { return sel[l]; }).sort(function (a, b) { return lineRank(a) - lineRank(b); });
-      if (!ls.length) return;
-      var pts = f.geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
-      ls.forEach(function (l, i) {
-        L_.transport.addLayer(L.polyline(pts, { renderer: lineRenderer, color: LINE_COLORS[l] || '#777', weight: w * (ls.length - i) * (ls.length > 1 ? .75 : 1), opacity: .9, interactive: false, lineCap: 'round' }));
-      });
+    LINE_ORDER.slice().reverse().forEach(function (l) {
+      if (!sel[l] || !lineGeoms[l]) return;
+      lineLayers[l] = L.polyline(lineGeoms[l], { renderer: transportRenderer, color: LINE_COLORS[l] || '#777', weight: lineWeight(), opacity: .9, interactive: false, lineCap: 'round', lineJoin: 'round' });
+      L_.transport.addLayer(lineLayers[l]);
     });
     STATIONS.forEach(function (s) {
-      var on = s.lines.filter(function (l) { return sel[l]; });
-      if (!on.length) return;
-      var m = L.circleMarker(s.ll, { pane: 'lines', radius: on.length > 1 ? 4.5 : 3.2, color: '#1e2023', weight: 1.3, fillColor: '#fff', fillOpacity: 1 });
-      m.bindTooltip(esc(s.name) + '<br><span style="color:#6c7078">' + esc(s.lines.join(', ')) + '</span>', { className: 'atlas-tip' });
+      if (!s.lines.some(function (l) { return sel[l]; })) return;
+      var m = L.circleMarker(s.ll, { renderer: transportRenderer, radius: s.lines.length > 1 ? 4 : 3, color: '#1e2023', weight: 1.2, fillColor: '#fff', fillOpacity: 1 });
+      m.bindTooltip(esc(s.name), { className: 'atlas-tip' });
       m.on('click', function () { openStation(s); });
-      L_.stations.addLayer(m);
-      L_.stations.addLayer(L.marker(s.ll, { icon: divLabel('station-label', s.name), interactive: false, pane: 'lines' }));
+      stationMarkers.push(m); L_.stations.addLayer(m);
     });
+  }
+  function restyleTransport() {
+    var w = lineWeight();
+    Object.keys(lineLayers).forEach(function (l) { lineLayers[l].setStyle({ weight: w }); });
   }
 
   /* landmarks */
@@ -393,7 +398,7 @@
   /* area character — only tags/zones with sources */
   AREAS.forEach(function (a) {
     (a.character || []).forEach(function (c, i) {
-      if (!c.src || !c.src.length) return;
+      if (!c.src || !c.src.length || c.k === 'heritage') return;
       var k = CHAR_KINDS[c.k]; if (!k) return;
       var ring = L.circle(a.ll, { radius: a.r + i * 40, color: k.color, weight: 2, opacity: .8, fill: false, dashArray: c.k === 'regen' ? '6 5' : null, pane: 'halos' });
       ring.bindTooltip('<b>' + esc(a.name) + '</b><br>' + esc(k.label) + '<br><span style="color:#6c7078">' + c.src.map(function (s) { return esc(srcObj(s).t); }).join('<br>') + '</span>', { className: 'atlas-tip', sticky: true });
@@ -464,7 +469,7 @@
     toggle(L_.landmarks, on.landmarks); toggle(L_.character, on.character); toggle(L_.roads, on.roads);
     toggle(L_.mine, on.mine); toggle(L_.boroughs, on.boroughs);
     toggle(L_.gates, map.getZoom() >= 15);
-    $('#line-picker').hidden = !on.transport;
+    $('#line-picker-wrap').hidden = !on.transport;
     $all('#layers input[data-layer]').forEach(function (i) { i.checked = !!on[i.dataset.layer]; });
     renderLegend();
     setTimeout(declutter, 0);
@@ -472,7 +477,7 @@
   function toggle(layer, on) { if (on && !map.hasLayer(layer)) layer.addTo(map); else if (!on && map.hasLayer(layer)) map.removeLayer(layer); }
 
   /* label collision: greedy by priority */
-  var FONT = { deep: [11, 13, 15, 18, 18], full: [0, 11, 13, 15, 15], base: [0, 0, 11, 13, 13], park: [0, 12, 12, 12, 12] };
+  var FONT = { deep: [11, 13, 15, 18, 18], full: [0, 11, 13, 15, 15], base: [0, 0, 0, 13, 13], park: [0, 12, 12, 12, 12] };
   function declutter() {
     var z = Math.round(map.getZoom()), zi = Math.max(0, Math.min(4, z - 11));
     var boxes = OFFICE_DEFAULTS.map(function (o) {
@@ -483,7 +488,8 @@
       var el = l.marker.getElement(); if (!el) return;
       var fs = FONT[l.cls] ? FONT[l.cls][zi] : 12;
       if (z >= 16) fs = 15;
-      if (!fs) { el.classList.remove('hidden'); return; } /* CSS hides it at this zoom */
+      el.classList.remove('hidden');
+      if (!fs || !el.firstChild || el.firstChild.offsetParent === null) return; /* CSS hides it at this zoom */
       var p = map.latLngToContainerPoint(l.marker.getLatLng());
       var w = l.text.length * fs * .56 + 6, h = fs * 1.35;
       var box = l.cls === 'park' ? [p.x - w / 2, p.y + 4, p.x + w / 2, p.y + 4 + h] : [p.x - w / 2, p.y - h / 2, p.x + w / 2, p.y + h / 2];
@@ -499,7 +505,7 @@
     return b;
   }
 
-  map.on('zoomend', function () { zoomClass(); styleOS(); if (S.layers.transport) drawTransport(); applyLayers(); });
+  map.on('zoomend', function () { zoomClass(); styleOS(); restyleTransport(); applyLayers(); });
   map.on('moveend', function () { S.view = { center: [map.getCenter().lat, map.getCenter().lng], zoom: map.getZoom() }; save(); declutter(); });
 
   /* ================================================================ panel */
@@ -535,46 +541,42 @@
     else if (s.kind === 'home') openHome();
     else if (s.kind === 'place') openPlace(s.id);
   }
-  function flyTo(ll, z) { map.flyTo(ll, Math.max(map.getZoom(), z || 14), { duration: .5 }); }
+  function flyTo(ll, z) { map.setView(ll, Math.max(map.getZoom(), z || 14), { animate: false }); }
   /* on phones the bottom sheet covers the lower half: keep the selection in the visible top part */
   function keepVisible(ll) {
     if (window.innerWidth > 760) return;
     var size = map.getSize(), p = map.latLngToContainerPoint(ll), target = L.point(size.x / 2, size.y * .22);
-    map.panBy(p.subtract(target), { animate: true, duration: .3 });
+    map.panBy(p.subtract(target), { animate: false });
   }
 
   /* ------------------------------------------------ sources */
-  function sourcesHtml(ids, wiki) {
+  function sourcesHtml(ids, wiki, flat) {
     var items = (ids || []).map(srcObj).filter(Boolean);
     (wiki || []).forEach(function (w) { items.push(WIKI(w[0], w[1])); });
     if (!items.length) return '<p class="small">No specific sources: this entry rests on general knowledge only — treat it as an impression and verify on the ground.</p>';
-    return '<details class="sources"><summary>Sources (' + items.length + ')</summary>' + items.map(function (s) {
+    return (flat ? '<div class="sources">' : '<details class="sources"><summary>Sources (' + items.length + ')</summary>') + items.map(function (s) {
       return '<div class="source"><a href="' + esc(s.u) + '" target="_blank" rel="noopener">' + esc(s.t) + '</a>' +
         '<div class="meta">' + esc(s.kind) + ' · accessed ' + esc(ACCESSED) + '</div><div>' + esc(s.notes) + '</div></div>';
-    }).join('') + '<p class="small">Interested parties (agents, landlords, business groups, political parties) are cited for what they report, not for overall judgements.</p></details>';
+    }).join('') + '<p class="small">Agents, landlords, business groups and political parties are cited only for what they report.</p>' + (flat ? '</div>' : '</details>');
   }
 
   /* ------------------------------------------------ commute block */
   function commuteKey(kind, id) { return kind + ':' + id; }
   function commuteHtml(kind, id, ll, routes) {
     var key = commuteKey(kind, id), rec = S.commutes[key] || {};
-    var origin = kind === 'area' ? 'from the neighbourhood’s centre point — a specific address can differ a lot' : 'from this pin';
-    return OFFICE_DEFAULTS.map(function (o) {
-      var oll = officeLL(o.id), r = rec[o.id] || {}, d = dist(ll, oll);
-      var t = r.tfl, stale = t && t.office && (Math.abs(t.office[0] - oll[0]) > 1e-5 || Math.abs(t.office[1] - oll[1]) > 1e-5);
+    var rows = OFFICE_DEFAULTS.map(function (o) {
+      var oll = officeLL(o.id), r = rec[o.id] || {}, d = dist(ll, oll), t = r.tfl;
+      var stale = t && t.office && (Math.abs(t.office[0] - oll[0]) > 1e-5 || Math.abs(t.office[1] - oll[1]) > 1e-5);
       var best = !blank(r.manual) ? +r.manual : t ? t.min : null;
-      var verdict = best == null ? '' : best <= S.threshold ? '<span class="badge ok">within ' + S.threshold + ' min target</span>' : '<span class="badge warn">over ' + S.threshold + ' min target</span>';
-      return '<div class="commute" data-office="' + o.id + '">' +
-        '<div class="head"><span class="office">' + esc(o.name) + '</span><span class="dist">' + fmtDist(d) + ' straight-line</span></div>' +
-        (routes && routes[o.id] ? '<div class="route">' + esc(routes[o.id]) + '</div>' : '') +
-        (!blank(r.manual) ? '<div class="row"><span class="time">' + esc(r.manual) + ' min</span><span class="note">measured by you</span></div>' : '') +
-        '<div class="row">' + (t ? '<span class="' + (blank(r.manual) ? 'time' : 'note') + '">' + t.min + ' min</span><span class="note">TfL, arriving 08:45 on ' + esc(t.forDate) + (stale ? ' · <b>office moved since</b>' : '') + '</span>' : (blank(r.manual) ? '<span class="note">No measured time yet.</span>' : '')) + '</div>' +
-        (t && t.summary ? '<div class="note">' + esc(t.summary) + '</div>' : '') +
-        '<div class="row">' + (HOSTED ? '' : '<button data-tfl="' + o.id + '">' + (t ? 'Re-check with TfL' : 'Look up with TfL') + '</button>') +
-        '<a href="' + gmaps(ll, oll) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="' + citymapper(ll, oll) + '" target="_blank" rel="noopener">Citymapper</a></div>' +
-        '<div class="row"><label class="note">My measured time <input type="number" min="1" max="180" data-manual="' + o.id + '" value="' + (blank(r.manual) ? '' : esc(r.manual)) + '"> min</label>' + verdict + '</div>' +
-        '</div>';
-    }).join('') + '<p class="small">Times are door-to-door ' + origin + '. ' + (HOSTED ? 'This hosted copy cannot call TfL directly: open a planner link, then type the time in. (The local version in the repo can look it up for you.)' : 'TfL lookups run from your browser against the public TfL Journey Planner; if it is unreachable, use the links and type the time in.') + '</p>';
+      var timeHtml = best == null ? '<span class="muted">—</span>'
+        : '<span class="cm-min ' + (best <= S.threshold ? 'ok' : 'over') + '" title="' + (blank(r.manual) ? 'TfL, arriving 08:45 ' + esc(t.forDate) + (stale ? ' (office moved since)' : '') : 'your measured time') + '">' + best + ' min</span>';
+      return '<div class="cm-row" data-office="' + o.id + '">' +
+        '<span class="cm-name">' + esc(o.short) + '</span><span class="cm-dist">' + fmtDist(d) + '</span>' + timeHtml +
+        '<input type="number" min="1" max="180" placeholder="min" aria-label="My measured minutes to ' + esc(o.name) + '" data-manual="' + o.id + '" value="' + (blank(r.manual) ? '' : esc(r.manual)) + '">' +
+        '<span class="cm-links"><a href="' + gmaps(ll, oll) + '" target="_blank" rel="noopener">Plan</a>' + (HOSTED ? '' : ' · <button class="link" data-tfl="' + o.id + '">TfL</button>') + '</span>' +
+        '</div>' + (routes && routes[o.id] ? '<div class="cm-route">' + esc(routes[o.id]) + '</div>' : '');
+    }).join('');
+    return '<div class="cm">' + rows + '</div><p class="small">Distance is straight-line. Minutes come only from ' + (HOSTED ? 'what you type in (use “Plan”)' : 'TfL or what you type in') + '; green = within ' + S.threshold + ' min.</p>';
   }
   function gmaps(a, b) { return 'https://www.google.com/maps/dir/?api=1&origin=' + a[0] + ',' + a[1] + '&destination=' + b[0] + ',' + b[1] + '&travelmode=transit'; }
   function citymapper(a, b) { return 'https://citymapper.com/directions?startcoord=' + a[0] + ',' + a[1] + '&endcoord=' + b[0] + ',' + b[1]; }
@@ -582,12 +584,12 @@
     var key = commuteKey(kind, id);
     $all('[data-tfl]', root).forEach(function (b) {
       b.addEventListener('click', function () {
-        var oid = b.dataset.tfl; b.disabled = true; b.textContent = 'Asking TfL…';
+        var oid = b.dataset.tfl; b.disabled = true; b.textContent = '…';
         tflJourney(ll, officeLL(oid)).then(function (res) {
           S.commutes[key] = S.commutes[key] || {}; S.commutes[key][oid] = S.commutes[key][oid] || {};
           S.commutes[key][oid].tfl = res; save(); rerender();
         }).catch(function (err) {
-          b.disabled = false; b.textContent = 'Look up with TfL';
+          b.disabled = false; b.textContent = 'TfL';
           toast('TfL lookup failed (' + err.message + '). Use the Google Maps / Citymapper links and enter the time manually.');
         });
       });
@@ -646,33 +648,37 @@
 
   /* ------------------------------------------------ area panel */
   function list(arr) { return arr && arr.length ? '<ul>' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : ''; }
+  function meters(id) {
+    var r = (window.ATLAS_RATINGS || {})[id]; if (!r) return '';
+    return '<div class="meters" title="Our read of the entry, 1–3">' + [['Parks', r[0]], ['Quiet', r[1]], ['Cafés & pubs', r[2]]].map(function (m) {
+      return '<div class="meter"><span class="meter-label">' + m[0] + '</span><span class="meter-bar" aria-label="' + m[1] + ' of 3">' + [1, 2, 3].map(function (i) { return '<i class="' + (i <= m[1] ? 'on' : '') + '"></i>'; }).join('') + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function fold(title, body, open) { return '<details class="fold"' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="fold-body">' + body + '</div></details>'; }
   function openArea(id, keepScroll) {
     var a = AREA_BY_ID[id]; if (!a) return;
     var y = panelBody.scrollTop;
     var inList = S.shortlist.indexOf(id) >= 0;
     var st = [];
     a.stations.forEach(function (n) { stationByName(n).forEach(function (s) { if (st.indexOf(s) < 0) st.push(s); }); });
-    var charTags = (a.character || []).filter(function (c) { return c.src && c.src.length && CHAR_KINDS[c.k]; })
-      .map(function (c) { return '<span class="badge" style="border-color:' + CHAR_KINDS[c.k].color + ';color:' + CHAR_KINDS[c.k].color + '">' + esc(CHAR_KINDS[c.k].label) + '</span>'; }).join('');
+    var flags = (a.character || []).filter(function (c) { return c.src && c.src.length && CHAR_KINDS[c.k] && c.k !== 'heritage'; })
+      .map(function (c) { return '<span class="badge warn">' + esc(CHAR_KINDS[c.k].label) + '</span>'; }).join('');
     var html =
       '<h1>' + esc(a.name) + '</h1>' +
-      '<div class="sub">' + (a.aka ? esc(a.aka) + ' · ' : '') + esc(a.borough) + '</div>' +
-      '<div class="badges"><span class="badge ' + (a.depth === 'deep' ? 'deep' : '') + '">' + (a.depth === 'deep' ? 'Researched in depth' : 'Full entry') + '</span>' + charTags + '</div>' +
-      '<div class="actions"><button class="' + (inList ? '' : 'primary') + '" id="btn-shortlist">' + (inList ? 'Remove from shortlist' : 'Add to shortlist') + '</button>' +
-      (S.shortlist.length ? '<button id="btn-cmp-areas">Compare shortlist (' + S.shortlist.length + ')</button>' : '') + '</div>' +
-      '<h2>At a glance</h2><p class="glance">' + esc(a.glance) + '</p>' +
-      '<h2>Within the area</h2>' + list(a.within) +
-      '<h2>Everyday life</h2><p>' + esc(a.everyday) + '</p><h3>Drawbacks</h3>' + list(a.drawbacks) +
-      '<h2>Connections</h2><p>' + esc(a.connections) + '</p>' +
-      (st.length ? '<div class="stations">' + st.map(function (s) { return stationChip(s); }).join('') + '</div>' : '') +
-      '<h3>Where this description stops applying</h3><p>' + esc(a.edges) + '</p>' +
-      '<h2>Fit for us</h2><dl class="fit"><dt>Strengths</dt><dd>' + esc(a.fit.strengths) + '</dd><dt>Trade-offs</dt><dd>' + esc(a.fit.tradeoffs) + '</dd>' +
-      (a.fit.unknowns ? '<dt>Unknowns</dt><dd>' + esc(a.fit.unknowns) + '</dd>' : '') + '</dl>' +
-      '<dl class="kv"><dt>Parks</dt><dd>' + esc(a.cmp.parks) + '</dd><dt>Cafés & pubs</dt><dd>' + esc(a.cmp.cafes) + '</dd><dt>Housing stock</dt><dd>' + esc(a.cmp.stock) + '</dd><dt>Budget evidence</dt><dd>' + esc(a.cmp.budget) + '</dd></dl>' +
-      '<h2>Commute</h2>' + commuteHtml('area', a.id, a.ll, a.route) +
-      '<h2>Our notes</h2><textarea id="area-note" placeholder="Impressions from a visit, streets to check…">' + esc(S.areaNotes[a.id] || '') + '</textarea>' +
-      '<h2>Evidence</h2><div class="evidence"><div><b>Backed by sources:</b> ' + esc(a.evidence.verified || 'nothing specific') + '</div><div><b>Impression / local knowledge:</b> ' + esc(a.evidence.impression || '—') + '</div></div>' +
-      sourcesHtml(a.src, a.wiki);
+      '<div class="sub">' + esc(a.borough) + '</div>' +
+      '<p class="glance">' + esc(a.glance.split(/(?<=\.)\s/)[0]) + '</p>' +
+      meters(a.id) + (flags ? '<div class="badges">' + flags + '</div>' : '') +
+      commuteHtml('area', a.id, a.ll, null) +
+      '<div class="actions"><button class="' + (inList ? '' : 'primary') + '" id="btn-shortlist">' + (inList ? '✓ Shortlisted' : 'Shortlist') + '</button>' +
+      (S.shortlist.length > 1 ? '<button id="btn-cmp-areas">Compare shortlist (' + S.shortlist.length + ')</button>' : '') + '</div>' +
+      fold('What it’s like', '<p>' + esc(a.glance) + '</p>' + list(a.within) + '<p>' + esc(a.everyday) + '</p><h3>Drawbacks</h3>' + list(a.drawbacks)) +
+      fold('Getting around', (st.length ? '<div class="stations">' + st.map(function (s) { return stationChip(s); }).join('') + '</div>' : '') +
+        '<p>' + esc(a.connections) + '</p><h3>To Portman Square</h3><p>' + esc(a.route.portman) + '</p><h3>To Bressenden Place</h3><p>' + esc(a.route.bressenden) + '</p>' +
+        '<h3>Where this stops applying</h3><p>' + esc(a.edges) + '</p>') +
+      fold('Fit for us', '<dl class="fit"><dt>Strengths</dt><dd>' + esc(a.fit.strengths) + '</dd><dt>Trade-offs</dt><dd>' + esc(a.fit.tradeoffs) + '</dd>' +
+        (a.fit.unknowns ? '<dt>Unknowns</dt><dd>' + esc(a.fit.unknowns) + '</dd>' : '') + '<dt>Housing</dt><dd>' + esc(a.cmp.stock) + '</dd><dt>Budget</dt><dd>' + esc(a.cmp.budget) + '</dd></dl>') +
+      fold('Our notes' + (S.areaNotes[a.id] ? ' ·' : ''), '<textarea id="area-note" placeholder="Impressions from a visit, streets to check…">' + esc(S.areaNotes[a.id] || '') + '</textarea>') +
+      fold('Sources', '<div class="evidence"><div><b>From sources:</b> ' + esc(a.evidence.verified || 'nothing specific') + '</div><div><b>Impression:</b> ' + esc(a.evidence.impression || '—') + '</div></div>' + sourcesHtml(a.src, a.wiki, true));
     openPanel(html, { kind: 'area', id: id });
     if (keepScroll) panelBody.scrollTop = y; else setTimeout(function () { keepVisible(a.ll); }, 0);
     $('#btn-shortlist').addEventListener('click', function () {
@@ -762,8 +768,9 @@
     out.privateSquares = PARKS.filter(function (p) { return p.access === 'private' && dist(ll, p.ll) < 350; });
     var roads = {};
     OS.roads.forEach(function (r) {
-      var b = r.p[0]; if (Math.abs(b[0] - ll[0]) > .02 || Math.abs(b[1] - ll[1]) > .03) return; /* cheap prefilter */
-      var d = distToLine(ll, r.p); if (d > 150) return;
+      var d = Infinity;
+      r.l.forEach(function (p) { if (Math.abs(p[0][0] - ll[0]) < .03 && Math.abs(p[0][1] - ll[1]) < .045) d = Math.min(d, distToLine(ll, p)); });
+      if (d > 150) return;
       var key = r.no || r.n || 'A road';
       if (!roads[key] || d < roads[key].d) roads[key] = { name: [r.no, r.n].filter(Boolean).join(' · ') || 'A road', motorway: r.m, d: d };
     });
@@ -840,6 +847,7 @@
       '<div class="badges"><span class="badge" style="border-color:' + (STATUS_COLOR[a.status] || '#ccc') + '">' + esc(a.status || 'interested') + '</span>' +
       (a.ll ? (a.precise ? '<span class="badge ok">precise pin</span>' : '<span class="badge warn">approximate pin</span>') : '<span class="badge warn">no pin yet</span>') +
       (a.archived ? '<span class="badge">archived</span>' : '') + '</div>' +
+      '<!--commute-->' +
       '<div class="actions"><button id="apt-edit" class="primary">Edit</button>' +
       '<button id="apt-cmp">' + (S.compareApts.indexOf(id) >= 0 ? 'Remove from comparison' : 'Add to comparison') + '</button>' +
       '<button id="apt-arch">' + (a.archived ? 'Unarchive' : 'Archive') + '</button></div>' +
@@ -852,11 +860,12 @@
       (a.notes ? '<h3>Listing notes</h3><p>' + esc(a.notes) + '</p>' : '') +
       (a.personal ? '<h3>Our notes</h3><p>' + esc(a.personal) + '</p>' : '');
     if (a.ll) {
-      html += '<h2>Commute</h2>' + commuteHtml('apt', a.id, a.ll, null);
-      html += '<h2>Around this pin</h2>' + analysisHtml(an, a.precise);
-      html += '<h2>Questions for the viewing</h2><ul class="checklist">' + viewingQuestions(a, an).map(function (q) {
+      var qs = viewingQuestions(a, an), done = qs.filter(function (q) { return checks[q[0]]; }).length;
+      html = html.replace('<!--commute-->', commuteHtml('apt', a.id, a.ll, null) + (an.area ? '<p class="small">In <button class="link" data-area="' + an.area.a.id + '">' + esc(an.area.a.name) + '</button> · nearest station ' + esc(an.stations[0].s.name) + ' ' + fmtDist(an.stations[0].d) + (an.bigGreen ? ' · ' + esc(an.bigGreen.g.n) + ' ' + fmtDist(an.bigGreen.d) : '') + '</p>' : ''));
+      html += fold('Around this pin', analysisHtml(an, a.precise));
+      html += fold('Viewing checklist (' + done + '/' + qs.length + ')', '<ul class="checklist">' + qs.map(function (q) {
         return '<li><label><input type="checkbox" data-q="' + q[0] + '"' + (checks[q[0]] ? ' checked' : '') + '> <span>' + esc(q[1]) + '</span></label></li>';
-      }).join('') + '</ul>' + sourcesHtml(['rra_rbkc', 'rra_gowling', 'police_uk'], []);
+      }).join('') + '</ul>' + sourcesHtml(['rra_rbkc', 'rra_gowling', 'police_uk'], []));
     } else {
       html += '<p>Place a pin to get commutes and the neighbourhood read-out: <button id="apt-pin" class="primary">Click the map to place pin</button></p>';
     }
@@ -1077,19 +1086,15 @@
 
   /* ------------------------------------------------ intro (explore, nothing selected) */
   function openIntro() {
-    var deep = AREAS.filter(function (a) { return a.depth === 'deep'; }), full = AREAS.filter(function (a) { return a.depth !== 'deep'; });
-    function chips(arr) { return '<div class="stations">' + arr.map(function (a) { return '<span class="station-chip" data-area="' + a.id + '">' + esc(a.name) + '</span>'; }).join('') + '</div>'; }
-    openPanel('<h1>London Atlas</h1><div class="sub">A researched map of central and inner London, built for choosing where to rent.</div>' +
-      '<p>Click any neighbourhood name for a candid write-up: what it is like, its pockets and edges, everyday drawbacks, how it connects, and how it fits a two-office commute. Switch to <b>Find a home</b> to shortlist areas, track apartments and compare them.</p>' +
-      '<h2>Coverage</h2><p class="small">' + AREAS.length + ' researched entries. Italic grey names are base-map only.</p>' +
-      '<h3>Researched in depth (' + deep.length + ')</h3>' + chips(deep) + '<h3>Full entries (' + full.length + ')</h3>' + chips(full) +
-      '<h2>How to read it</h2><ul>' +
-      '<li>Character write-ups combine cited sources with general local knowledge. Each entry separates the two under <b>Evidence</b>; impressions should be checked on the ground.</li>' +
-      '<li>Rents quote ONS borough averages for all existing tenancies (August 2026). New-let asking rents run higher; budget lines marked “interpretation” are judgements, not data.</li>' +
-      '<li>Commute minutes only appear when they come from TfL’s Journey Planner or from you. Distances are straight-line and never turned into times.</li>' +
-      '<li>Office pins are approximate until you move them to the real entrances (click an office).</li></ul>' +
-      '<p class="small">Sources accessed ' + esc(ACCESSED) + '. Contains OS data © Crown copyright and database right (OGL). Transport © OpenStreetMap contributors. Street tiles © CARTO.</p>', { kind: 'intro', id: null });
-    $all('[data-area]', panelBody).forEach(function (b) { b.addEventListener('click', function () { var a = AREA_BY_ID[b.dataset.area]; openArea(a.id); flyTo(a.ll, 14); }); });
+    openPanel('<h1>London Atlas</h1>' +
+      '<p class="glance">Tap a neighbourhood name to see what it’s like and how it fits your commute. Switch to <b>Find a home</b> to shortlist areas and track flats.</p>' +
+      fold('About the information', '<ul>' +
+      '<li>' + AREAS.length + ' neighbourhoods researched; bold names have the most depth. Grey italic names are for orientation only.</li>' +
+      '<li>Write-ups mix cited sources with general knowledge; each says which is which under Sources.</li>' +
+      '<li>Ratings are our 1–3 read of each write-up, not measurements.</li>' +
+      '<li>Rents are ONS borough averages (August 2026); new lets cost more.</li>' +
+      '<li>Commute minutes appear only from TfL or what you enter. Office pins are approximate until you move them.</li></ul>' +
+      '<p class="small">Sources accessed ' + esc(ACCESSED) + '. Contains OS data © Crown copyright and database right (OGL). Transport © OpenStreetMap contributors.</p>'), { kind: 'intro', id: null });
   }
 
   /* ================================================================ map clicks */
@@ -1212,13 +1217,10 @@
   }
   renderLinePicker();
   function renderLegend() {
-    var h = '<div class="item"><span class="key" style="font:600 12px var(--serif)">Aa</span> Researched neighbourhood <i class="small">(italic grey = base map only)</i></div>' +
-      '<div class="item"><span class="key"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--map-park);border:1.5px solid var(--green)"></i></span> Public park (OS outline) · <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);border:1.5px solid var(--field)"></i> researched park</div>' +
-      '<div class="item"><span class="key"><i style="display:inline-block;width:9px;height:9px;border:1.5px dashed var(--estate-ink);background:var(--field)"></i></span> Private garden square (keyholders)</div>' +
-      '<div class="item"><span class="key"><i style="display:inline-block;background:#1e2023;color:#fff;font:600 9px/14px var(--sans);padding:0 3px;border-radius:2px">P</i></span> Office anchor (dashed = approximate)</div>';
-    if (S.layers.character) h += Object.keys(CHAR_KINDS).filter(function (k) { return k !== 'crowds'; }).map(function (k) { return '<div class="item"><span class="key" style="border:2px solid ' + CHAR_KINDS[k].color + ';border-radius:50%"></span>' + esc(CHAR_KINDS[k].label) + '</div>'; }).join('');
-    if (S.layers.roads) h += '<div class="item"><span class="key" style="height:5px;background:var(--map-highlight-road);opacity:.6"></span> A road / motorway (OS Open Roads)</div>';
-    if (S.layers.mine) h += '<div class="item"><span class="key"><i style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2e4a66;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)"></i></span> Apartment (colour = status; ring = approximate)</div>';
+    var h = '<div class="item"><span class="key" style="background:var(--map-park);border:1px solid var(--map-park-edge)"></span> Public park</div>' +
+      '<div class="item"><span class="key"><i style="display:inline-block;background:var(--ink);color:var(--on-ink);font:600 9px/14px var(--sans);padding:0 3px;border-radius:2px">P</i></span> Office</div>';
+    if (S.layers.character) h += Object.keys(CHAR_KINDS).filter(function (k) { return k !== 'crowds' && k !== 'heritage'; }).map(function (k) { return '<div class="item"><span class="key" style="border:2px solid ' + CHAR_KINDS[k].color + ';border-radius:50%"></span>' + esc(CHAR_KINDS[k].label) + '</div>'; }).join('');
+    if (S.layers.mine && S.apartments.length) h += '<div class="item"><span class="key"><i style="display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--accent)"></i></span> Flat (ring = approximate pin)</div>';
     $('#legend').innerHTML = h;
   }
   if (HOSTED) $all('#basemap option').forEach(function (o) { if (o.value !== 'atlas') o.remove(); });
@@ -1291,7 +1293,7 @@
   applyLayers();
   $all('.mode button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.mode === S.mode)); });
   if (S.mode === 'home') openHome();
-  else if (window.innerWidth > 760) openIntro();
+  $('.brand').addEventListener('click', openIntro);
   map.whenReady(function () { setTimeout(function () { refreshAreaClasses(); declutter(); }, 50); });
   window.__atlas = { state: function () { return S; }, map: map, analyse: analyse }; /* for debugging and tests */
 })();

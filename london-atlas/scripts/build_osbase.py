@@ -16,7 +16,7 @@ SRC = "https://raw.githubusercontent.com/jreades/fsds/master/data/src/"
 OUT = pathlib.Path(__file__).resolve().parent.parent / "data" / "osbase.js"
 # BNG boxes (metres)
 INNER = (515000, 170000, 545000, 192000)   # parks, lakes
-ROADBOX = (518000, 172000, 542000, 189500)  # A roads
+ROADBOX = (520000, 173000, 540000, 188500)  # A roads
 
 
 def get(name):
@@ -26,11 +26,11 @@ def get(name):
     return sqlite3.connect(p)
 
 
-def conv(pts, tol):
+def conv(pts, tol, nd=5):
     out = []
     for x, y in dp(pts, tol):
         la, lo = bng2wgs(x, y)
-        out.append([round(la, 5), round(lo, 5)])
+        out.append([round(la, nd), round(lo, nd)])
     return out
 
 
@@ -53,7 +53,7 @@ for name, inner, blob in get("Boroughs.gpkg").execute("select NAME, ONS_INNER, g
     for p in polys(geom(blob)):
         for r in p[1]:
             if area(r) > 2000:
-                rings.append(conv(r, 3))
+                rings.append(conv(r, 3) if inner == "T" else conv(r, 12, 4))
     land.append({"n": name, "inner": inner == "T", "r": rings})
 
 # Water.gpkg (OS Meridian 2 lakes/docks) is not used: its polygons sit 300-400 m south of the true
@@ -67,16 +67,19 @@ for name, blob in get("Greenspace.gpkg").execute("select distName1, geom from Gr
         if not bbox_hit(outer, INNER):
             continue
         ha = area(outer) / 10000
-        if ha < 0.15:
+        if ha < 0.4:
             continue
         green.append({"n": name or "", "ha": round(ha, 1), "r": [conv(r, 3) for r in p[1] if area(r) > 50]})
 
-roads = []
+groups = {}
 for name, num, cls, blob in get("Roads.gpkg").execute("select DISTNAME, ROADNUMBER, CLASSIFICA, geom from Roads"):
     for l in polys(geom(blob)):
         pts = l[1]
         if bbox_hit(pts, ROADBOX):
-            roads.append({"n": name or "", "no": num or "", "m": cls.startswith("Motorway"), "p": conv(pts, 5)})
+            key = (name or "", num or "", cls.startswith("Motorway"))
+            groups.setdefault(key, []).append(conv(pts, 8, 4))
+# one entry per named road: {n: name, no: number, m: motorway?, l: [polylines]}
+roads = [{"n": k[0], "no": k[1], "m": k[2], "l": v} for k, v in groups.items()]
 
 src = ("Contains OS data © Crown copyright and database right (OGL v3): OS Open Greenspace, OS Open Roads; borough boundaries excluding the Thames (London Datastore / ONS, OGL). "
        "Via jreades/fsds (UCL CASA). Converted from British National Grid with a ~5 m Helmert transform; "

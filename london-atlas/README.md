@@ -54,7 +54,7 @@ On a phone, serve it from a laptop on the same Wi-Fi and open `http://<laptop-ip
 
 ### Neighbourhood panel
 
-Each panel has these sections:
+Each panel opens as a short card: a one-sentence summary, three 1–3 ratings (parks, quiet, cafés & pubs; our read of the write-up, in `data/ratings.js`) and the distance to each office with room for a measured time. The detail folds away underneath. In full, a panel covers:
 
 - **At a glance**
 - **Within the area** (pockets and contrasts)
