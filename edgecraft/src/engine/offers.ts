@@ -224,16 +224,25 @@ export function buildPods(seed: string): Built[] {
 
     // Track record, rejection-sampled for survivorship where specified.
     let track: number[] = [];
+    let bestSh = -Infinity;
     for (let attempt = 0; attempt < 400; attempt++) {
-      track = hist.map((h) => {
+      const cand = hist.map((h) => {
         let x = drift0 + Math.sqrt(idio) * rng.normal();
         for (let f = 0; f < NF; f++) x += beta[f] * h.Z[f];
         let k = 0;
         while (k < thresholds.length && x >= thresholds[k]) k++;
         return outcomes[k].r;
       });
-      const sh = (mean(track) / (std(track) || 1)) * Math.sqrt(52);
-      if (!spec.minTrackSharpe || sh >= spec.minTrackSharpe) break;
+      const sh = (mean(cand) / (std(cand) || 1)) * Math.sqrt(52);
+      // survivorship: keep the best-looking record seen (stop once it clears the bar)
+      if (sh > bestSh) {
+        bestSh = sh;
+        track = cand;
+      }
+      if (!spec.minTrackSharpe || sh >= spec.minTrackSharpe) {
+        track = cand;
+        break;
+      }
     }
 
     // Desk estimates come from the track record itself.
@@ -243,18 +252,27 @@ export function buildPods(seed: string): Built[] {
     const statedSe = Math.max(0.03, s / Math.sqrt(track.length) / Math.max(slope, 1e-6));
     const betaEst = capBeta(regressBetas(track, hist.map((h) => h.Z)).map((b) => b / Math.max(slope, 1e-6)));
     const id = `pod-${idx}`;
+    // hidden edge path: managers' alpha switches off for stretches and sometimes comes back
+    const erng = new Rng(seed, 'edge', idx);
+    const edgePath: number[] = [];
+    let on = 1;
+    for (let w = 0; w < 600; w++) {
+      edgePath.push(on);
+      on = on ? (erng.bernoulli(0.035) ? 0 : 1) : erng.bernoulli(0.06) ? 1 : 0;
+    }
+    const offDrift = driftForEv(outcomes, thresholds, -0.3 * Math.abs(evOf(outcomes, neutralProbs(thresholds, drift0))));
     const built: Built = {
       pub: {
         id, archetype: 'pod', name: spec.name, ticker: spec.name.split(' ')[0].slice(0, 4).toUpperCase(),
         thesis: spec.style, manager: spec.manager,
         notes: [`${TRACK_WEEKS}-week track record`, 'Allocate capital; the pod runs its own book', 'Pods have capacity: big tickets cost more to deploy'],
-        outcomes, thresholds, estDrift, statedSe, se0: statedSe, betaEst, idioEst: idioFor(betaEst),
-        createdTurn: 1, expiresTurn: 1e9, offerUntil: 1e9, margin: 0.25, tcBps: 4, finBps: 0.3,
-        capacity: 2.5e6 * rng.uniform(0.7, 1.3), netFraction: 0.1, allowShort: false, maxPctNav: 1,
+        outcomes, thresholds, estDrift, estDrift0: estDrift, statedSe, se0: statedSe, betaEst, idioEst: idioFor(betaEst),
+        createdTurn: 1, expiresTurn: 1e9, offerUntil: 1e9, margin: 0.25, tcBps: 20, finBps: 0.3,
+        capacity: 1e6 * rng.uniform(0.25, 0.5), netFraction: 0.1, allowShort: false, maxPctNav: 1,
         research: { signal: false, risk: false }, researchCost: { signal: 0.0015, risk: 0.0008 },
         track, alive: true,
       },
-      truth: { id, drift0, decay: spec.quality === 'trap' ? 0.0 : 0.004, beta, idio, err0: estDrift - drift0, errScale: 1, resNoise: 0, quality: spec.quality },
+      truth: { id, drift0, decay: spec.quality === 'trap' ? 0.0 : 0.004, beta, idio, err0: estDrift - drift0, errScale: 1, resNoise: 0, quality: spec.quality, edgePath, offDrift },
     };
     return built;
   });

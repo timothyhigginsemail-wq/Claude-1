@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GameState, OrderCheck } from '../../engine/game';
+import { POD_PACE, type GameState, type OrderCheck } from '../../engine/game';
 import { ARCHETYPE_INFO, type InstrumentPublic } from '../../engine/instruments';
 import { FACTORS } from '../../engine/market';
 import { goldenMax } from '../../engine/math';
@@ -135,7 +135,15 @@ export function Blotter({ state, desk, targets, baseline, setTarget, setAll, onD
     const p = state.instruments[id];
     const canAdd = state.offered.includes(id) || !!state.positions[id];
     const maxN = canAdd ? p.maxPctNav * nav : Math.abs(state.positions[id]?.notional ?? 0);
-    return { maxN, minN: p.allowShort ? -maxN : 0 };
+    let lo = p.allowShort ? -maxN : 0;
+    let hi = maxN;
+    if (p.archetype === 'pod') {
+      // capital moves into and out of pods slowly
+      const cur = state.positions[id]?.notional ?? 0;
+      lo = Math.max(lo, cur - POD_PACE * nav);
+      hi = Math.min(hi, cur + POD_PACE * nav);
+    }
+    return { maxN: hi, minN: lo };
   };
   const clampFor = (id: string, n: number) => {
     const { maxN, minN } = limitFor(id);
@@ -323,6 +331,7 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
         {bet && <span className="font-sans text-muted">· bets on <span className="text-ink2">{bet}</span></span>}
         {p.expiresTurn < 1e8 && <span className="text-muted font-sans">· {left <= 1 ? 'last week' : `${left} weeks left`}</span>}
         {!canAdd && <span className="text-warn font-sans">· closed to new money</span>}
+        {p.archetype === 'pod' && <span className="font-sans text-muted">· capacity {money(p.capacity)} · moves ≤{money(POD_PACE * nav)}/wk</span>}
         {kelly !== undefined && (
           <span className="font-sans">
             <span className="text-muted">· Kelly given book </span>
@@ -332,6 +341,7 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
           </span>
         )}
       </div>
+      <Evidence p={p} />
       {changed && (
         <div className="mt-1 text-[11px] num flex flex-wrap gap-x-2 text-ink2">
           <span className="text-warn font-sans">Order {held ? `${pct(held / nav, 1)} → ` : ''}{pct(target / nav, 1)}</span>
@@ -350,6 +360,52 @@ function Row({ idx, focused, onFocus, state, p, q, target, base, setTarget, limi
             </>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * How much the live results actually tell you: cumulative return, and a
+ * t-statistic of the mean weekly return. Most streaks are noise.
+ */
+function Evidence({ p }: { p: InstrumentPublic }) {
+  const live = p.live ?? [];
+  const track = p.track ?? [];
+  const n = live.length;
+  const t = (xs: number[]) => {
+    if (xs.length < 2) return 0;
+    const m = xs.reduce((a, x) => a + x, 0) / xs.length;
+    const sd = Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1));
+    return sd > 0 ? (m / sd) * Math.sqrt(xs.length) : 0;
+  };
+  const verdict = (tt: number) => (Math.abs(tt) < 1.5 ? ['probably noise', 'text-muted'] : Math.abs(tt) < 2.5 ? ['weak evidence', 'text-warn'] : ['strong evidence', tt > 0 ? 'text-pos' : 'text-neg']);
+  if (n < 2 && !track.length) return null;
+  const recent = live.slice(-4);
+  const cum = (xs: number[]) => xs.reduce((a, x) => a * (1 + x), 1) - 1;
+  const tLive = t(live);
+  const [vl, vc] = verdict(tLive);
+  const tTrack = t(track);
+  // strategies that win small and lose big make t-stats look better than they are
+  const worstR = Math.min(...p.outcomes.map((o) => o.r));
+  const typical = p.outcomes.reduce((a, o) => a + Math.abs(o.r), 0) / p.outcomes.length;
+  const negSkew = worstR < -3 * typical;
+  const sharpe = track.length > 1 ? (tTrack / Math.sqrt(track.length)) * Math.sqrt(52) : 0;
+  return (
+    <div className="mt-0.5 text-[11px] num flex flex-wrap gap-x-2 text-ink2">
+      {track.length > 0 && (
+        <span title="Pre-game track record: annualised Sharpe and its t-statistic. Managers you meet are often the ones whose records happened to look good.">
+          <span className="font-sans text-muted">{track.length}-wk record </span>Sharpe {sharpe.toFixed(1)} <span className="text-muted">(t {tTrack.toFixed(1)})</span>
+        </span>
+      )}
+      {n >= 2 && (
+        <span title="Live results since the game started. t = mean weekly return ÷ its standard error. Below ~2 it is hard to tell skill from luck.">
+          {track.length > 0 && <span className="text-muted">· </span>}
+          <span className="font-sans text-muted">live {n} wks </span>{cum(live) >= 0 ? '+' : ''}{(cum(live) * 100).toFixed(1)}%
+          <span className="font-sans text-muted"> (last 4: {cum(recent) >= 0 ? '+' : ''}{(cum(recent) * 100).toFixed(1)}%)</span>
+          <span className="text-muted"> · t {tLive.toFixed(1)} </span><span className={`font-sans ${vc}`}>{vl}</span>
+          {negSkew && tLive > 1.5 && <span className="font-sans text-warn"> — but this payoff has a fat left tail the record may not have seen yet</span>}
+        </span>
       )}
     </div>
   );

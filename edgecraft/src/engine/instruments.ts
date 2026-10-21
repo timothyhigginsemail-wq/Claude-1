@@ -80,6 +80,10 @@ export interface InstrumentPublic {
   researchCost: { signal: number; risk: number };
   /** Track record (pods): weekly returns before the game started. */
   track?: number[];
+  /** Realised weekly returns per $ since the game started (public information). */
+  live?: number[];
+  /** The desk's prior estimate of the drift before any live results (its starting view). */
+  estDrift0?: number;
   manager?: string;
   alive: boolean;
   /** Group tag for scripted sets (e.g. the "ten strategies" experiment). */
@@ -99,14 +103,19 @@ export interface InstrumentTruth {
   errScale: number;
   /** Noise introduced by the research itself. */
   resNoise: number;
+  /** Pods: 1 = edge working, 0 = edge gone, by week (hidden). */
+  edgePath?: number[];
+  /** Drift while the edge is switched off. */
+  offDrift?: number;
   quality: Quality;
 }
 
-export const LEARN_SHRINK = 0.88;
 /** Template capacities are quoted for a large fund; scale them to the game's $1M starting book. */
 export const CAPACITY_SCALE = 0.05;
 
 export function trueDrift(t: InstrumentTruth, pub: InstrumentPublic, turn: number): number {
+  // managers can lose their edge for stretches of time (hidden on/off path)
+  if (t.edgePath && t.offDrift !== undefined && t.edgePath[Math.min(turn, t.edgePath.length - 1)] === 0) return t.offDrift;
   return t.drift0 * Math.exp(-t.decay * Math.max(0, turn - pub.createdTurn));
 }
 

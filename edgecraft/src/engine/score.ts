@@ -160,6 +160,12 @@ export function scorecard(s: GameState): Scorecard {
   if (quotedEv > 0 && est < -0.3 * Math.abs(quotedEv)) recurring.push(`Your positions' true expected P&L was ${((-est / Math.abs(quotedEv)) * 100).toFixed(0)}% below the desk's quotes — you trusted optimistic estimates.`);
   if (brierUser !== null && brierUser > brierDesk + 0.01) weaknesses.push('Your own probability estimates were less accurate than the desk\'s.');
   if (brierUser !== null && brierUser < brierDesk - 0.005) strengths.push('Your own probability estimates beat the desk\'s quotes — genuine calibration skill.');
+  const chase = performanceChasing(s);
+  if (chase) {
+    const msg = `Performance chasing: you added to pods after a good 4-week run ${chase.adds} times and cut them after a bad run ${chase.cuts} times. Over the next 4 weeks the pods you added returned ${(chase.addNext * 100).toFixed(2)}% vs ${(chase.cutNext * 100).toFixed(2)}% for the ones you cut.`;
+    if (chase.addNext <= chase.cutNext) recurring.push(msg + ' Short-run results were mostly noise — reallocating on them paid costs for nothing.');
+    else strengths.push(msg + ' This time it paid off — check whether the edge was real (t-stats) or luck before relying on it.');
+  }
   if (!strengths.length) strengths.push('Survived the campaign with the fund intact.');
   if (!weaknesses.length) weaknesses.push('No major structural weaknesses detected.');
 
@@ -212,3 +218,33 @@ export function scorecard(s: GameState): Scorecard {
 }
 
 export { BENCH_INFO };
+
+/**
+ * Did the player add to recent winners and cut recent losers, and did it work?
+ * Compares the following 4-week return of pods added after a good trailing
+ * 4-week run with that of pods cut after a bad one.
+ */
+export function performanceChasing(s: GameState): { adds: number; cuts: number; addNext: number; cutNext: number } | null {
+  const h = s.history;
+  const pods = Object.values(s.instruments).filter((p) => p.archetype === 'pod' && (p.live?.length ?? 0) > 8);
+  const addNext: number[] = [];
+  const cutNext: number[] = [];
+  for (let i = 1; i < h.length; i++) {
+    const turn = h[i].turn;
+    for (const p of pods) {
+      const before = h[i - 1].positions.find((x) => x.id === p.id)?.notional ?? 0;
+      const now = h[i].positions.find((x) => x.id === p.id)?.notional ?? 0;
+      const d = (now - before) / h[i].navBefore;
+      const live = p.live!;
+      const idx = turn - p.createdTurn; // live[idx] is the return in this turn
+      if (idx < 4 || idx + 4 > live.length) continue;
+      const trailing = live.slice(idx - 4, idx).reduce((a, x) => a + x, 0);
+      const next = live.slice(idx, idx + 4).reduce((a, x) => a + x, 0);
+      if (d >= 0.05 && trailing > 0) addNext.push(next);
+      if (d <= -0.05 && trailing < 0) cutNext.push(next);
+    }
+  }
+  if (addNext.length + cutNext.length < 3) return null;
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, x) => a + x, 0) / xs.length : 0);
+  return { adds: addNext.length, cuts: cutNext.length, addNext: avg(addNext), cutNext: avg(cutNext) };
+}

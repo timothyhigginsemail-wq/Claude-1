@@ -8,7 +8,7 @@ import {
   pairsFromRegime, predictRegime, stepIndicators, transitionMatrix, type Indicators, type RegimeId, type RegimePair,
 } from './market';
 import {
-  LEARN_SHRINK, bucketOf, capBeta, evOf, idioFor, outcomeProbs, trueDrift, winProb,
+  bucketOf, capBeta, driftForEv, evOf, evSlope, idioFor, neutralProbs, outcomeProbs, sdOf, trueDrift, winProb,
   type Archetype, type InstrumentPublic, type InstrumentTruth,
 } from './instruments';
 import { LEVELS, type Level, type LevelConfig } from './levels';
@@ -267,6 +267,11 @@ const FUNDED: Record<Archetype, number> = {
   statarb: 0.5, factor: 0.5, merger: 0.6, relval: 0.5, event: 1, longvol: 1, tailhedge: 1, shortvol: 0.25,
   pod: 1, trend: 0, macro: 0, carry: 0, future: 0,
 };
+/** Weekly drag on pod capital above the manager's capacity. */
+export const POD_CAPACITY_DRAG = 0.003;
+/** Max change in a pod allocation per week, as a fraction of NAV (capital moves slowly). */
+export const POD_PACE = 0.2;
+
 export function fundedFrac(a: Archetype) {
   return FUNDED[a];
 }
@@ -446,6 +451,7 @@ export function checkOrders(s: GameState, targets: Record<string, number>): Orde
       tradeCost += Math.abs(n - cur) * tcRate(p, cm, n - cur);
     }
     if (n < 0 && !p.allowShort) errors.push(`${p.name} cannot be shorted.`);
+    if (p.archetype === 'pod' && Math.abs(n - cur) > POD_PACE * s.nav + 1) errors.push(`${p.name}: pod allocations can change by at most ${(POD_PACE * 100).toFixed(0)}% of NAV per week.`);
     if (Math.abs(n) > p.maxPctNav * s.nav + 1) errors.push(`${p.name}: position limit is ${(p.maxPctNav * 100).toFixed(0)}% of NAV.`);
     if (n !== 0) count++;
     gross += Math.abs(n);
@@ -482,7 +488,11 @@ export function buyResearch(prev: GameState, id: string, kind: 'signal' | 'risk'
     const before = quoteInstrument(p, deskPairs(s));
     t.errScale = 0.3;
     t.resNoise = rng.normal() * 0.04;
+    // research re-anchors the desk's prior much closer to the current true edge
+    p.estDrift0 = trueDrift(t, p, s.turn) + t.err0 * t.errScale + t.resNoise;
+    p.estDrift = p.estDrift0;
     p.se0 = Math.max(0.02, p.se0 * 0.45);
+    p.statedSe = p.se0;
     refreshEstimate(s, id);
     const after = quoteInstrument(p, deskPairs(s));
     const d = after.win - before.win;
@@ -506,13 +516,29 @@ export function buyResearch(prev: GameState, id: string, kind: 'signal' | 'risk'
   return { state: s, message };
 }
 
+/**
+ * The desk learns only from what it can see: the trade's realised weekly
+ * returns. Its prior (the original quote) is combined with the sample mean of
+ * live results in a normal–normal Bayesian update on expected return. With
+ * weekly Sharpe ratios around 0.1, a few weeks of results barely move the
+ * estimate — and a hot streak is mostly noise.
+ */
 function refreshEstimate(s: GameState, id: string) {
   const p = s.instruments[id];
-  const t = s.truth[id];
-  const age = Math.max(0, s.turn - p.createdTurn);
-  const learn = Math.pow(LEARN_SHRINK, age);
-  p.estDrift = trueDrift(t, p, s.turn) + (t.err0 * t.errScale + t.resNoise) * learn;
-  p.statedSe = Math.max(0.02, p.se0 * Math.sqrt(learn));
+  if (p.estDrift0 === undefined) p.estDrift0 = p.estDrift;
+  const live = p.live ?? [];
+  if (!live.length) return;
+  const probs0 = neutralProbs(p.thresholds, p.estDrift0);
+  const m0 = evOf(p.outcomes, probs0);
+  const sd0 = Math.max(1e-6, sdOf(p.outcomes, probs0));
+  const slope = Math.max(1e-6, evSlope(p.outcomes, p.thresholds, p.estDrift0));
+  const v0 = (slope * p.se0) ** 2;
+  const n = live.length;
+  const xbar = live.reduce((a, x) => a + x, 0) / n;
+  const v = 1 / (1 / v0 + n / (sd0 * sd0));
+  const m = v * (m0 / v0 + (n * xbar) / (sd0 * sd0));
+  p.estDrift = driftForEv(p.outcomes, p.thresholds, m);
+  p.statedSe = Math.max(0.01, Math.sqrt(v) / slope);
 }
 
 // ---------------------------------------------------------------------------
@@ -769,6 +795,8 @@ function runBook(s: GameState, before: Record<string, number>, after: Record<str
     if (n1 !== n0) tc += Math.abs(n1 - n0) * tcRate(p, cm, n1 - n0);
     if (!n1) continue;
     fin += Math.abs(n1) * holdRate(p, s.indicators);
+    // pods: money beyond a manager's capacity dilutes the edge (charged as a drag)
+    if (p.archetype === 'pod' && Math.abs(n1) > p.capacity) fin += (Math.abs(n1) - p.capacity) * POD_CAPACITY_DRAG;
     funded += Math.abs(n1) * fundedFrac(p.archetype);
     const k = draw.outcomes[id];
     pnl += n1 * p.outcomes[k].r;
@@ -869,6 +897,13 @@ export function advance(prev: GameState, orders: Order[]): { state: GameState; r
       userProb: orders.find((x) => x.id === id)?.userProb ?? old?.userProb,
       pct: n / prev.nav,
     };
+  }
+
+  // public track record of every live instrument (the desk learns from this)
+  for (const p of aliveInstruments(s)) {
+    const k = draw.outcomes[p.id];
+    if (k === undefined) continue;
+    (p.live ??= []).push(p.outcomes[k].r);
   }
 
   // instrument lifecycle: terminal outcomes and expiry

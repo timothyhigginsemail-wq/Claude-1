@@ -249,7 +249,7 @@ describe('campaign engine', () => {
     expect(pods.length).toBe(7);
     pods.forEach((p) => expect(p.track!.length).toBeGreaterThan(50));
     for (let t = 0; t < 12 && s.status === 'playing'; t++) {
-      const orders = pods.map((p) => ({ id: p.id, target: 0.25 * s.nav }));
+      const orders = pods.map((p) => ({ id: p.id, target: 0.15 * s.nav }));
       s = advance(s, t === 0 ? orders : []).state;
     }
     expect(['ended', 'closed']).toContain(s.status);
@@ -289,20 +289,20 @@ describe('free-play mechanics', () => {
   it('advanceMany carries the book and rebalances to % of NAV in pct mode', () => {
     const s = newGame(fp({ holdMode: 'pct' }));
     const pods = tradableIds(s).filter((id) => s.instruments[id].archetype === 'pod').slice(0, 2);
-    const { state, records } = advanceMany(s, pods.map((id) => ({ id, target: 0.3 * s.nav })), 4);
+    const { state, records } = advanceMany(s, pods.map((id) => ({ id, target: 0.18 * s.nav })), 4);
     expect(records.length).toBeGreaterThanOrEqual(1);
     for (const id of pods) {
       const p = state.positions[id];
       if (!p) continue;
-      expect(p.notional / records[records.length - 1].navBefore).toBeCloseTo(0.3, 2);
+      expect(p.notional / records[records.length - 1].navBefore).toBeCloseTo(0.18, 2);
     }
   });
 
   it('usd mode keeps dollar notionals fixed', () => {
     const s = newGame(fp({ holdMode: 'usd' }));
     const pod = tradableIds(s).find((id) => s.instruments[id].archetype === 'pod')!;
-    const { state } = advanceMany(s, [{ id: pod, target: 300_000 }], 3);
-    if (state.positions[pod]) expect(state.positions[pod].notional).toBe(300_000);
+    const { state } = advanceMany(s, [{ id: pod, target: 150_000 }], 3);
+    if (state.positions[pod]) expect(state.positions[pod].notional).toBe(150_000);
   });
 
   it('practice scenarios script the true regime path', () => {
