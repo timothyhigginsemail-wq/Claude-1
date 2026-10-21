@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { GameConfig, GameState } from './engine/game';
-import { newGame } from './engine/game';
-import { Home } from './ui/Home';
-import { GameScreen } from './ui/game/GameScreen';
+import { newAllocGame, type AllocConfig, type AllocState } from './engine/allocator';
+import { Home, randomSeed } from './ui/Home';
+import { AllocScreen } from './ui/alloc/AllocScreen';
 import { clearSave, loadGame, loadPrefs, saveGame, savePrefs, type Prefs } from './ui/storage';
 
 export default function App() {
   const [prefs, setPrefs] = useState<Prefs>(() => loadPrefs());
   const [screen, setScreen] = useState<'home' | 'game'>('home');
-  const [game, setGame] = useState<GameState | null>(() => loadGame().state);
+  const [game, setGame] = useState<AllocState | null>(() => loadGame().state);
   const [loadError] = useState<string | undefined>(() => loadGame().error);
 
   useEffect(() => {
@@ -16,20 +15,29 @@ export default function App() {
     savePrefs(prefs);
   }, [prefs]);
 
-  const updateGame = useCallback((s: GameState) => {
+  const update = useCallback((s: AllocState) => {
     setGame(s);
-    if (!saveGame(s)) console.warn('Could not save game to local storage.');
+    if (!saveGame(s)) console.warn('Could not save to local storage.');
   }, []);
 
-  const start = (cfg: GameConfig) => {
-    updateGame(newGame(cfg));
+  const start = (cfg: AllocConfig) => {
+    update(newAllocGame(cfg));
     setScreen('game');
   };
 
   const toggleTheme = () => setPrefs((p) => ({ ...p, theme: p.theme === 'dark' ? 'light' : 'dark' }));
 
   if (screen === 'game' && game) {
-    return <GameScreen state={game} setState={updateGame} prefs={prefs} onExit={() => setScreen('home')} onToggleTheme={toggleTheme} onReplay={start} />;
+    return (
+      <AllocScreen
+        state={game}
+        setState={update}
+        onExit={() => setScreen('home')}
+        onToggleTheme={toggleTheme}
+        theme={prefs.theme}
+        onNew={(seed) => start({ ...game.config, seed: seed ?? randomSeed() })}
+      />
+    );
   }
   return (
     <Home
@@ -39,10 +47,6 @@ export default function App() {
       onToggleTheme={toggleTheme}
       onContinue={() => setScreen('game')}
       onStart={start}
-      onLoad={(s) => {
-        updateGame(s);
-        setScreen('game');
-      }}
       onDiscard={() => {
         clearSave();
         setGame(null);

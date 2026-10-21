@@ -8,7 +8,7 @@ A browser game about the judgement of a quantitative portfolio manager. You deci
 cd edgecraft
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 42 unit tests (math, simulation, engine)
+npm test           # unit tests (maths, market model, allocator engine)
 npm run build      # typecheck + production build in dist/
 npm run preview    # serve the production build
 ```
@@ -17,23 +17,25 @@ Requires Node 18+ (tested on Node 22). Campaigns autosave to `localStorage` afte
 
 ## How it plays
 
-Edgecraft is a single free-play mode: you run a multi-strategy book with as many positions as you like.
+You are the CIO of a $1bn multi-manager platform. The game is about one craft: **sizing PMs by conviction and risk**.
 
-- **Every week** a fresh set of trades arrives (stat arb, factor, trend, carry, vol, merger arb, relative value, macro, tail hedges). Seven strategy pods with track records and two index futures are always available.
-- **Trade blotter**: one row per instrument with win probability (and its estimation band), EV per week, worst case and weeks left.
-  - Size with chips (5/10/25/50% of NAV), − / +, or by typing. **Scale book** ×0.5 … ×2 resizes everything at once.
-  - Every pending order shows its **impact on the whole book**: change in portfolio vol, change in expected growth, and the factor exposure it adds.
-  - **Kelly guide** (optional) shows each trade's growth-optimal size given the rest of your book, with a one-click ½-Kelly.
-  - **Details** opens the full sizing analysis.
-- **Keyboard**: ↑/↓ choose a row · 1–4 set 5/10/25/50% · +/− step · 0 close · D details · Enter advances one week · Shift+Enter four weeks.
-- **Multi-week advance**: 4w / 13w / 26w carry your book forward and stop early on a margin call, risk-committee de-gross or market shock. **Holding style**: fixed % of NAV (rebalanced weekly) or fixed dollars (left to drift).
-- **Feedback while you play**:
-  - *Skill vs luck*: cumulative expected growth of the books you chose vs. realised, with a ±1σ luck band.
-  - *Same trades, other sizes*: ghost books run your exact trades at ½× and 2× your size on the same market path.
-  - *Vs benchmarks*: half-Kelly, risk-parity, fixed-fraction and cash, all using the same information you had.
-- **Practice drills** (start screen): Crowded trade, Picking up nickels, Optimistic desk, Trend to chop. Each scripts the hidden regime path and the opportunity mix around one lesson; timing isn't shown.
-- **Rules**: gross leverage cap (default 5×, adjustable), regime-dependent margin with forced liquidation, a risk-committee de-gross at a 15% drawdown, and fund closure at 30%.
-- **Finish & review** at any time (or pick a fixed length) for the investment-committee review, with the hidden true probabilities and regimes revealed. The same seed always produces the same market.
+- **The allocation meeting.** Every round you see your PMs and new PMs pitching. Each shows:
+  - a 2-year track record, plus results since the pitch;
+  - a *shrunk* skill estimate (annual Sharpe, with a 90% range) that pulls the record toward what a typical pitching PM delivers, because you only meet managers whose records look good;
+  - volatility, max drawdown, correlation to your platform, capacity, and a fat-tail warning for styles that win small and lose big.
+- **Your decisions.**
+  - Give each PM a **risk budget** (their annual volatility as % of NAV). Capital = budget ÷ the PM's estimated vol.
+  - Set each PM's **stop** (drawdown from their book's peak). The row shows how likely that stop is to trigger in the next jump.
+- **Run 4, 6 or 8 weeks.** PMs keep their capital until they hit their stop or you redeem them. Stopped PMs leave for good. If the platform's drawdown hits your risk-cut level, every allocation is halved and the round ends early.
+- **Economics.** PMs are paid a share (default 18%) of their own profits yearly and when they leave, even when the platform as a whole lost money. Capital above a PM's capacity is diluted. Moving capital costs 5bp.
+- **Feedback after every run.** Your result is split into four parts, using counterfactual books on the same market:
+  - the pool at equal risk;
+  - your **selection** (your PMs vs every PM);
+  - your **sizing** (your budgets vs equal risk on your PMs);
+  - your **stops** (your book vs the same allocations without stops).
+- **Review.** At the end every PM's true skill is revealed, along with whether your risk weights lined up with it, which stopped PMs were genuinely good, and what the payouts cost.
+
+Platform settings on the start screen: seed (same seed = same market and PMs), length, target volatility, PM payout and the platform risk-cut level.
 
 ## The simulation model (`src/engine`)
 
@@ -42,33 +44,27 @@ Edgecraft is a single free-play mode: you run a multi-strategy book with as many
   - Regime correlation matrices are built as `normalise(BBᵀ + D)` from macro drivers, so they are positive semi-definite by construction. Stress regimes raise co-movement and volatility and add jumps.
   - Shocks are concentrated in regime *transitions*; persistent stress regimes mostly bring volatility and correlation, because their drift is priced in.
   - The desk observes noisy indicators and runs an HMM forward filter. Some regimes, such as structural alpha decay, can't be distinguished from normal markets.
-- **Instruments** (`instruments.ts`): each trade maps a latent variable `X = drift + βᵀZ + √idio·ε` onto a discrete payoff table through fixed thresholds (a Gaussian copula).
-  - Regimes change outcome probabilities *mathematically*. True probabilities are computed analytically as a mixture over (current → next) regime transitions and jumps, and simulated frequencies match them (tested).
-  - The desk's quote uses an estimated drift with a persistent error. Traps are biased upward and quoted with too-narrow bands. The desk also uses estimated loadings, which can miss hidden factors, and its regime belief.
-  - New trades are priced for the prevailing regime.
-- **Risk** (`risk.ts`): joint Monte Carlo scenarios built only from public information, with stratified idiosyncratic draws. They feed covariance and correlation matrices, risk contributions, factor exposures, stress tests and the loser-count distributions.
-- **Sizing** (`kelly.ts`, `sizing.ts`):
-  - Closed-form Kelly for binary bets.
-  - A bisection solver for arbitrary payoff tables.
-  - A projected-gradient log-optimal portfolio optimiser with box limits, a gross-leverage limit and costs.
-  - Kelly shrinkage `f*²/(f*²+Var f̂)` for estimation error.
-- **Game** (`game.ts`): orders and limits, transaction costs with square-root impact, financing and leverage interest, regime-dependent margin, forced liquidation, drawdown rules, benchmarks and decision grading. Grading looks at selection and at sizing relative to the growth-optimal scale within your limits, both judged on the desk model. The ex-ante evaluation never sees future draws.
+- **Allocator** (`allocator.ts`): the platform engine.
+  - Each PM's weekly return is their factor loadings on the shared market, plus idiosyncratic noise, plus true alpha. That alpha switches off and on along a hidden path (off ≈1.2%/week, back on ≈6%/week).
+  - PMs pitch with survivorship-selected track records. The game draws records until one shows a Sharpe ≥ 0.7, otherwise it keeps the best of 60 draws. Records therefore flatter most PMs.
+  - Estimates shrink each PM's record Sharpe toward a population prior (normal–normal, prior 0.45 ± 0.6) and report a 90% band.
+  - **Sizing:** a risk budget is a fraction of NAV in annualised vol, and capital = budget ÷ the PM's estimated vol. Allocations are notional: platform cash equals NAV and earns the cash rate.
+  - **Stops:** each PM is stopped from the high-water mark of their own book.
+  - **Payouts:** the PM's share of profit above their high-water mark is paid yearly and when they leave. You pay winners while losers cost you in full (netting risk).
+  - **Frictions:** capacity drag beyond each PM's capacity, a 5bp reallocation cost, and a platform drawdown limit that halves all risk.
+  - **Counterfactual books:** "no stops", "equal risk to the same PMs" and "equal risk to every PM" run on the same path. Each round is attributed to base, selection, sizing and stops.
+- **Kelly helpers** (`kelly.ts`, `math.ts`): closed-form and numeric Kelly sizing and the linear-algebra utilities.
 
 Conventions:
-- One turn is one week.
-- Returns are per $ of gross notional.
-- Exposures stay at their dollar notional until you resize them.
-- Funded legs above NAV pay cash plus the funding spread; idle cash earns the cash rate.
-- Expected log growth is reported per turn and annualised as `exp(52·g) − 1`.
+- One week is one step, and rounds jump 4–8 weeks.
+- Risk is annualised vol as a fraction of NAV.
+- Cash earns 4% a year.
 
 ## Tests
 
-`tests/math.test.ts` and `tests/simulation.test.ts` cover:
-- The 10% Kelly optimum for a 55/45 even-money bet, zero bet at zero edge, and ≈ zero growth at 2× Kelly.
-- `f* = p/a − q/b`, the shrinkage formula and `w = Σ⁻¹μ`.
-- The portfolio optimiser recovering single-bet Kelly, and correlation shrinking total log-optimal exposure (and the naive sum of standalone Kelly sizes overstating it).
-- Portfolio variance `σ²(1/N + (1−1/N)ρ)`.
-- Valid (PSD) correlation matrices in every regime; factor draws reproducing the regime covariance.
-- Simulated outcome frequencies matching analytic true probabilities; regimes raising the odds of carry crashes; shared factors creating correlation that rises in stress.
-- The filter detecting a liquidity crisis.
-- Decision-independence of the market path, the NAV accounting identity, attribution summing to P&L, research, save/load, and a full Level 3 campaign.
+`tests/math.test.ts`, `tests/market.test.ts` and `tests/allocator.test.ts` cover:
+- Kelly identities and the portfolio optimiser.
+- PSD regime correlations and simulated outcome frequencies matching analytic probabilities.
+- A market path that doesn't depend on your decisions, and survivorship bias in pitched records.
+- Shrinkage pulling estimates toward the prior, capital scaling with the risk budget, and stops firing at the right drawdown.
+- The NAV accounting identity, payouts, and save/load (including the "no stop" setting).

@@ -2,7 +2,8 @@ export function money(x: number, digits = 0): string {
   if (!isFinite(x)) return '—';
   const sign = x < 0 ? '−' : '';
   const a = Math.abs(x);
-  if (a >= 1e6) return `${sign}$${(a / 1e6).toFixed(a >= 1e8 ? 0 : 2)}M`;
+  if (a >= 1e9) return `${sign}$${(a / 1e9).toFixed(3)}bn`;
+  if (a >= 1e6) return `${sign}$${(a / 1e6).toFixed(a >= 1e8 ? 0 : a >= 1e7 ? 1 : 2)}M`;
   if (a >= 1e4) return `${sign}$${(a / 1e3).toFixed(digits || (a >= 1e5 ? 0 : 1))}k`;
   return `${sign}$${a.toFixed(digits)}`;
 }
