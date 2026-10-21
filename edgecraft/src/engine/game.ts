@@ -268,7 +268,7 @@ const FUNDED: Record<Archetype, number> = {
   pod: 1, trend: 0, macro: 0, carry: 0, future: 0,
 };
 /** Weekly drag on pod capital above the manager's capacity. */
-export const POD_CAPACITY_DRAG = 0.003;
+export const POD_CAPACITY_DRAG = 0.0015;
 /** Max change in a pod allocation per week, as a fraction of NAV (capital moves slowly). */
 export const POD_PACE = 0.2;
 

@@ -258,7 +258,7 @@ export function buildPods(seed: string): Built[] {
     let on = 1;
     for (let w = 0; w < 600; w++) {
       edgePath.push(on);
-      on = on ? (erng.bernoulli(0.035) ? 0 : 1) : erng.bernoulli(0.06) ? 1 : 0;
+      on = on ? (erng.bernoulli(0.015) ? 0 : 1) : erng.bernoulli(0.08) ? 1 : 0;
     }
     const offDrift = driftForEv(outcomes, thresholds, -0.3 * Math.abs(evOf(outcomes, neutralProbs(thresholds, drift0))));
     const built: Built = {
@@ -268,7 +268,7 @@ export function buildPods(seed: string): Built[] {
         notes: [`${TRACK_WEEKS}-week track record`, 'Allocate capital; the pod runs its own book', 'Pods have capacity: big tickets cost more to deploy'],
         outcomes, thresholds, estDrift, estDrift0: estDrift, statedSe, se0: statedSe, betaEst, idioEst: idioFor(betaEst),
         createdTurn: 1, expiresTurn: 1e9, offerUntil: 1e9, margin: 0.25, tcBps: 20, finBps: 0.3,
-        capacity: 1e6 * rng.uniform(0.25, 0.5), netFraction: 0.1, allowShort: false, maxPctNav: 1,
+        capacity: 1e6 * rng.uniform(0.3, 0.6), netFraction: 0.1, allowShort: false, maxPctNav: 1,
         research: { signal: false, risk: false }, researchCost: { signal: 0.0015, risk: 0.0008 },
         track, alive: true,
       },
