@@ -1,6 +1,8 @@
 import { useState, type CSSProperties } from 'react'
 import { images, imageSrc, remoteOriginal } from '../data/images'
 
+const PRINTING = new URLSearchParams(window.location.search).has('print')
+
 interface Props {
   id: string
   style?: CSSProperties
@@ -24,7 +26,7 @@ export function Img({ id, style, className = '', pos, contain, credit = 'br', wi
       <div className={`img ${contain ? 'contain' : ''} ${className}`} style={style}>
         {!failed ? (
           <img src={src} alt={meta.alt} style={pos ? { objectPosition: pos } : undefined}
-            loading="eager" decoding="async" onError={() => { const orig = remoteOriginal(id); if (src !== orig && !src.startsWith('images/')) setSrc(orig); else setFailed(true) }} />
+            loading={PRINTING ? "eager" : "lazy"} decoding="async" onError={() => { const orig = remoteOriginal(id); if (src !== orig && !src.startsWith('images/')) setSrc(orig); else setFailed(true) }} />
         ) : (
           <div className="img-fallback">
             {meta.alt}
