@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { images, imageSrc } from '../data/images'
+import { images, imageSrc, remoteOriginal } from '../data/images'
 
 interface Props {
   id: string
@@ -16,14 +16,15 @@ interface Props {
 export function Img({ id, style, className = '', pos, contain, credit = 'br', width = 1920 }: Props) {
   const meta = images[id]
   const [failed, setFailed] = useState(false)
+  const [src, setSrc] = useState(() => imageSrc(id, width))
   if (!meta) return <div className="img" style={style}>missing image: {id}</div>
   const creditEl = credit ? <div className={`credit ${credit}`}>{meta.credit}</div> : null
   return (
     <>
       <div className={`img ${contain ? 'contain' : ''} ${className}`} style={style}>
         {!failed ? (
-          <img src={imageSrc(id, width)} alt={meta.alt} style={pos ? { objectPosition: pos } : undefined}
-            loading="eager" decoding="async" onError={() => setFailed(true)} />
+          <img src={src} alt={meta.alt} style={pos ? { objectPosition: pos } : undefined}
+            loading="eager" decoding="async" onError={() => { const orig = remoteOriginal(id); if (src !== orig && !src.startsWith('images/')) setSrc(orig); else setFailed(true) }} />
         ) : (
           <div className="img-fallback">
             {meta.alt}

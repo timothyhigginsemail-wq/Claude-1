@@ -103,6 +103,11 @@ export function remoteSrc(file: string, width = 1920) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${width}`
 }
 
+/** The full-size original — used when a file is narrower than the requested thumbnail width */
+export function remoteOriginal(id: string) {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(images[id].file)}`
+}
+
 export function imageSrc(id: string, width = 1920) {
   if (localSet.has(id)) return `images/${id}.jpg`
   return remoteSrc(images[id].file, width)

@@ -18,11 +18,14 @@ const exists = async (p) => { try { await access(p); return true } catch { retur
 for (const [id, file] of Object.entries(list)) {
   const dest = join(outDir, `${id}.jpg`)
   if (await exists(dest)) { ok.push(id); continue }
-  const url = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${WIDTH}`
+  const base = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`
+  let url = `${base}?width=${WIDTH}`
   let done = false
-  for (let attempt = 1; attempt <= 4 && !done; attempt++) {
+  for (let attempt = 1; attempt <= 5 && !done; attempt++) {
     try {
       const res = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow' })
+      // Images narrower than WIDTH cannot be upscaled: fetch the original file instead
+      if (!res.ok && res.status !== 429 && url !== base) { url = base; continue }
       if (res.status === 429) { await sleep(5000 * attempt); continue }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const buf = Buffer.from(await res.arrayBuffer())
