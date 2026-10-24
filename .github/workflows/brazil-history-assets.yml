@@ -1,0 +1,65 @@
+name: Brazil deck — cache images and export PDF
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/brazil-history-presentation-id9n3l]
+    paths: ['.github/workflows/brazil-history-assets.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: brazil-history
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Download images from Wikimedia Commons
+        run: npm run fetch-images
+      - name: Downsize images for the web
+        run: |
+          pip install --quiet pillow
+          python3 - <<'PY'
+          import glob
+          from PIL import Image
+          for f in glob.glob('public/images/*.jpg'):
+              im = Image.open(f)
+              im = im.convert('RGB')
+              if im.width > 1600:
+                  im = im.resize((1600, round(im.height * 1600 / im.width)), Image.LANCZOS)
+              im.save(f, 'JPEG', quality=82, optimize=True, progressive=True)
+          PY
+          du -sh public/images
+      - name: Export PDF with images
+        run: |
+          npx playwright@1.49.1 install --with-deps chromium
+          npm run build
+          (npx vite preview --port 4173 --host 127.0.0.1 &) ; sleep 5
+          cat > /tmp/pdf.cjs <<'JS'
+          const { chromium } = require(process.cwd() + '/node_modules/playwright');
+          (async () => {
+            const b = await chromium.launch();
+            const p = await b.newPage({ viewport: { width: 1600, height: 900 } });
+            await p.goto('http://127.0.0.1:4173/?print', { waitUntil: 'networkidle' });
+            await p.waitForTimeout(4000);
+            await p.pdf({ path: 'How-Brazil-Became-Brazil.pdf', width: '1600px', height: '900px', printBackground: true });
+            await b.close();
+          })();
+          JS
+          npm install --no-save playwright@1.49.1
+          node /tmp/pdf.cjs
+          ls -la How-Brazil-Became-Brazil.pdf
+      - name: Commit images and PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f public/images/*.jpg public/images/manifest.json How-Brazil-Became-Brazil.pdf
+          git commit -m "Brazil deck: cache Wikimedia images locally and re-export PDF with images" || echo "nothing to commit"
+          git push
