@@ -15,7 +15,7 @@ export const images: Record<string, ImageMeta> = {
   suykerwerken: {"file": "Brasilise-Suykerwerken-Johannes-Ribbius.jpg", "alt": "Brazilian sugar works (Brasilise Suyker-werken)", "credit": "Simon de Vries (publ.), Brazilian sugar works (Brasilise Suyker-werken), 1682 · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "Simon de Vries (publ.)", "date": "1682"},
   wagenerRecife: {"file": "Zacharias_Wagner_-_Mercado_de_escravos_no_Recife.jpg", "alt": "Slave market in Recife", "credit": "Zacharias Wagener, Slave market in Recife, c. 1637–44 · Kupferstich-Kabinett, Dresden · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "Zacharias Wagener", "date": "c. 1637–44"},
   navioNegreiro: {"file": "Navio_negreiro_-_Rugendas_1830.jpg", "alt": "Slave ship (Negres à fond de cale)", "credit": "Johann Moritz Rugendas, Slave ship (Negres à fond de cale), c. 1830 · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "Johann Moritz Rugendas", "date": "c. 1830"},
-  franceAntarctique: {"file": "LA_FRANCE_ANTARCTIQVE_autrement_LE_RIO_IANEIRO_Tirée_des_Voyages_que_Villegagnon,_et_Jean_de_Leri_ont_faits_au_BRESIL_Les_Années_1557._et_1558.png", "alt": "La France Antarctique, autrement le Rio Ianeiro", "credit": "French map after Villegaignon and Léry, La France Antarctique, autrement le Rio Ianeiro, 17th c. · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "French map after Villegaignon and Léry", "date": "17th c."},
+  franceAntarctique: {"file": "LA_FRANCE_ANTARCTIQVE_autrement_LE_RIO_IANEIRO_Tirée_des_Voyages_que_Villegagnon,_et_Jean_de_Leri_ont_faits_au_BRESIL_Les_Années_1557._et_1558.png", "alt": "La France Antarctique, autrement le Rio Ianeiro (after Villegaignon and Léry)", "credit": "Attrib. Pierre Duval, La France Antarctique, autrement le Rio Ianeiro (after Vi…, 17th c. · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "Attrib. Pierre Duval", "date": "17th c."},
   ouroPreto: {"file": "Conjunto_arquitetônico_e_urbanístico_de_Ouro_Preto.JPG", "alt": "Ouro Preto, historic centre", "credit": "Raquel Mendes Silva, Ouro Preto, historic centre, 2014 · CC BY-SA 4.0 · Wikimedia Commons", "license": "CC BY-SA 4.0", "creator": "Raquel Mendes Silva", "date": "2014"},
   ouroRendimento: {"file": "Mapa_de_rendimento_do_ouro_nas_Reais_Casas_de_Fundição_em_Minas_Gerais,_entre_julho_e_setembro_de_1767..tif", "alt": "Gold yield of the royal smelting houses of Minas Gerais, Jul–Sep 1767", "credit": "Colonial administration, Gold yield of the royal smelting houses of Minas Gerais, …, 1767 · Arquivo Nacional · Public domain · Wikimedia Commons", "license": "Public domain", "creator": "Colonial administration", "date": "1767"},
   aleijadinhoPortada: {"file": "Aleijadinho_-_Portada_da_Igreja_de_São_Francisco_de_Ouro_Preto.jpg", "alt": "Portal of São Francisco de Assis, Ouro Preto, by Aleijadinho", "credit": "Ricardo André Frantz, Portal of São Francisco de Assis, Ouro Preto, by Aleijadi…, 2015 · CC BY 3.0 · Wikimedia Commons", "license": "CC BY 3.0", "creator": "Ricardo André Frantz", "date": "2015"},
@@ -99,11 +99,11 @@ export async function loadImageManifest() {
   } catch { /* offline or no manifest: fall back to Wikimedia */ }
 }
 
-export function remoteSrc(file: string, width = 1600) {
+export function remoteSrc(file: string, width = 1920) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${width}`
 }
 
-export function imageSrc(id: string, width = 1600) {
+export function imageSrc(id: string, width = 1920) {
   if (localSet.has(id)) return `images/${id}.jpg`
   return remoteSrc(images[id].file, width)
 }

@@ -601,9 +601,9 @@ const gold: SlideDef = {
               <Dot p={p} at={[-43.17, -22.9]} label="Rio de Janeiro — capital from 1763" fill={C.brazilwood} r={7} />
               <Dot p={p} at={[-44.71, -23.22]} label="Paraty" dx={-9} anchor="end" />
               <Dot p={p} at={[-46.63, -23.55]} label="São Paulo" dx={-9} anchor="end" />
-              <path d={curve(p(-41.6, -18.0), p(-40.4, -17.0), 0)} stroke="#1f1b16" strokeWidth={1.5} markerEnd="url(#arrow)" />
+              <path d={curve(p(-41.6, -18.0), p(-40.4, -17.0), 0)} stroke="#1f1b16" strokeWidth={1.5} fill="none" markerEnd="url(#arrow)" />
               <text {...pt(p, -41.8, -17.4)} className="map-label xs" textAnchor="end">to Salvador (capital to 1763)</text>
-              <path d={curve(p(-42.6, -23.3), p(-39.0, -24.6), 0.1)} stroke={C.gold} strokeWidth={4} markerEnd="url(#arrow)" />
+              <path d={curve(p(-42.6, -23.3), p(-39.0, -24.6), 0.1)} stroke={C.gold} strokeWidth={4} fill="none" markerEnd="url(#arrow)" />
               <text {...pt(p, -40.6, -23.4)} className="map-label sm" fill="#7a5a14">gold → Lisbon → London</text>
             </>
           )}

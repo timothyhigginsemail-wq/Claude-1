@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** A historical image with automatic attribution and a graceful offline fallback. */
-export function Img({ id, style, className = '', pos, contain, credit = 'br', width = 1600 }: Props) {
+export function Img({ id, style, className = '', pos, contain, credit = 'br', width = 1920 }: Props) {
   const meta = images[id]
   const [failed, setFailed] = useState(false)
   if (!meta) return <div className="img" style={style}>missing image: {id}</div>

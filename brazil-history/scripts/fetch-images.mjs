@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'public', 'images')
 const list = JSON.parse(await readFile(join(root, 'scripts', 'image-list.json'), 'utf8'))
-const WIDTH = Number(process.env.WIDTH || 1920)
+const WIDTH = Number(process.env.WIDTH || 1920) // a standard Wikimedia thumbnail size
 const UA = 'HowBrazilBecameBrazil/1.0 (educational slide deck; local cache script)'
 
 await mkdir(outDir, { recursive: true })

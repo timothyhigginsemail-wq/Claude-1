@@ -352,7 +352,7 @@ const notice: SlideDef = {
         <li><strong>Religion in plain sight:</strong> baroque Catholic churches; offerings to Iemanjá on the beach at New Year (Afro-Brazilian religion); and, increasingly, Pentecostal churches in the suburbs — evangelicals are now around a quarter or more of Brazilians, reshaping politics.</li>
         <li><strong>Football colours as class and neighbourhood:</strong> Flamengo (the most popular club in Brazil), Fluminense (historically elite), Vasco (Portuguese immigrants and the 1924 “Resposta Histórica”), Botafogo.</li>
       </ul>
-      <p>The Tijuca reforestation (1861–) was directed by Major Manuel Gomes Archer, who planted some 100,000 seedlings with a small team that included enslaved workers. Today the Tijuca National Park is one of the largest urban forests in the world.</p>
+      <p>The Tijuca reforestation (1861–) was directed by Major Manuel Gomes Archer, who planted tens of thousands of seedlings with a small team that included enslaved workers. Today the Tijuca National Park is one of the largest urban forests in the world.</p>
     </>
   ),
   sources: ['abreu', 'dean_tijuca', 'unescoRio', 'needell'],

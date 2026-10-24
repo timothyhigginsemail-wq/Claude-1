@@ -57,7 +57,7 @@ const oldRepublic: SlideDef = {
       <At x={80} y={736} w={700}>
         <div className="card" style={{ padding: '12px 16px' }}>
           <h5 style={{ fontSize: 20 }}>Canudos, 1896–97</h5>
-          <p style={{ fontSize: 13.5 }}>The army destroyed a religious community of perhaps 20,000+ backlanders in Bahia led by Antônio Conselheiro, killing most of them. Returning soldiers settled on a Rio hillside they nicknamed <b>Morro da Favella</b> — see slide 25.</p>
+          <p style={{ fontSize: 13.5 }}>The army destroyed a religious community of backlanders in Bahia led by Antônio Conselheiro — estimates run up to 25,000 people — killing most of its defenders. Returning soldiers settled on a Rio hillside they nicknamed <b>Morro da Favella</b> — see slide 25.</p>
         </div>
       </At>
       <Cite y={862} w={1000}>Immigration: IBGE / Levy (1974), entries by decade. Holloway (1980); Skidmore, Black into White (1974); Leal (1949).</Cite>
