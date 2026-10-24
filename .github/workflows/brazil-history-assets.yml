@@ -1,5 +1,5 @@
 name: Brazil deck — cache images and export PDF
-# Re-run: downloads only images not yet cached in public/images
+# Re-run 2: downloads only images not yet cached in public/images
 
 on:
   workflow_dispatch:
