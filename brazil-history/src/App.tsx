@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { slides, acts } from './slides'
 import { SourceList } from './components/Sources'
+import { Article } from './Article'
 
 const W = 1600
 const H = 900
@@ -31,11 +32,18 @@ function useScale(ref: React.RefObject<HTMLDivElement>) {
 
 export default function App() {
   const printMode = useMemo(() => new URLSearchParams(window.location.search).has('print'), [])
+  const [mode, setMode] = useState<'page' | 'deck'>(() => (/^#\/\d/.test(window.location.hash) ? 'deck' : 'page'))
+  const [scrollY, setScrollY] = useState(0)
+  useEffect(() => {
+    document.body.classList.toggle('page-mode', mode === 'page')
+    if (mode === 'page') window.scrollTo(0, scrollY)
+  }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
   if (printMode) return <PrintDeck />
-  return <Deck />
+  if (mode === 'deck') return <Deck onExit={() => { history.replaceState(null, '', ' '); setMode('page') }} />
+  return <Article onPresent={(i) => { setScrollY(window.scrollY); history.replaceState(null, '', `#/${i + 1}`); setMode('deck') }} />
 }
 
-function Deck() {
+function Deck({ onExit }: { onExit?: () => void }) {
   const init = readHash()
   const [index, setIndex] = useState(init.i)
   const [step, setStep] = useState(init.s)
@@ -98,11 +106,11 @@ function Deck() {
       else if (k === 'n' || k === 'N') setNotesOpen((v) => !v)
       else if (k === 'm' || k === 'M') setMenuOpen((v) => !v)
       else if (k === 'f' || k === 'F') toggleFullscreen()
-      else if (k === 'Escape') { setMenuOpen(false); setNotesOpen(false) }
+      else if (k === 'Escape') { if (!menuOpen && !notesOpen && onExit) onExit(); setMenuOpen(false); setNotesOpen(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [next, prev, go, index, notesOpen])
+  }, [next, prev, go, index, notesOpen, menuOpen, onExit])
 
   // Auto-hide the chrome after a few seconds without mouse movement
   useEffect(() => {
@@ -159,6 +167,7 @@ function Deck() {
           ))}
         </div>
         <div className="bar">
+          {onExit && <button className="ctl" onClick={onExit} title="Back to the scrolling page">← Page</button>}
           <button className="ctl" onClick={() => setMenuOpen((v) => !v)} title="Sections (M)">☰ <span>Sections</span></button>
           <div className="where">
             <span className="where-act" style={{ color: act.color }}>{act.numeral}</span>
