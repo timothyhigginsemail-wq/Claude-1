@@ -276,10 +276,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .print-deck .rise, .print-deck .fade-in { animation: none; }
 .print-deck .draw { animation: none; stroke-dashoffset: 0; }
 @media print {
-  @page { size: 1600px 900px; margin: 0; }
   html, body, #root { height: auto; overflow: visible; background: #fff; }
   .print-page { width: 1600px; height: 900px; break-after: page; position: relative; overflow: hidden; }
   .print-notes { width: 1600px; min-height: 900px; break-after: page; padding: 60px 140px; font-size: 19px; line-height: 1.55; columns: 2; column-gap: 60px; color: #333; background: #fff; }
   .print-notes .notes-kicker { column-span: all; margin-bottom: 18px; color: var(--brazilwood); }
 }
 .print-deck .img-fallback small { display: none; }
+
+/* Phone edition: each slide starts a tall page; notes flow beneath in large single-column type */
+@media print {
+  .print-deck.phone section { break-before: page; }
+  .print-deck.phone .print-page { break-after: auto; }
+  .print-deck.phone .print-notes { columns: 1; min-height: 0; break-after: auto; padding: 70px 90px 90px; font-size: 40px; line-height: 1.5; }
+  .print-deck.phone .print-notes h4 { font-size: 54px; margin: 50px 0 14px; }
+  .print-deck.phone .print-notes .notes-kicker { font-size: 26px; margin-bottom: 30px; }
+  .print-deck.phone .print-notes .contested-label { font-size: 24px; }
+  .print-deck.phone .print-notes .sources-h { font-size: 24px; }
+  .print-deck.phone .print-notes .sources ol { font-size: 30px; }
+}

@@ -47,27 +47,34 @@ jobs:
           (async () => {
             const b = await chromium.launch();
             const p = await b.newPage({ viewport: { width: 1600, height: 900 } });
-            await p.goto('http://127.0.0.1:4173/?print', { waitUntil: 'networkidle' });
-            await p.waitForTimeout(4000);
-            await p.pdf({ path: 'How-Brazil-Became-Brazil.pdf', width: '1600px', height: '900px', printBackground: true });
+            for (const [q, file, h] of [['print', 'How-Brazil-Became-Brazil.pdf', '900px'], ['print=phone', 'How-Brazil-Became-Brazil-iPhone.pdf', '3460px']]) {
+              await p.goto('http://127.0.0.1:4173/?' + q, { waitUntil: 'networkidle' });
+              await p.waitForTimeout(4000);
+              await p.pdf({ path: file, width: '1600px', height: h, printBackground: true });
+            }
             await b.close();
           })();
           JS
           npm install --no-save playwright@1.49.1
           node /tmp/pdf.cjs
           sudo apt-get install -y -qq ghostscript >/dev/null
-          gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook -dDownsampleColorImages=true -dColorImageResolution=110 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=small.pdf How-Brazil-Became-Brazil.pdf
-          mv small.pdf How-Brazil-Became-Brazil.pdf
-          ls -la How-Brazil-Became-Brazil.pdf
+          for f in How-Brazil-Became-Brazil.pdf How-Brazil-Became-Brazil-iPhone.pdf; do
+            gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook -dDownsampleColorImages=true -dColorImageResolution=110 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=small.pdf "$f"
+            mv small.pdf "$f"
+          done
+          ls -la *.pdf
       - uses: actions/upload-artifact@v4
         with:
           name: How-Brazil-Became-Brazil-pdf
-          path: brazil-history/How-Brazil-Became-Brazil.pdf
+          path: brazil-history/How-Brazil-Became-Brazil*.pdf
       - name: Commit images and PDF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f public/images/*.jpg public/images/manifest.json
-          if [ $(stat -c%s How-Brazil-Became-Brazil.pdf) -lt 95000000 ]; then git add -f How-Brazil-Became-Brazil.pdf; fi
+          for f in How-Brazil-Became-Brazil.pdf How-Brazil-Became-Brazil-iPhone.pdf; do
+            if [ $(stat -c%s "$f") -lt 95000000 ]; then git add -f "$f"; fi
+          done
           git commit -m "Brazil deck: cache Wikimedia images locally and re-export PDF with images" || echo "nothing to commit"
+          git pull --rebase origin ${{ github.ref_name }} || true
           git push
