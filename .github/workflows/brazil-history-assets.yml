@@ -55,11 +55,19 @@ jobs:
           JS
           npm install --no-save playwright@1.49.1
           node /tmp/pdf.cjs
+          sudo apt-get install -y -qq ghostscript >/dev/null
+          gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook -dDownsampleColorImages=true -dColorImageResolution=110 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=small.pdf How-Brazil-Became-Brazil.pdf
+          mv small.pdf How-Brazil-Became-Brazil.pdf
           ls -la How-Brazil-Became-Brazil.pdf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: How-Brazil-Became-Brazil-pdf
+          path: brazil-history/How-Brazil-Became-Brazil.pdf
       - name: Commit images and PDF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f public/images/*.jpg public/images/manifest.json How-Brazil-Became-Brazil.pdf
+          git add -f public/images/*.jpg public/images/manifest.json
+          if [ $(stat -c%s How-Brazil-Became-Brazil.pdf) -lt 95000000 ]; then git add -f How-Brazil-Became-Brazil.pdf; fi
           git commit -m "Brazil deck: cache Wikimedia images locally and re-export PDF with images" || echo "nothing to commit"
           git push
