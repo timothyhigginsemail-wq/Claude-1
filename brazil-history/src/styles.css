@@ -282,3 +282,4 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .print-notes { width: 1600px; min-height: 900px; break-after: page; padding: 60px 140px; font-size: 19px; line-height: 1.55; columns: 2; column-gap: 60px; color: #333; background: #fff; }
   .print-notes .notes-kicker { column-span: all; margin-bottom: 18px; color: var(--brazilwood); }
 }
+.print-deck .img-fallback small { display: none; }
