@@ -241,7 +241,9 @@ function toggleFullscreen() {
 /** Print / PDF mode: every slide at full size, each followed by its deeper notes. */
 /** ?print = 16:9 pages for a laptop or printer; ?print=phone = tall iPhone-shaped pages, slide on top, notes in large type below */
 function PrintDeck() {
-  const phone = new URLSearchParams(window.location.search).get('print') === 'phone'
+  const printParam = new URLSearchParams(window.location.search).get('print')
+  const phone = printParam === 'phone'
+  const slidesOnly = printParam === 'slides'
   return (
     <div className={`print-deck ${phone ? 'phone' : ''}`}>
       <style>{phone ? '@page { size: 1600px 3460px; margin: 0; }' : '@page { size: 1600px 900px; margin: 0; }'}</style>
@@ -254,7 +256,7 @@ function PrintDeck() {
                 <div className="slide-wrap">{s.render(last)}</div>
               </div>
             </div>
-            {s.notes && (
+            {s.notes && !slidesOnly && (
               <div className="print-notes">
                 <div className="notes-kicker">Slide {i + 1} · {s.short}</div>
                 {s.notes}
