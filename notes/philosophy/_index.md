@@ -1,21 +1,11 @@
 ---
 title: Philosophy
-type: index
-tags: [philosophy, framework, moc]
-status: budding
+tags: [philosophy]
 created: 2026-11-03
 updated: 2026-11-03
 ---
 # Philosophy
 
-A nine-step framework from minimal certainty to practical principles for living well.
-
-## Stages
-- **1–6 Establishing understanding** — what exists, how we experience it, how we form reliable beliefs.
-- **7–8 Understanding ourselves** — what we appear to be and why we have the desires we have.
-- **9 Deciding how to live** — which goals are worth pursuing and how to act.
-
-## Steps
 1. [[Existence and uncertainty]]
 2. [[Distinction]]
 3. [[Structure and regularity]]
@@ -26,8 +16,12 @@ A nine-step framework from minimal certainty to practical principles for living 
 8. [[Evolution and motivation]]
 9. [[Practical philosophy]]
 
-## Open questions
-- [[Other minds]] — where does "we" get earned?
-- [[Problem of induction]]
-- [[Source of normativity]] — the standard for evaluating values
-- [[Ethics and other people]]
+### Why I prefer this
+
+The argument now has three natural stages:
+
+1–6: Establishing understanding. What exists, how we experience it, and how we develop reliable beliefs.
+
+7–8: Understanding ourselves. What we appear to be and why we possess particular desires and motivations.
+
+9: Deciding how to live. Which motivations and goals are worth pursuing, what constitutes flourishing, and how we should act.
