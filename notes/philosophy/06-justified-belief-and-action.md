@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Justified belief and action
 
-6. Justified belief and action: The demonstrated reliability of our methods provides a basis for rationally justified beliefs that can guide action, without requiring absolute certainty.
+The demonstrated reliability of our methods provides a basis for rationally justified beliefs that can guide action, without requiring absolute certainty.

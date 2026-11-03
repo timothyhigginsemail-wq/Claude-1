@@ -207,8 +207,24 @@ function kbCore() {
         return seg;
       });
     }
+    // Numbered files in one folder (01-..., 02-...) form an ordered sequence.
+    const groups = new Map();
     for (const n of notes) {
-      const real = new Set(n.out.concat(n.in));
+      const m = n.base.match(/^(\d+)[\s._-]/);
+      if (!m) continue;
+      if (!groups.has(n.folder)) groups.set(n.folder, []);
+      groups.get(n.folder).push([+m[1], n]);
+    }
+    for (const list of groups.values()) {
+      if (list.length < 2) continue;
+      list.sort((a, b) => a[0] - b[0]);
+      list.forEach(([num, n], i) => {
+        n.seq = { num, pos: i + 1, total: list.length, prev: i ? list[i - 1][1].id : null, next: i < list.length - 1 ? list[i + 1][1].id : null };
+        if (i) edges.push({ source: list[i - 1][1].id, target: n.id, seq: true });
+      });
+    }
+    for (const n of notes) {
+      const real = new Set(n.out.concat(n.in, n.seq ? [n.seq.prev, n.seq.next].filter(Boolean) : []));
       n.degree = new Set(n.out.concat(n.in, n.ghostOut)).size;
       n.orphan = real.size === 0;
     }
@@ -336,6 +352,14 @@ main.panel-open .view.list{padding-right:calc(var(--panel-w) + 24px)}
 #graph:active{cursor:grabbing}
 .link{stroke:var(--edge);stroke-width:1.1;transition:stroke .15s, opacity .15s}
 .link.ghost{stroke-dasharray:3 3}
+.link.seq{stroke:var(--accent);stroke-opacity:.55;stroke-width:2;marker-end:url(#arrow)}
+.link.seq.hl{stroke-opacity:.9}
+.seq-nav{display:flex;gap:8px;margin-top:28px}
+.seq-nav button{flex:1;text-align:left;background:var(--surface-2);border:0;border-radius:10px;padding:10px 12px;min-width:0}
+.seq-nav button:hover{background:var(--accent-soft)}
+.seq-nav button.next{text-align:right}
+.seq-nav small{display:block;color:var(--muted);font-size:11.5px}
+.seq-nav span{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link.hl{stroke:var(--edge-hl);stroke-width:1.6}
 .link.dim{opacity:.25}
 .node{cursor:pointer;transition:opacity .15s}
@@ -623,15 +647,20 @@ function clientApp() {
     $('#f-topic').innerHTML = opt('', 'All topics', S.f.topic) + D.topics.map(t => opt(t.id, `${t.name} (${t.count})`, S.f.topic)).join('');
     $('#f-tag').innerHTML = opt('', 'All tags', S.f.tag) + D.tags.map(t => opt(t.tag, `#${t.tag} (${t.count})`, S.f.tag)).join('');
     $('#f-status').innerHTML = opt('', 'Any status', S.f.status) + D.statuses.map(s => opt(s, `${STATUS_ICON[s] || '•'} ${s}`, S.f.status)).join('');
+    // Hide filters that have nothing to choose between.
+    $('#f-topic').hidden = D.topics.length < 2 && !S.f.topic;
+    $('#f-tag').hidden = D.tags.length < 2 && !S.f.tag;
+    $('#f-status').hidden = !D.statuses.length && !S.f.status;
   }
   function renderStats() {
-    const links = D.edges.filter(e => !e.ghost).length;
+    const links = D.edges.filter(e => !e.ghost && !e.seq).length;
     const orphans = D.notes.filter(n => n.orphan).length;
     const cnt = s => D.notes.filter(n => n.status === s).length;
+    const garden = D.statuses.length ? `<span title="seeds vs evergreen">🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>` : '';
     $('#stats').innerHTML = `<span><b>${D.notes.length}</b> notes</span><span><b>${links}</b> links</span>` +
-      `<span class="s-orph"><b>${orphans}</b> orphan${orphans === 1 ? '' : 's'}</span><span><b>${D.ghosts.length}</b> to write</span>` +
-      `<span title="seeds vs evergreen">🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>`;
-    $('#stats-m').innerHTML = `<span><b>${D.notes.length}</b> notes</span><span>🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>`;
+      (orphans ? `<span class="s-orph"><b>${orphans}</b> orphan${orphans === 1 ? '' : 's'}</span>` : '') +
+      (D.ghosts.length ? `<span><b>${D.ghosts.length}</b> to write</span>` : '') + garden;
+    $('#stats-m').innerHTML = `<span><b>${D.notes.length}</b> notes</span>` + garden;
   }
   function renderAll() {
     renderGraph();
@@ -652,7 +681,7 @@ function clientApp() {
       return;
     }
     svg = d3.select('#graph');
-    svg.append('defs').html('<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>');
+    svg.append('defs').html('<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1L9 5L0 9z" fill="var(--accent)" fill-opacity=".8"/></marker>');
     gRoot = svg.append('g');
     gLinks = gRoot.append('g');
     gNodes = gRoot.append('g');
@@ -666,10 +695,10 @@ function clientApp() {
     const box = svg.node().getBoundingClientRect();
     svg.call(zoom.transform, d3.zoomIdentity.translate(box.width / 2, box.height / 2));
     sim = d3.forceSimulation()
-      .force('link', d3.forceLink().id(d => d.id).distance(l => (l.ghost ? 45 : 75)).strength(0.45))
+      .force('link', d3.forceLink().id(d => d.id).distance(l => (l.ghost ? 45 : l.seq ? 70 : 85)).strength(l => (l.seq ? 0.9 : 0.4)))
       .force('charge', d3.forceManyBody().strength(-240).distanceMax(700))
-      .force('x', d3.forceX(0).strength(0.055))
-      .force('y', d3.forceY(0).strength(0.055))
+      .force('x', d3.forceX(d => (d.seqX != null ? d.seqX : 0)).strength(d => (d.seqX != null ? 0.8 : 0.055)))
+      .force('y', d3.forceY(d => (d.src.seq && d.seqY != null ? d.seqY : 0)).strength(d => (d.src.seq && d.seqY != null ? 0.8 : 0.055)))
       .force('collide', d3.forceCollide(d => d.r + 7))
       .on('tick', ticked);
   }
@@ -719,9 +748,22 @@ function clientApp() {
       n.src = src; n.r = radius(src);
       return n;
     });
-    const links = edges.map(e => ({ key: e.source + '>' + e.target, source: e.source, target: e.target, ghost: e.ghost }));
+    // Numbered sequences read top to bottom as a column (one column per folder).
+    const cols = new Map();
+    nodes.forEach(n => { n.seqX = n.seqY = null; if (n.src.seq) { if (!cols.has(n.src.folder)) cols.set(n.src.folder, []); cols.get(n.src.folder).push(n); } });
+    let ci = 0;
+    for (const col of cols.values()) {
+      if (col.length < 2) continue;
+      col.sort((a, b) => a.src.seq.pos - b.src.seq.pos);
+      col.forEach((n, i) => { n.seqX = ci * 520; n.seqY = (i - (col.length - 1) / 2) * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
+      // The folder's _index sits to the left of its column, like a bracket.
+      const idx = nodes.find(n => n.src.isIndex && n.src.folder === col[0].src.folder);
+      if (idx) { idx.seqX = ci * 520 - 190; idx.seqY = 0; if (firstLayout) { idx.x = idx.seqX; idx.y = 0; } }
+      ci++;
+    }
+    const links = edges.map(e => ({ key: e.source + '>' + e.target + (e.seq ? '#seq' : ''), source: e.source, target: e.target, ghost: e.ghost, seq: e.seq }));
 
-    linkSel = gLinks.selectAll('line').data(links, d => d.key).join('line').attr('class', d => 'link' + (d.ghost ? ' ghost' : ''));
+    linkSel = gLinks.selectAll('line').data(links, d => d.key).join('line').attr('class', d => 'link' + (d.ghost ? ' ghost' : '') + (d.seq ? ' seq' : ''));
     nodeSel = gNodes.selectAll('g.node').data(nodes, d => d.id).join(enter => {
       const g = enter.append('g');
       g.append('circle').attr('class', 'ring');
@@ -742,7 +784,8 @@ function clientApp() {
     }).style('--c', d => color(d.src));
     nodeSel.select('.dot-c').attr('r', d => d.r);
     nodeSel.select('.ring').attr('r', d => d.r + 4.5);
-    nodeSel.select('text').attr('dy', d => d.r + 13).text(d => (d.src.title.length > 30 ? d.src.title.slice(0, 28) + '…' : d.src.title));
+    nodeSel.select('text').attr('dy', d => (d.src.seq && d.seqY != null ? 4 : d.r + 13)).attr('x', d => (d.src.seq && d.seqY != null ? d.r + 8 : 0))
+      .style('text-anchor', d => (d.src.seq && d.seqY != null ? 'start' : null)).text(d => (d.src.seq ? d.src.seq.num + '. ' : '') + (d.src.title.length > 30 ? d.src.title.slice(0, 28) + '…' : d.src.title));
 
     sim.nodes(nodes);
     sim.force('link').links(links);
@@ -761,10 +804,17 @@ function clientApp() {
 
   function ticked() {
     if (!linkSel) return;
-    linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => (d.seq ? endAt(d, 'x') : d.target.x)).attr('y2', d => (d.seq ? endAt(d, 'y') : d.target.y));
     nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
   }
 
+  // Stop sequence arrows at the edge of the target node so the arrowhead shows.
+  function endAt(d, axis) {
+    const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y, len = Math.hypot(dx, dy) || 1;
+    const back = (d.target.r || 6) + 3;
+    return axis === 'x' ? d.target.x - (dx / len) * back : d.target.y - (dy / len) * back;
+  }
   function updateClasses() {
     if (!nodeSel) return;
     const focus = S.hover || S.selected;
@@ -796,7 +846,7 @@ function clientApp() {
     if (!ns.length) return;
     const { w, h } = usableRect();
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    ns.forEach(n => { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r); y1 = Math.max(y1, n.y + n.r + 16); });
+    ns.forEach(n => { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r + (n.src.seq && n.seqY != null ? 210 : 0)); y1 = Math.max(y1, n.y + n.r + 16); });
     const pad = phoneMq.matches ? 30 : 70;
     const k = Math.max(0.15, Math.min(1.8, Math.min((w - pad * 2) / (x1 - x0 || 1), (h - pad * 2) / (y1 - y0 || 1))));
     const t = d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, h / 2 - k * (y0 + y1) / 2).scale(k);
@@ -814,14 +864,18 @@ function clientApp() {
     D.notes.forEach(n => counts.set(n.topic, (counts.get(n.topic) || 0) + 1));
     const sw = (cls, extra) => `<svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="6" ${extra}/></svg>`;
     const fg = darkMq.matches ? '#bbb' : '#666';
+    const has = st => D.notes.some(n => n.status === st);
     $('#legend-body').innerHTML =
       D.topics.map(t => `<div class="lg-row${S.f.topic && S.f.topic !== t.id ? ' off' : ''}" data-topic="${esc(t.id)}"><span class="dot" style="--c:${color({ topic: t.id })};margin:0"></span>${esc(t.name)}<span class="n">${counts.get(t.id) || 0}</span></div>`).join('') +
-      '<hr>' +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" fill-opacity=".28" stroke="${fg}" stroke-dasharray="3 2" stroke-width="1.5"`)} Seed — faded, dashed</div>` +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}"`)} Budding</div>` +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" filter="url(#glow)" stroke="${fg}" stroke-opacity=".5" stroke-width="2"`)} Evergreen — glowing</div>` +
-      `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="4" fill="${fg}"/><circle r="7.5" fill="none" stroke="var(--orphan)" stroke-dasharray="1.5 3" stroke-width="1.5"/></svg> Orphan — no links</div>` +
-      `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="5" fill="none" stroke="var(--ghost)" stroke-dasharray="2 2" stroke-width="1.4"/></svg> Ghost — not written yet</div>` +
+      '<hr>' + [
+        D.edges.some(e => e.seq) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9H12" stroke="var(--accent)" stroke-width="2"/><path d="M11 5L17 9L11 13z" fill="var(--accent)"/></svg> Order (numbered files)</div>`,
+        D.edges.some(e => !e.seq && !e.ghost) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9H17" stroke="${fg}" stroke-width="1.2"/></svg> Wikilink</div>`,
+        has('seed') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" fill-opacity=".28" stroke="${fg}" stroke-dasharray="3 2" stroke-width="1.5"`)} Seed — faded, dashed</div>`,
+        has('budding') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}"`)} Budding</div>`,
+        has('evergreen') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" filter="url(#glow)" stroke="${fg}" stroke-opacity=".5" stroke-width="2"`)} Evergreen — glowing</div>`,
+        D.notes.some(n => n.orphan) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="4" fill="${fg}"/><circle r="7.5" fill="none" stroke="var(--orphan)" stroke-dasharray="1.5 3" stroke-width="1.5"/></svg> Orphan — no links</div>`,
+        D.ghosts.length > 0 && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="5" fill="none" stroke="var(--ghost)" stroke-dasharray="2 2" stroke-width="1.4"/></svg> Ghost — not written yet</div>`,
+      ].filter(Boolean).join('') +
       '<div class="muted" style="padding:4px;font-size:11.5px">Size = number of links</div>';
   }
 
@@ -924,11 +978,14 @@ function clientApp() {
         <section class="links-sec"><h3>Wanted by (${n.refs.length})</h3>${linkList(n.refs, n.id)}</section>`;
     } else {
       const meta = [n.created && `Created ${fmtDate(n.created)}`, n.updated && `Updated ${fmtDate(n.updated)}`, `${n.words} words`, n.type && n.type].filter(Boolean);
-      h = `<div class="crumbs">${topicChip(n)}${statusChip(n)}${n.orphan ? '<span class="chip orph">○ orphan</span>' : ''}</div>
+      const sq = n.seq;
+      const seqNav = sq ? `<nav class="seq-nav">${sq.prev ? `<button data-id="${esc(sq.prev)}"><small>← Previous</small><span>${esc(byId.get(sq.prev).title)}</span></button>` : '<span style="flex:1"></span>'}${sq.next ? `<button class="next" data-id="${esc(sq.next)}"><small>Next →</small><span>${esc(byId.get(sq.next).title)}</span></button>` : '<span style="flex:1"></span>'}</nav>` : '';
+      h = `<div class="crumbs">${topicChip(n)}${sq ? `<span class="chip">Step ${sq.pos} of ${sq.total}</span>` : ''}${statusChip(n)}${n.orphan ? '<span class="chip orph">○ orphan</span>' : ''}</div>
         <h1 class="note-title">${esc(n.title)}</h1>
         <div class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
         ${n.tags.length ? `<div class="tags">${n.tags.map(t => `<button class="chip" data-tag="${esc(t)}" title="Filter by tag">${esc(t)}</button>`).join('')}</div>` : ''}
         <article class="prose">${mdToHtml(n)}</article>
+        ${seqNav}
         <section class="links-sec"><h3>Linked from (${n.in.length})</h3>${n.in.length ? linkList(n.in, n.id) : '<p class="muted">No backlinks yet.</p>'}</section>
         ${n.out.length ? `<section class="links-sec"><h3>Links to (${n.out.length})</h3>${linkList(n.out)}</section>` : ''}
         ${n.ghostOut.length ? `<section class="links-sec"><h3>Not written yet (${n.ghostOut.length})</h3><div class="chips">${n.ghostOut.map(g => `<button class="chip ghost-chip" data-id="${esc(g)}">${esc(byId.get(g).title)}</button>`).join('')}</div></section>` : ''}
@@ -1192,6 +1249,7 @@ function clientApp() {
   load(JSON.parse(document.getElementById('kb-data').textContent));
   const m = location.hash.match(/^#note=(.+)$/);
   if (m && byId.has(decodeURIComponent(m[1]))) openNote(decodeURIComponent(m[1]), { from: 'link' });
+  else if (D.topics.length === 1 && D.topics[0].indexId && !phoneMq.matches) openNote(D.topics[0].indexId, { from: 'graph' });
   window.KB = { get data() { return D; }, openNote, state: S };
 }
 
@@ -1261,7 +1319,7 @@ function main(argv) {
 
   const cnt = s => data.notes.filter(n => n.status === s).length;
   console.log(`Scanned ${files.length} Markdown files in ${dir}`);
-  console.log(`  ${data.notes.length} notes · ${data.edges.filter(e => !e.ghost).length} links · ${data.ghosts.length} ghost links · ${data.notes.filter(n => n.orphan).length} orphans`);
+  console.log(`  ${data.notes.length} notes · ${data.edges.filter(e => !e.ghost && !e.seq).length} links · ${data.ghosts.length} ghost links · ${data.notes.filter(n => n.orphan).length} orphans`);
   console.log(`  topics: ${data.topics.map(t => `${t.name} (${t.count})`).join(', ')}`);
   console.log(`  status: ${cnt('seed')} seed · ${cnt('budding')} budding · ${cnt('evergreen')} evergreen`);
   console.log(`Wrote ${path.relative(process.cwd(), out) || out} (${(fs.statSync(out).size / 1024).toFixed(1)} KB)`);

@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Prediction and reliability
 
-5. Prediction and reliability: Observed regularities allow us to construct models whose reliability can be evaluated through their predictive success, although past success cannot guarantee future results.
+Observed regularities allow us to construct models whose reliability can be evaluated through their predictive success, although past success cannot guarantee future results.

@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Existence and uncertainty
 
-1. Existence and uncertainty: Something exists—at minimum, experience is occurring—but we cannot conclusively establish its ultimate nature.
+Something exists—at minimum, experience is occurring—but we cannot conclusively establish its ultimate nature.

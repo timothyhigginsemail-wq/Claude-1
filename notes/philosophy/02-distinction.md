@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Distinction
 
-2. Distinction: Experience contains distinguishable content, regardless of its underlying source.
+Experience contains distinguishable content, regardless of its underlying source.

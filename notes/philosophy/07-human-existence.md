@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Human existence
 
-7. Human existence: The available evidence strongly indicates that we are biological human beings shaped by evolution.
+The available evidence strongly indicates that we are biological human beings shaped by evolution.

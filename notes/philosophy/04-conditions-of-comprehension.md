@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Conditions of comprehension
 
-4. Conditions of comprehension: Understanding experience requires logical and cognitive structures, without necessarily establishing that these structures characterize ultimate reality.
+Understanding experience requires logical and cognitive structures, without necessarily establishing that these structures characterize ultimate reality.

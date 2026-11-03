@@ -6,4 +6,4 @@ updated: 2026-11-03
 ---
 # Structure and regularity
 
-3. Structure and regularity: Experience exhibits patterns, relationships, and apparent laws, although their ultimate origin remains uncertain.
+Experience exhibits patterns, relationships, and apparent laws, although their ultimate origin remains uncertain.

@@ -84,6 +84,14 @@ main.panel-open .view.list{padding-right:calc(var(--panel-w) + 24px)}
 #graph:active{cursor:grabbing}
 .link{stroke:var(--edge);stroke-width:1.1;transition:stroke .15s, opacity .15s}
 .link.ghost{stroke-dasharray:3 3}
+.link.seq{stroke:var(--accent);stroke-opacity:.55;stroke-width:2;marker-end:url(#arrow)}
+.link.seq.hl{stroke-opacity:.9}
+.seq-nav{display:flex;gap:8px;margin-top:28px}
+.seq-nav button{flex:1;text-align:left;background:var(--surface-2);border:0;border-radius:10px;padding:10px 12px;min-width:0}
+.seq-nav button:hover{background:var(--accent-soft)}
+.seq-nav button.next{text-align:right}
+.seq-nav small{display:block;color:var(--muted);font-size:11.5px}
+.seq-nav span{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link.hl{stroke:var(--edge-hl);stroke-width:1.6}
 .link.dim{opacity:.25}
 .node{cursor:pointer;transition:opacity .15s}
@@ -301,7 +309,7 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
   </aside>
 </main>
 
-<script id="kb-data" type="application/json">{"generatedAt":"2026-11-03T02:56:22.439Z","source":"notes/","origin":"build","notes":[{"id":"philosophy/_index","path":"philosophy/_index.md","folder":"philosophy","base":"_index","title":"Philosophy","isIndex":true,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":87,"body":"# Philosophy\n\n1. [[Existence and uncertainty]]\n2. [[Distinction]]\n3. [[Structure and regularity]]\n4. [[Conditions of comprehension]]\n5. [[Prediction and reliability]]\n6. [[Justified belief and action]]\n7. [[Human existence]]\n8. [[Evolution and motivation]]\n9. [[Practical philosophy]]\n\n### Why I prefer this\n\nThe argument now has three natural stages:\n\n1–6: Establishing understanding. What exists, how we experience it, and how we develop reliable beliefs.\n\n7–8: Understanding ourselves. What we appear to be and why we possess particular desires and motivations.\n\n9: Deciding how to live. Which motivations and goals are worth pursuing, what constitutes flourishing, and how we should act.\n","out":["philosophy/01-existence-and-uncertainty","philosophy/02-distinction","philosophy/03-structure-and-regularity","philosophy/04-conditions-of-comprehension","philosophy/05-prediction-and-reliability","philosophy/06-justified-belief-and-action","philosophy/07-human-existence","philosophy/08-evolution-and-motivation","philosophy/09-practical-philosophy"],"in":[],"ghostOut":[],"degree":9,"orphan":false},{"id":"philosophy/01-existence-and-uncertainty","path":"philosophy/01-existence-and-uncertainty.md","folder":"philosophy","base":"01-existence-and-uncertainty","title":"Existence and uncertainty","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":19,"body":"# Existence and uncertainty\n\n1. Existence and uncertainty: Something exists—at minimum, experience is occurring—but we cannot conclusively establish its ultimate nature.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/02-distinction","path":"philosophy/02-distinction.md","folder":"philosophy","base":"02-distinction","title":"Distinction","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":11,"body":"# Distinction\n\n2. Distinction: Experience contains distinguishable content, regardless of its underlying source.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/03-structure-and-regularity","path":"philosophy/03-structure-and-regularity.md","folder":"philosophy","base":"03-structure-and-regularity","title":"Structure and regularity","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":19,"body":"# Structure and regularity\n\n3. Structure and regularity: Experience exhibits patterns, relationships, and apparent laws, although their ultimate origin remains uncertain.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/04-conditions-of-comprehension","path":"philosophy/04-conditions-of-comprehension.md","folder":"philosophy","base":"04-conditions-of-comprehension","title":"Conditions of comprehension","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":22,"body":"# Conditions of comprehension\n\n4. Conditions of comprehension: Understanding experience requires logical and cognitive structures, without necessarily establishing that these structures characterize ultimate reality.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/05-prediction-and-reliability","path":"philosophy/05-prediction-and-reliability.md","folder":"philosophy","base":"05-prediction-and-reliability","title":"Prediction and reliability","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":29,"body":"# Prediction and reliability\n\n5. Prediction and reliability: Observed regularities allow us to construct models whose reliability can be evaluated through their predictive success, although past success cannot guarantee future results.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/06-justified-belief-and-action","path":"philosophy/06-justified-belief-and-action.md","folder":"philosophy","base":"06-justified-belief-and-action","title":"Justified belief and action","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":29,"body":"# Justified belief and action\n\n6. Justified belief and action: The demonstrated reliability of our methods provides a basis for rationally justified beliefs that can guide action, without requiring absolute certainty.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/07-human-existence","path":"philosophy/07-human-existence.md","folder":"philosophy","base":"07-human-existence","title":"Human existence","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":18,"body":"# Human existence\n\n7. Human existence: The available evidence strongly indicates that we are biological human beings shaped by evolution.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/08-evolution-and-motivation","path":"philosophy/08-evolution-and-motivation.md","folder":"philosophy","base":"08-evolution-and-motivation","title":"Evolution and motivation","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":32,"body":"# Evolution and motivation\n\n8. Evolution and motivation: Evolution shaped our drives toward survival, reproduction, pleasure, attachment, belonging, status, autonomy, and exploration, but their evolutionary origins do not establish which goals we should pursue.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false},{"id":"philosophy/09-practical-philosophy","path":"philosophy/09-practical-philosophy.md","folder":"philosophy","base":"09-practical-philosophy","title":"Practical philosophy","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":24,"body":"# Practical philosophy\n\n9. Practical philosophy: By understanding our nature, evaluating what we value, and applying reliable knowledge, we can develop rational principles for living well.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false}],"ghosts":[],"edges":[{"source":"philosophy/_index","target":"philosophy/01-existence-and-uncertainty","ghost":false},{"source":"philosophy/_index","target":"philosophy/02-distinction","ghost":false},{"source":"philosophy/_index","target":"philosophy/03-structure-and-regularity","ghost":false},{"source":"philosophy/_index","target":"philosophy/04-conditions-of-comprehension","ghost":false},{"source":"philosophy/_index","target":"philosophy/05-prediction-and-reliability","ghost":false},{"source":"philosophy/_index","target":"philosophy/06-justified-belief-and-action","ghost":false},{"source":"philosophy/_index","target":"philosophy/07-human-existence","ghost":false},{"source":"philosophy/_index","target":"philosophy/08-evolution-and-motivation","ghost":false},{"source":"philosophy/_index","target":"philosophy/09-practical-philosophy","ghost":false}],"topics":[{"id":"philosophy","name":"Philosophy","indexId":"philosophy/_index","description":"The argument now has three natural stages:","count":9,"statusCounts":{"unset":9},"topTags":["philosophy"],"updated":"2026-11-03"}],"index":{"philosophy/-index":"philosophy/_index","philosophy/01-existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","philosophy/02-distinction":"philosophy/02-distinction","philosophy/03-structure-and-regularity":"philosophy/03-structure-and-regularity","philosophy/04-conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","philosophy/05-prediction-and-reliability":"philosophy/05-prediction-and-reliability","philosophy/06-justified-belief-and-action":"philosophy/06-justified-belief-and-action","philosophy/07-human-existence":"philosophy/07-human-existence","philosophy/08-evolution-and-motivation":"philosophy/08-evolution-and-motivation","philosophy/09-practical-philosophy":"philosophy/09-practical-philosophy","01-existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","02-distinction":"philosophy/02-distinction","03-structure-and-regularity":"philosophy/03-structure-and-regularity","04-conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","05-prediction-and-reliability":"philosophy/05-prediction-and-reliability","06-justified-belief-and-action":"philosophy/06-justified-belief-and-action","07-human-existence":"philosophy/07-human-existence","08-evolution-and-motivation":"philosophy/08-evolution-and-motivation","09-practical-philosophy":"philosophy/09-practical-philosophy","philosophy":"philosophy/_index","existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","distinction":"philosophy/02-distinction","structure-and-regularity":"philosophy/03-structure-and-regularity","conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","prediction-and-reliability":"philosophy/05-prediction-and-reliability","justified-belief-and-action":"philosophy/06-justified-belief-and-action","human-existence":"philosophy/07-human-existence","evolution-and-motivation":"philosophy/08-evolution-and-motivation","practical-philosophy":"philosophy/09-practical-philosophy"},"tags":[{"tag":"philosophy","count":10}],"statuses":[]}</script>
+<script id="kb-data" type="application/json">{"generatedAt":"2026-11-03T03:18:10.098Z","source":"notes/","origin":"build","notes":[{"id":"philosophy/_index","path":"philosophy/_index.md","folder":"philosophy","base":"_index","title":"Philosophy","isIndex":true,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":238,"body":"# Philosophy\n\nThe argument now has three natural stages:\n\n## 1–6: Establishing understanding\n\n*What exists, how we experience it, and how we develop reliable beliefs.*\n\n1. **[[Existence and uncertainty]]**: Something exists—at minimum, experience is occurring—but we cannot conclusively establish its ultimate nature.\n2. **[[Distinction]]**: Experience contains distinguishable content, regardless of its underlying source.\n3. **[[Structure and regularity]]**: Experience exhibits patterns, relationships, and apparent laws, although their ultimate origin remains uncertain.\n4. **[[Conditions of comprehension]]**: Understanding experience requires logical and cognitive structures, without necessarily establishing that these structures characterize ultimate reality.\n5. **[[Prediction and reliability]]**: Observed regularities allow us to construct models whose reliability can be evaluated through their predictive success, although past success cannot guarantee future results.\n6. **[[Justified belief and action]]**: The demonstrated reliability of our methods provides a basis for rationally justified beliefs that can guide action, without requiring absolute certainty.\n\n## 7–8: Understanding ourselves\n\n*What we appear to be and why we possess particular desires and motivations.*\n\n7. **[[Human existence]]**: The available evidence strongly indicates that we are biological human beings shaped by evolution.\n8. **[[Evolution and motivation]]**: Evolution shaped our drives toward survival, reproduction, pleasure, attachment, belonging, status, autonomy, and exploration, but their evolutionary origins do not establish which goals we should pursue.\n\n## 9: Deciding how to live\n\n*Which motivations and goals are worth pursuing, what constitutes flourishing, and how we should act.*\n\n9. **[[Practical philosophy]]**: By understanding our nature, evaluating what we value, and applying reliable knowledge, we can develop rational principles for living well.\n","out":["philosophy/01-existence-and-uncertainty","philosophy/02-distinction","philosophy/03-structure-and-regularity","philosophy/04-conditions-of-comprehension","philosophy/05-prediction-and-reliability","philosophy/06-justified-belief-and-action","philosophy/07-human-existence","philosophy/08-evolution-and-motivation","philosophy/09-practical-philosophy"],"in":[],"ghostOut":[],"degree":9,"orphan":false},{"id":"philosophy/01-existence-and-uncertainty","path":"philosophy/01-existence-and-uncertainty.md","folder":"philosophy","base":"01-existence-and-uncertainty","title":"Existence and uncertainty","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":16,"body":"# Existence and uncertainty\n\nSomething exists—at minimum, experience is occurring—but we cannot conclusively establish its ultimate nature.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":1,"pos":1,"total":9,"prev":null,"next":"philosophy/02-distinction"}},{"id":"philosophy/02-distinction","path":"philosophy/02-distinction.md","folder":"philosophy","base":"02-distinction","title":"Distinction","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":10,"body":"# Distinction\n\nExperience contains distinguishable content, regardless of its underlying source.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":2,"pos":2,"total":9,"prev":"philosophy/01-existence-and-uncertainty","next":"philosophy/03-structure-and-regularity"}},{"id":"philosophy/03-structure-and-regularity","path":"philosophy/03-structure-and-regularity.md","folder":"philosophy","base":"03-structure-and-regularity","title":"Structure and regularity","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":16,"body":"# Structure and regularity\n\nExperience exhibits patterns, relationships, and apparent laws, although their ultimate origin remains uncertain.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":3,"pos":3,"total":9,"prev":"philosophy/02-distinction","next":"philosophy/04-conditions-of-comprehension"}},{"id":"philosophy/04-conditions-of-comprehension","path":"philosophy/04-conditions-of-comprehension.md","folder":"philosophy","base":"04-conditions-of-comprehension","title":"Conditions of comprehension","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":19,"body":"# Conditions of comprehension\n\nUnderstanding experience requires logical and cognitive structures, without necessarily establishing that these structures characterize ultimate reality.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":4,"pos":4,"total":9,"prev":"philosophy/03-structure-and-regularity","next":"philosophy/05-prediction-and-reliability"}},{"id":"philosophy/05-prediction-and-reliability","path":"philosophy/05-prediction-and-reliability.md","folder":"philosophy","base":"05-prediction-and-reliability","title":"Prediction and reliability","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":26,"body":"# Prediction and reliability\n\nObserved regularities allow us to construct models whose reliability can be evaluated through their predictive success, although past success cannot guarantee future results.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":5,"pos":5,"total":9,"prev":"philosophy/04-conditions-of-comprehension","next":"philosophy/06-justified-belief-and-action"}},{"id":"philosophy/06-justified-belief-and-action","path":"philosophy/06-justified-belief-and-action.md","folder":"philosophy","base":"06-justified-belief-and-action","title":"Justified belief and action","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":25,"body":"# Justified belief and action\n\nThe demonstrated reliability of our methods provides a basis for rationally justified beliefs that can guide action, without requiring absolute certainty.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":6,"pos":6,"total":9,"prev":"philosophy/05-prediction-and-reliability","next":"philosophy/07-human-existence"}},{"id":"philosophy/07-human-existence","path":"philosophy/07-human-existence.md","folder":"philosophy","base":"07-human-existence","title":"Human existence","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":16,"body":"# Human existence\n\nThe available evidence strongly indicates that we are biological human beings shaped by evolution.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":7,"pos":7,"total":9,"prev":"philosophy/06-justified-belief-and-action","next":"philosophy/08-evolution-and-motivation"}},{"id":"philosophy/08-evolution-and-motivation","path":"philosophy/08-evolution-and-motivation.md","folder":"philosophy","base":"08-evolution-and-motivation","title":"Evolution and motivation","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":29,"body":"# Evolution and motivation\n\nEvolution shaped our drives toward survival, reproduction, pleasure, attachment, belonging, status, autonomy, and exploration, but their evolutionary origins do not establish which goals we should pursue.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":8,"pos":8,"total":9,"prev":"philosophy/07-human-existence","next":"philosophy/09-practical-philosophy"}},{"id":"philosophy/09-practical-philosophy","path":"philosophy/09-practical-philosophy.md","folder":"philosophy","base":"09-practical-philosophy","title":"Practical philosophy","isIndex":false,"topic":"philosophy","tags":["philosophy"],"aliases":[],"type":"","status":"","description":"","created":"2026-11-03","updated":"2026-11-03","words":22,"body":"# Practical philosophy\n\nBy understanding our nature, evaluating what we value, and applying reliable knowledge, we can develop rational principles for living well.\n","out":[],"in":["philosophy/_index"],"ghostOut":[],"degree":1,"orphan":false,"seq":{"num":9,"pos":9,"total":9,"prev":"philosophy/08-evolution-and-motivation","next":null}}],"ghosts":[],"edges":[{"source":"philosophy/_index","target":"philosophy/01-existence-and-uncertainty","ghost":false},{"source":"philosophy/_index","target":"philosophy/02-distinction","ghost":false},{"source":"philosophy/_index","target":"philosophy/03-structure-and-regularity","ghost":false},{"source":"philosophy/_index","target":"philosophy/04-conditions-of-comprehension","ghost":false},{"source":"philosophy/_index","target":"philosophy/05-prediction-and-reliability","ghost":false},{"source":"philosophy/_index","target":"philosophy/06-justified-belief-and-action","ghost":false},{"source":"philosophy/_index","target":"philosophy/07-human-existence","ghost":false},{"source":"philosophy/_index","target":"philosophy/08-evolution-and-motivation","ghost":false},{"source":"philosophy/_index","target":"philosophy/09-practical-philosophy","ghost":false},{"source":"philosophy/01-existence-and-uncertainty","target":"philosophy/02-distinction","seq":true},{"source":"philosophy/02-distinction","target":"philosophy/03-structure-and-regularity","seq":true},{"source":"philosophy/03-structure-and-regularity","target":"philosophy/04-conditions-of-comprehension","seq":true},{"source":"philosophy/04-conditions-of-comprehension","target":"philosophy/05-prediction-and-reliability","seq":true},{"source":"philosophy/05-prediction-and-reliability","target":"philosophy/06-justified-belief-and-action","seq":true},{"source":"philosophy/06-justified-belief-and-action","target":"philosophy/07-human-existence","seq":true},{"source":"philosophy/07-human-existence","target":"philosophy/08-evolution-and-motivation","seq":true},{"source":"philosophy/08-evolution-and-motivation","target":"philosophy/09-practical-philosophy","seq":true}],"topics":[{"id":"philosophy","name":"Philosophy","indexId":"philosophy/_index","description":"The argument now has three natural stages:","count":9,"statusCounts":{"unset":9},"topTags":["philosophy"],"updated":"2026-11-03"}],"index":{"philosophy/-index":"philosophy/_index","philosophy/01-existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","philosophy/02-distinction":"philosophy/02-distinction","philosophy/03-structure-and-regularity":"philosophy/03-structure-and-regularity","philosophy/04-conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","philosophy/05-prediction-and-reliability":"philosophy/05-prediction-and-reliability","philosophy/06-justified-belief-and-action":"philosophy/06-justified-belief-and-action","philosophy/07-human-existence":"philosophy/07-human-existence","philosophy/08-evolution-and-motivation":"philosophy/08-evolution-and-motivation","philosophy/09-practical-philosophy":"philosophy/09-practical-philosophy","01-existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","02-distinction":"philosophy/02-distinction","03-structure-and-regularity":"philosophy/03-structure-and-regularity","04-conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","05-prediction-and-reliability":"philosophy/05-prediction-and-reliability","06-justified-belief-and-action":"philosophy/06-justified-belief-and-action","07-human-existence":"philosophy/07-human-existence","08-evolution-and-motivation":"philosophy/08-evolution-and-motivation","09-practical-philosophy":"philosophy/09-practical-philosophy","philosophy":"philosophy/_index","existence-and-uncertainty":"philosophy/01-existence-and-uncertainty","distinction":"philosophy/02-distinction","structure-and-regularity":"philosophy/03-structure-and-regularity","conditions-of-comprehension":"philosophy/04-conditions-of-comprehension","prediction-and-reliability":"philosophy/05-prediction-and-reliability","justified-belief-and-action":"philosophy/06-justified-belief-and-action","human-existence":"philosophy/07-human-existence","evolution-and-motivation":"philosophy/08-evolution-and-motivation","practical-philosophy":"philosophy/09-practical-philosophy"},"tags":[{"tag":"philosophy","count":10}],"statuses":[]}</script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
@@ -489,8 +497,24 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
         return seg;
       });
     }
+    // Numbered files in one folder (01-..., 02-...) form an ordered sequence.
+    const groups = new Map();
     for (const n of notes) {
-      const real = new Set(n.out.concat(n.in));
+      const m = n.base.match(/^(\d+)[\s._-]/);
+      if (!m) continue;
+      if (!groups.has(n.folder)) groups.set(n.folder, []);
+      groups.get(n.folder).push([+m[1], n]);
+    }
+    for (const list of groups.values()) {
+      if (list.length < 2) continue;
+      list.sort((a, b) => a[0] - b[0]);
+      list.forEach(([num, n], i) => {
+        n.seq = { num, pos: i + 1, total: list.length, prev: i ? list[i - 1][1].id : null, next: i < list.length - 1 ? list[i + 1][1].id : null };
+        if (i) edges.push({ source: list[i - 1][1].id, target: n.id, seq: true });
+      });
+    }
+    for (const n of notes) {
+      const real = new Set(n.out.concat(n.in, n.seq ? [n.seq.prev, n.seq.next].filter(Boolean) : []));
       n.degree = new Set(n.out.concat(n.in, n.ghostOut)).size;
       n.orphan = real.size === 0;
     }
@@ -595,15 +619,20 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
     $('#f-topic').innerHTML = opt('', 'All topics', S.f.topic) + D.topics.map(t => opt(t.id, `${t.name} (${t.count})`, S.f.topic)).join('');
     $('#f-tag').innerHTML = opt('', 'All tags', S.f.tag) + D.tags.map(t => opt(t.tag, `#${t.tag} (${t.count})`, S.f.tag)).join('');
     $('#f-status').innerHTML = opt('', 'Any status', S.f.status) + D.statuses.map(s => opt(s, `${STATUS_ICON[s] || '•'} ${s}`, S.f.status)).join('');
+    // Hide filters that have nothing to choose between.
+    $('#f-topic').hidden = D.topics.length < 2 && !S.f.topic;
+    $('#f-tag').hidden = D.tags.length < 2 && !S.f.tag;
+    $('#f-status').hidden = !D.statuses.length && !S.f.status;
   }
   function renderStats() {
-    const links = D.edges.filter(e => !e.ghost).length;
+    const links = D.edges.filter(e => !e.ghost && !e.seq).length;
     const orphans = D.notes.filter(n => n.orphan).length;
     const cnt = s => D.notes.filter(n => n.status === s).length;
+    const garden = D.statuses.length ? `<span title="seeds vs evergreen">🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>` : '';
     $('#stats').innerHTML = `<span><b>${D.notes.length}</b> notes</span><span><b>${links}</b> links</span>` +
-      `<span class="s-orph"><b>${orphans}</b> orphan${orphans === 1 ? '' : 's'}</span><span><b>${D.ghosts.length}</b> to write</span>` +
-      `<span title="seeds vs evergreen">🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>`;
-    $('#stats-m').innerHTML = `<span><b>${D.notes.length}</b> notes</span><span>🌱 <b>${cnt('seed')}</b> · 🌳 <b>${cnt('evergreen')}</b></span>`;
+      (orphans ? `<span class="s-orph"><b>${orphans}</b> orphan${orphans === 1 ? '' : 's'}</span>` : '') +
+      (D.ghosts.length ? `<span><b>${D.ghosts.length}</b> to write</span>` : '') + garden;
+    $('#stats-m').innerHTML = `<span><b>${D.notes.length}</b> notes</span>` + garden;
   }
   function renderAll() {
     renderGraph();
@@ -624,7 +653,7 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
       return;
     }
     svg = d3.select('#graph');
-    svg.append('defs').html('<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>');
+    svg.append('defs').html('<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1L9 5L0 9z" fill="var(--accent)" fill-opacity=".8"/></marker>');
     gRoot = svg.append('g');
     gLinks = gRoot.append('g');
     gNodes = gRoot.append('g');
@@ -638,10 +667,10 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
     const box = svg.node().getBoundingClientRect();
     svg.call(zoom.transform, d3.zoomIdentity.translate(box.width / 2, box.height / 2));
     sim = d3.forceSimulation()
-      .force('link', d3.forceLink().id(d => d.id).distance(l => (l.ghost ? 45 : 75)).strength(0.45))
+      .force('link', d3.forceLink().id(d => d.id).distance(l => (l.ghost ? 45 : l.seq ? 70 : 85)).strength(l => (l.seq ? 0.9 : 0.4)))
       .force('charge', d3.forceManyBody().strength(-240).distanceMax(700))
-      .force('x', d3.forceX(0).strength(0.055))
-      .force('y', d3.forceY(0).strength(0.055))
+      .force('x', d3.forceX(d => (d.seqX != null ? d.seqX : 0)).strength(d => (d.seqX != null ? 0.8 : 0.055)))
+      .force('y', d3.forceY(d => (d.src.seq && d.seqY != null ? d.seqY : 0)).strength(d => (d.src.seq && d.seqY != null ? 0.8 : 0.055)))
       .force('collide', d3.forceCollide(d => d.r + 7))
       .on('tick', ticked);
   }
@@ -691,9 +720,22 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
       n.src = src; n.r = radius(src);
       return n;
     });
-    const links = edges.map(e => ({ key: e.source + '>' + e.target, source: e.source, target: e.target, ghost: e.ghost }));
+    // Numbered sequences read top to bottom as a column (one column per folder).
+    const cols = new Map();
+    nodes.forEach(n => { n.seqX = n.seqY = null; if (n.src.seq) { if (!cols.has(n.src.folder)) cols.set(n.src.folder, []); cols.get(n.src.folder).push(n); } });
+    let ci = 0;
+    for (const col of cols.values()) {
+      if (col.length < 2) continue;
+      col.sort((a, b) => a.src.seq.pos - b.src.seq.pos);
+      col.forEach((n, i) => { n.seqX = ci * 520; n.seqY = (i - (col.length - 1) / 2) * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
+      // The folder's _index sits to the left of its column, like a bracket.
+      const idx = nodes.find(n => n.src.isIndex && n.src.folder === col[0].src.folder);
+      if (idx) { idx.seqX = ci * 520 - 190; idx.seqY = 0; if (firstLayout) { idx.x = idx.seqX; idx.y = 0; } }
+      ci++;
+    }
+    const links = edges.map(e => ({ key: e.source + '>' + e.target + (e.seq ? '#seq' : ''), source: e.source, target: e.target, ghost: e.ghost, seq: e.seq }));
 
-    linkSel = gLinks.selectAll('line').data(links, d => d.key).join('line').attr('class', d => 'link' + (d.ghost ? ' ghost' : ''));
+    linkSel = gLinks.selectAll('line').data(links, d => d.key).join('line').attr('class', d => 'link' + (d.ghost ? ' ghost' : '') + (d.seq ? ' seq' : ''));
     nodeSel = gNodes.selectAll('g.node').data(nodes, d => d.id).join(enter => {
       const g = enter.append('g');
       g.append('circle').attr('class', 'ring');
@@ -714,7 +756,8 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
     }).style('--c', d => color(d.src));
     nodeSel.select('.dot-c').attr('r', d => d.r);
     nodeSel.select('.ring').attr('r', d => d.r + 4.5);
-    nodeSel.select('text').attr('dy', d => d.r + 13).text(d => (d.src.title.length > 30 ? d.src.title.slice(0, 28) + '…' : d.src.title));
+    nodeSel.select('text').attr('dy', d => (d.src.seq && d.seqY != null ? 4 : d.r + 13)).attr('x', d => (d.src.seq && d.seqY != null ? d.r + 8 : 0))
+      .style('text-anchor', d => (d.src.seq && d.seqY != null ? 'start' : null)).text(d => (d.src.seq ? d.src.seq.num + '. ' : '') + (d.src.title.length > 30 ? d.src.title.slice(0, 28) + '…' : d.src.title));
 
     sim.nodes(nodes);
     sim.force('link').links(links);
@@ -733,10 +776,17 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
 
   function ticked() {
     if (!linkSel) return;
-    linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => (d.seq ? endAt(d, 'x') : d.target.x)).attr('y2', d => (d.seq ? endAt(d, 'y') : d.target.y));
     nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
   }
 
+  // Stop sequence arrows at the edge of the target node so the arrowhead shows.
+  function endAt(d, axis) {
+    const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y, len = Math.hypot(dx, dy) || 1;
+    const back = (d.target.r || 6) + 3;
+    return axis === 'x' ? d.target.x - (dx / len) * back : d.target.y - (dy / len) * back;
+  }
   function updateClasses() {
     if (!nodeSel) return;
     const focus = S.hover || S.selected;
@@ -768,7 +818,7 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
     if (!ns.length) return;
     const { w, h } = usableRect();
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    ns.forEach(n => { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r); y1 = Math.max(y1, n.y + n.r + 16); });
+    ns.forEach(n => { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r + (n.src.seq && n.seqY != null ? 210 : 0)); y1 = Math.max(y1, n.y + n.r + 16); });
     const pad = phoneMq.matches ? 30 : 70;
     const k = Math.max(0.15, Math.min(1.8, Math.min((w - pad * 2) / (x1 - x0 || 1), (h - pad * 2) / (y1 - y0 || 1))));
     const t = d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, h / 2 - k * (y0 + y1) / 2).scale(k);
@@ -786,14 +836,18 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
     D.notes.forEach(n => counts.set(n.topic, (counts.get(n.topic) || 0) + 1));
     const sw = (cls, extra) => `<svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="6" ${extra}/></svg>`;
     const fg = darkMq.matches ? '#bbb' : '#666';
+    const has = st => D.notes.some(n => n.status === st);
     $('#legend-body').innerHTML =
       D.topics.map(t => `<div class="lg-row${S.f.topic && S.f.topic !== t.id ? ' off' : ''}" data-topic="${esc(t.id)}"><span class="dot" style="--c:${color({ topic: t.id })};margin:0"></span>${esc(t.name)}<span class="n">${counts.get(t.id) || 0}</span></div>`).join('') +
-      '<hr>' +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" fill-opacity=".28" stroke="${fg}" stroke-dasharray="3 2" stroke-width="1.5"`)} Seed — faded, dashed</div>` +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}"`)} Budding</div>` +
-      `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" filter="url(#glow)" stroke="${fg}" stroke-opacity=".5" stroke-width="2"`)} Evergreen — glowing</div>` +
-      `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="4" fill="${fg}"/><circle r="7.5" fill="none" stroke="var(--orphan)" stroke-dasharray="1.5 3" stroke-width="1.5"/></svg> Orphan — no links</div>` +
-      `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="5" fill="none" stroke="var(--ghost)" stroke-dasharray="2 2" stroke-width="1.4"/></svg> Ghost — not written yet</div>` +
+      '<hr>' + [
+        D.edges.some(e => e.seq) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9H12" stroke="var(--accent)" stroke-width="2"/><path d="M11 5L17 9L11 13z" fill="var(--accent)"/></svg> Order (numbered files)</div>`,
+        D.edges.some(e => !e.seq && !e.ghost) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9H17" stroke="${fg}" stroke-width="1.2"/></svg> Wikilink</div>`,
+        has('seed') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" fill-opacity=".28" stroke="${fg}" stroke-dasharray="3 2" stroke-width="1.5"`)} Seed — faded, dashed</div>`,
+        has('budding') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}"`)} Budding</div>`,
+        has('evergreen') && `<div class="lg-row" style="cursor:default">${sw('', `fill="${fg}" filter="url(#glow)" stroke="${fg}" stroke-opacity=".5" stroke-width="2"`)} Evergreen — glowing</div>`,
+        D.notes.some(n => n.orphan) && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="4" fill="${fg}"/><circle r="7.5" fill="none" stroke="var(--orphan)" stroke-dasharray="1.5 3" stroke-width="1.5"/></svg> Orphan — no links</div>`,
+        D.ghosts.length > 0 && `<div class="lg-row" style="cursor:default"><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="5" fill="none" stroke="var(--ghost)" stroke-dasharray="2 2" stroke-width="1.4"/></svg> Ghost — not written yet</div>`,
+      ].filter(Boolean).join('') +
       '<div class="muted" style="padding:4px;font-size:11.5px">Size = number of links</div>';
   }
 
@@ -896,11 +950,14 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
         <section class="links-sec"><h3>Wanted by (${n.refs.length})</h3>${linkList(n.refs, n.id)}</section>`;
     } else {
       const meta = [n.created && `Created ${fmtDate(n.created)}`, n.updated && `Updated ${fmtDate(n.updated)}`, `${n.words} words`, n.type && n.type].filter(Boolean);
-      h = `<div class="crumbs">${topicChip(n)}${statusChip(n)}${n.orphan ? '<span class="chip orph">○ orphan</span>' : ''}</div>
+      const sq = n.seq;
+      const seqNav = sq ? `<nav class="seq-nav">${sq.prev ? `<button data-id="${esc(sq.prev)}"><small>← Previous</small><span>${esc(byId.get(sq.prev).title)}</span></button>` : '<span style="flex:1"></span>'}${sq.next ? `<button class="next" data-id="${esc(sq.next)}"><small>Next →</small><span>${esc(byId.get(sq.next).title)}</span></button>` : '<span style="flex:1"></span>'}</nav>` : '';
+      h = `<div class="crumbs">${topicChip(n)}${sq ? `<span class="chip">Step ${sq.pos} of ${sq.total}</span>` : ''}${statusChip(n)}${n.orphan ? '<span class="chip orph">○ orphan</span>' : ''}</div>
         <h1 class="note-title">${esc(n.title)}</h1>
         <div class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
         ${n.tags.length ? `<div class="tags">${n.tags.map(t => `<button class="chip" data-tag="${esc(t)}" title="Filter by tag">${esc(t)}</button>`).join('')}</div>` : ''}
         <article class="prose">${mdToHtml(n)}</article>
+        ${seqNav}
         <section class="links-sec"><h3>Linked from (${n.in.length})</h3>${n.in.length ? linkList(n.in, n.id) : '<p class="muted">No backlinks yet.</p>'}</section>
         ${n.out.length ? `<section class="links-sec"><h3>Links to (${n.out.length})</h3>${linkList(n.out)}</section>` : ''}
         ${n.ghostOut.length ? `<section class="links-sec"><h3>Not written yet (${n.ghostOut.length})</h3><div class="chips">${n.ghostOut.map(g => `<button class="chip ghost-chip" data-id="${esc(g)}">${esc(byId.get(g).title)}</button>`).join('')}</div></section>` : ''}
@@ -1164,6 +1221,7 @@ a.wikilink.ghost{color:var(--muted);border-bottom:1px dashed var(--ghost)}
   load(JSON.parse(document.getElementById('kb-data').textContent));
   const m = location.hash.match(/^#note=(.+)$/);
   if (m && byId.has(decodeURIComponent(m[1]))) openNote(decodeURIComponent(m[1]), { from: 'link' });
+  else if (D.topics.length === 1 && D.topics[0].indexId && !phoneMq.matches) openNote(D.topics[0].indexId, { from: 'graph' });
   window.KB = { get data() { return D; }, openNote, state: S };
 })();</script>
 </body>
