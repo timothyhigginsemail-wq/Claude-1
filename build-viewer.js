@@ -751,15 +751,16 @@ function clientApp() {
     // Numbered sequences read top to bottom as a column (one column per folder).
     const cols = new Map();
     nodes.forEach(n => { n.seqX = n.seqY = null; if (n.src.seq) { if (!cols.has(n.src.folder)) cols.set(n.src.folder, []); cols.get(n.src.folder).push(n); } });
-    let ci = 0;
+    let colX = 0;  // columns sit side by side, spaced by their label widths
     for (const col of cols.values()) {
       if (col.length < 2) continue;
       col.sort((a, b) => a.src.seq.pos - b.src.seq.pos);
-      col.forEach((n, i) => { n.seqX = ci * 520; n.seqY = (i - (col.length - 1) / 2) * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
+      const labelW = Math.max(...col.map(labelWidth));
+      col.forEach((n, i) => { n.seqX = colX + 190; n.seqY = (i - (col.length - 1) / 2) * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
       // The folder's _index sits to the left of its column, like a bracket.
       const idx = nodes.find(n => n.src.isIndex && n.src.folder === col[0].src.folder);
-      if (idx) { idx.seqX = ci * 520 - 190; idx.seqY = 0; if (firstLayout) { idx.x = idx.seqX; idx.y = 0; } }
-      ci++;
+      if (idx) { idx.seqX = colX; idx.seqY = 0; if (firstLayout) { idx.x = idx.seqX; idx.y = 0; } }
+      colX += 190 + 30 + labelW + 160;
     }
     const links = edges.map(e => ({ key: e.source + '>' + e.target + (e.seq ? '#seq' : ''), source: e.source, target: e.target, ghost: e.ghost, seq: e.seq }));
 
@@ -785,7 +786,7 @@ function clientApp() {
     nodeSel.select('.dot-c').attr('r', d => d.r);
     nodeSel.select('.ring').attr('r', d => d.r + 4.5);
     nodeSel.select('text').attr('dy', d => (d.src.seq && d.seqY != null ? 4 : d.r + 13)).attr('x', d => (d.src.seq && d.seqY != null ? d.r + 8 : 0))
-      .style('text-anchor', d => (d.src.seq && d.seqY != null ? 'start' : null)).text(d => (d.src.seq ? d.src.seq.num + '. ' : '') + (d.src.title.length > 30 ? d.src.title.slice(0, 28) + '…' : d.src.title));
+      .style('text-anchor', d => (d.src.seq && d.seqY != null ? 'start' : null)).text(d => (d.src.seq ? d.src.seq.num + '. ' : '') + shortTitle(d.src, d.src.seq ? 64 : 30));
 
     sim.nodes(nodes);
     sim.force('link').links(links);
@@ -809,6 +810,8 @@ function clientApp() {
     nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
   }
 
+  const shortTitle = (s, max) => (s.title.length > max ? s.title.slice(0, max - 2).trimEnd() + '…' : s.title);
+  const labelWidth = n => (String(n.src.seq ? n.src.seq.num : '').length + 2 + shortTitle(n.src, 64).length) * 6.4;
   // Stop sequence arrows at the edge of the target node so the arrowhead shows.
   function endAt(d, axis) {
     const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y, len = Math.hypot(dx, dy) || 1;
@@ -846,7 +849,7 @@ function clientApp() {
     if (!ns.length) return;
     const { w, h } = usableRect();
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    ns.forEach(n => { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r + (n.src.seq && n.seqY != null ? 210 : 0)); y1 = Math.max(y1, n.y + n.r + 16); });
+    ns.forEach(n => { const half = n.src.seq && n.seqY != null ? 0 : Math.min(30, n.src.title.length) * 3.3; x0 = Math.min(x0, n.x - Math.max(n.r, half)); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + Math.max(n.r, half) + (n.src.seq && n.seqY != null ? labelWidth(n) + 10 : 0)); y1 = Math.max(y1, n.y + n.r + 16); });
     const pad = phoneMq.matches ? 30 : 70;
     const k = Math.max(0.15, Math.min(1.8, Math.min((w - pad * 2) / (x1 - x0 || 1), (h - pad * 2) / (y1 - y0 || 1))));
     const t = d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, h / 2 - k * (y0 + y1) / 2).scale(k);
@@ -1244,7 +1247,6 @@ function clientApp() {
 
   /* ---------- boot ---------- */
   wire();
-  if (!phoneMq.matches) $('#legend').open = true;
   initGraph();
   load(JSON.parse(document.getElementById('kb-data').textContent));
   const m = location.hash.match(/^#note=(.+)$/);
