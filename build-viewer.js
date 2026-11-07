@@ -433,7 +433,7 @@ button.chip:hover{color:var(--text)}
 .prose code{font:.85em var(--mono);background:var(--surface-2);padding:.15em .4em;border-radius:5px}
 .prose pre{background:var(--surface-2);padding:12px 14px;border-radius:10px;overflow:auto;line-height:1.5}
 .prose pre code{background:none;padding:0}
-.prose table{border-collapse:collapse;font-family:var(--ui);font-size:14px;display:block;overflow:auto}
+.prose table{border-collapse:collapse;font-family:var(--ui);font-size:13px;display:block;overflow:auto}
 .prose th,.prose td{border:1px solid var(--border);padding:6px 10px;text-align:left}
 .prose th{background:var(--surface-2)}
 .prose img{max-width:100%;border-radius:8px}
@@ -751,16 +751,20 @@ function clientApp() {
     // Numbered sequences read top to bottom as a column (one column per folder).
     const cols = new Map();
     nodes.forEach(n => { n.seqX = n.seqY = null; if (n.src.seq) { if (!cols.has(n.src.folder)) cols.set(n.src.folder, []); cols.get(n.src.folder).push(n); } });
-    let colX = 0;  // columns sit side by side, spaced by their label widths
+    // Columns sit side by side, spaced by their label widths, wrapping into rows.
+    let colX = 0, rowY = 0, rowH = 0;
     for (const col of cols.values()) {
       if (col.length < 2) continue;
       col.sort((a, b) => a.src.seq.pos - b.src.seq.pos);
       const labelW = Math.max(...col.map(labelWidth));
-      col.forEach((n, i) => { n.seqX = colX + 190; n.seqY = (i - (col.length - 1) / 2) * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
+      const colW = 190 + 30 + labelW + 160;
+      if (colX > 0 && colX + colW > 1500) { colX = 0; rowY += rowH + 130; rowH = 0; }
+      rowH = Math.max(rowH, (col.length - 1) * 64);
+      col.forEach((n, i) => { n.seqX = colX + 190; n.seqY = rowY + i * 64; if (firstLayout || n.x == null) { n.x = n.seqX; n.y = n.seqY; } });
       // The folder's _index sits to the left of its column, like a bracket.
       const idx = nodes.find(n => n.src.isIndex && n.src.folder === col[0].src.folder);
-      if (idx) { idx.seqX = colX; idx.seqY = 0; if (firstLayout) { idx.x = idx.seqX; idx.y = 0; } }
-      colX += 190 + 30 + labelW + 160;
+      if (idx) { idx.seqX = colX; idx.seqY = rowY + (col.length - 1) * 32; if (firstLayout) { idx.x = idx.seqX; idx.y = idx.seqY; } }
+      colX += colW;
     }
     const links = edges.map(e => ({ key: e.source + '>' + e.target + (e.seq ? '#seq' : ''), source: e.source, target: e.target, ghost: e.ghost, seq: e.seq }));
 
